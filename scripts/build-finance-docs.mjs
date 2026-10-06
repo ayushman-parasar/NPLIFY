@@ -420,7 +420,7 @@ ${titleBlock("", "Deliverable 2 — Ledger Posting Design &amp; Chart of Account
 <table><thead><tr><th>Code</th><th>Kind</th><th>Holder</th><th>What the balance means</th></tr></thead><tbody>
 ${PURPOSES.map(([o, p, k, h, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${p}</td><td>${k}</td><td>${esc(h)}</td><td>${esc(w)}</td></tr>`).join("")}
 </tbody></table>
-<p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. The ERD's purpose list gains <code>PAYABLE</code> and <code>WALLET</code> as used here and the holder type <code>Project</code>; <code>ADVANCE</code> is not used because NPL never advances money. Rebates are credited to <code>EXP_PARTNER</code> and referral commissions debited to <code>EARN_GROSS</code>, so no extra income or expense accounts are needed.</p>
+<p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. All purposes and holder types above are in ERD v4.0 (LEDGER_ACCOUNT); <code>ADVANCE</code> does not exist because NPL never advances money. Rebates are credited to <code>EXP_PARTNER</code> and referral commissions debited to <code>EARN_GROSS</code>, so no extra income or expense accounts are needed.</p>
 
 <h2>4 · Reading a posting table</h2>
 <p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example uses project Evo, sender Ayush, receiver Sud (receiver group A, the default group) with entities NewXP Entity and ReferScout Entity, partner PT (Ali, a disclosed-rate partner whose margin is inside its rate) and partner Jeton (a market + 0.50 % partner that states its fee separately). Rates: market 0.9000 EUR per USDT, PT 0.8950 EUR per USDT. Fee structure: basis partner, fixed, 1.00 % in total, 0.40 % sender share and 0.60 % receiver share. The arithmetic behind the amounts is in the Calculation Specification; the headline figures for deal 1 are:</p>
@@ -510,7 +510,7 @@ ${identities.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).jo
 
 <h2>17 · Who sees what</h2>
 <p>Operations sees operational fields, sender-facing prices and partner rates as entered, but never a ledger balance, a margin, a pool, a cost breakdown or a variance, on any screen, export, message or report. Finance sees all postings and balances and owns reconciliation. Management additionally approves settlements above limit, cross-group payouts, shortfall top-ups, contingency routes, own-wallet outbound transfers, balance conversions, dues recovery and post-money voids. Approver is never the initiator, and every controlled action is audited with actor, time, reason and record version.</p>
-<p class="small"><i>Draft v1.0 — for review with NPL. Figures are worked examples, not NPL data. The account purposes PAYABLE and WALLET and the holder type Project are additions to the ERD v4.0 enumerations and will be carried into the next ERD revision.</i></p>
+<p class="small"><i>Draft v1.0 — for review with NPL. Figures are worked examples, not NPL data.</i></p>
 `);
 
 // ------------------------------------------------------------------ DOCUMENT 2: calculation specification
