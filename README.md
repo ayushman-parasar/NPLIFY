@@ -6,8 +6,8 @@ Interactive map of the NPLify P0 data model (draft v4.0) with an assistant that 
 
 - Next.js 16 (App Router) on Vercel, Node runtime for the API routes
 - Claude API via `@anthropic-ai/sdk`, streaming, with the knowledge base cached as a system-prompt prefix
-- Auth.js v5 with magic-link email (Resend) and an email allowlist
-- Neon Postgres via Drizzle for the activity log
+- Auth.js v5 with email + password sign-in; users are seeded rows (no self sign-up)
+- Neon Postgres via Drizzle for users and the activity log
 
 ## Layout
 
@@ -33,15 +33,37 @@ npm run dev
 Without `DATABASE_URL` nothing is recorded and, with `AUTH_DISABLED=true`, sign-in is skipped (development builds only). With a database:
 
 ```bash
-npm run db:push                 # creates the tables
+npm run db:push                 # creates or updates the tables
+cp seed/users.example.json seed/users.json   # edit emails and passwords; this file is git-ignored
+npm run seed -- seed/users.json              # inserts or updates the sign-in users
 ```
+
+## Users and seeding
+
+There is no self sign-up. Sign-in users are rows in the `user` table with a scrypt password hash and a role (`user` or `admin`; admins can open `/admin`). `scripts/seed-users.mjs` inserts new emails and updates existing ones, so re-running it with a changed password resets that password. Passwords must be at least 8 characters.
+
+To seed **production**, run the same script from your machine against the production database:
+
+```bash
+# 1. get the production connection string (either copy DATABASE_URL from the Vercel project's
+#    Environment Variables, or pull all variables into .env.production.local)
+npx vercel env pull .env.production.local --environment=production
+
+# 2. apply the schema to production (creates the user and log tables)
+DATABASE_URL="postgres://..." npm run db:push
+
+# 3. seed the users
+DATABASE_URL="postgres://..." npm run seed -- seed/users.json
+```
+
+Never commit `seed/users.json`. To disable a user, set `"active": false` for them and re-run the seed; to remove one, delete the row in Neon.
 
 ## Deploy to Vercel
 
 1. Push this repo to GitHub and import it in Vercel.
 2. In the Vercel project, add **Neon Postgres** from the Marketplace (free tier). It sets `DATABASE_URL`.
-3. Add the remaining variables from `.env.example`: `ANTHROPIC_API_KEY`, `AUTH_SECRET` (`openssl rand -base64 32`), `AUTH_RESEND_KEY`, `AUTH_EMAIL_FROM` (a sender verified in Resend), `ALLOWED_EMAILS`, `ADMIN_EMAILS`, `NEXT_PUBLIC_FLAGGING_ENABLED`.
-4. Run `npm run db:push` once against the production `DATABASE_URL` (locally, with the variable exported).
+3. Add the remaining variables from `.env.example`: `ANTHROPIC_API_KEY`, `AUTH_SECRET` (`openssl rand -base64 32`), `NEXT_PUBLIC_FLAGGING_ENABLED`, and optionally `ADMIN_EMAILS`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `ASK_DAILY_LIMIT`.
+4. Apply the schema and seed the users against the production `DATABASE_URL` as described above.
 5. Deploy. Set `NEXT_PUBLIC_FLAGGING_ENABLED=false` and redeploy to switch entity flagging off before launch.
 
 ## Cost and model

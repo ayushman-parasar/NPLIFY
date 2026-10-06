@@ -1,0 +1,5 @@
+[
+  { "email": "admin@newxp.example", "password": "change-me-admin-123", "name": "New XP admin", "role": "admin" },
+  { "email": "finance@npl.example", "password": "change-me-finance-123", "name": "NPL Finance", "role": "user" },
+  { "email": "ops@npl.example", "password": "change-me-ops-123", "name": "NPL Operations", "role": "user" }
+]
