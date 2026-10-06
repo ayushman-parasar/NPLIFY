@@ -1,0 +1,389 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Transaction Lifecycle &amp; Approval State Machines v1.0</title><style>
+@page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
+@page land { size: A4 landscape; margin: 12mm 14mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
+.land{page:land;break-before:page;break-after:page}
+body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
+h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
+h2{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:18pt 0 6pt;break-after:avoid}
+h3{font:700 11pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:14pt 0 4pt;break-after:avoid}
+p{margin:0 0 7pt} ul,ol{margin:0 0 8pt 16pt;padding:0} li{margin:0 0 4pt}
+code,.mono{font:8.8pt Menlo,Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:4pt 0 10pt;font-size:9.2pt}
+th{text-align:left;font-weight:600;border-bottom:1px solid #333;padding:3pt 5pt;vertical-align:bottom}
+td{padding:3pt 5pt;border-bottom:1px solid #ddd;vertical-align:top}
+tr{break-inside:avoid}
+.title{text-align:center;margin-top:40mm}
+.title .sub{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:0 0 10pt}
+.title .org{margin:0 0 2pt} .title .date{margin:0 0 16pt}
+.rule{border-top:2px solid #222;border-bottom:1px solid #222;height:2px;margin:10pt 0 14pt}
+.pb{break-before:page}
+figure.chart{margin:8pt 0 12pt;break-inside:avoid} figure.chart svg{display:block;max-width:100%}
+figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
+.box{border:1px solid #2f5d9e;background:#f3f6fb;padding:6pt 9pt;margin:8pt 0;font-size:9.8pt}
+.small{font-size:9pt;color:#444}
+</style></head><body>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 4 — Transaction Lifecycle &amp; Approval State Machines · Draft v1.0</p><p class="org">New XP Technologies Limited</p><p class="date">7 October 2026 · Confidential</p></div>
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v4.0, the Ledger Posting Design v1.0 and the Project Understanding v1.0 with NPL's review comments. It defines the states a transaction passes through from quote to settlement, the events that move it between states, and for every controlled action who initiates it, who approves it, when it escalates to Management and what happens on rejection.<br>
+<b>Audience:</b> NPL Operations, Finance and Management, and the New XP engineering team. Figures show the normal path in blue, exceptions in orange, rejections dashed in red, and end states as rounded boxes.</p>
+<div class="rule"></div>
+
+<h2>1 · Three roles, one principle</h2>
+<p>Every controlled action is <b>maker-checker</b>: one person initiates, a different person in the approving role approves, and the system refuses an approval by the initiator. Visibility is cumulative: Operations sees the least, Finance sees everything Operations sees plus the economics, Management sees everything.</p>
+<table><thead><tr><th style="width:16%">Role</th><th>Does</th><th>Sees</th><th>Never sees</th></tr></thead><tbody>
+<tr><td>Operations</td><td>Quotes, verifies collections, instructs conversions, prepares disbursements, requests reroutes, records partner approvals</td><td>Operational fields, sender-facing prices, partner rates as entered, deal states</td><td>Reference rate at capture, spread, margin, pool, cost breakdown, ledger balances, variances, earnings — on any screen, export, message or report</td></tr>
+<tr><td>Finance</td><td>Approves what Operations initiates (quotes, rates, conversions, settlements, exceptions); resolves variance exceptions; owns reconciliation and the Finance Log; proposes configuration</td><td>Everything Operations sees plus all economics, postings and balances</td><td>—</td></tr>
+<tr><td>Management</td><td>Approves escalations and the heavier actions listed in Section 4; approves configuration and user changes; countersigns releases when only one Finance user is on shift</td><td>Everything</td><td>—</td></tr>
+</tbody></table>
+<div class="box"><b>Where the Understanding document says two things.</b> Section 7.1 says a reroute is "Ops requests, Finance approves"; Section 9 lists "contingency routes" among Management's approvals. Both are kept: Finance approves the individual reroute; Management approves the <i>set</i> of alternate partners a project may reroute to (<code>PARTNER_CONFIG.applicable_for_reroute</code>, which is configuration) and, together with Finance, every outbound transfer from NPL's own wallet.</div>
+
+<h2>2 · The deal: Quote → Collect → Convert → Settle</h2>
+<p>A deal is a group of one or more legs. A quote-first leg walks the whole top row of Figure 1; a collect-first leg is born at Collected because the money arrived before any quote; an estimate-first leg enters Collecting with an indicative figure and is priced at conversion; a return leg is born at Collected, funded by the returned payout. Pricing fields are stamped once and never recomputed.</p>
+<figure class="chart"><svg viewBox="0 0 760 480" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure 1 — Deal leg lifecycle. Blue: normal path. Orange: exceptions. Rounded: end states. Collect-first and return legs enter at Collected; estimate-first enters at Collecting.">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#2f5d9e"/></marker>
+<marker id="arrE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#b7651a"/></marker>
+<marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#a33"/></marker></defs>
+<style>.st{font:600 9.5px Helvetica,Arial,sans-serif;fill:#111}.el{font:8.2px Helvetica,Arial,sans-serif}.note{font:italic 8.6px Helvetica,Arial,sans-serif;fill:#555}</style>
+<path d="M138.0,61.0 L168.0,61.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M286.0,61.0 L316.0,61.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M434.0,61.0 L464.0,61.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M582.0,61.0 L612.0,61.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M671.0,78.0 L671.0,160.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M612.0,177.0 L582.0,177.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M464.0,177.0 L434.0,177.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M316.0,177.0 L286.0,177.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M523.0,78.0 L523.0,307.0 L434.0,307.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M316.0,307.0 L286.0,307.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M375.0,290.0 L375.0,220.0 L642.0,220.0 L659.5,194.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M79.0,78.0 L79.0,290.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M671.0,194.0 L671.0,290.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M671.0,324.0 L671.0,410.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M523.0,194.0 L523.0,290.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M582.0,307.0 L592.0,307.0 L592.0,177.0 L612.0,177.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<rect x="20" y="44" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="2"/>
+<text x="79" y="64.5" text-anchor="middle" class="st">Inquiry</text>
+<rect x="168" y="44" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="227" y="64.5" text-anchor="middle" class="st">Quoted</text>
+<rect x="316" y="44" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="375" y="64.5" text-anchor="middle" class="st">Sent</text>
+<rect x="464" y="44" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="523" y="64.5" text-anchor="middle" class="st">Accepted</text>
+<rect x="612" y="44" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="64.5" text-anchor="middle" class="st">Collecting</text>
+<rect x="612" y="160" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="180.5" text-anchor="middle" class="st">Collected</text>
+<rect x="464" y="160" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="523" y="180.5" text-anchor="middle" class="st">Converting</text>
+<rect x="316" y="160" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="375" y="180.5" text-anchor="middle" class="st">Converted</text>
+<rect x="168" y="160" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="227" y="180.5" text-anchor="middle" class="st">Settled</text>
+<rect x="316" y="290" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="375" y="305.5" text-anchor="middle" class="st">Expired /</text>
+<text x="375" y="316" text-anchor="middle" class="st">in grace</text>
+<rect x="168" y="290" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="227" y="305.5" text-anchor="middle" class="st">Requoted</text>
+<text x="227" y="316" text-anchor="middle" class="st">(new deal group)</text>
+<rect x="20" y="290" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="79" y="305.5" text-anchor="middle" class="st">Voided</text>
+<text x="79" y="316" text-anchor="middle" class="st">(no money moved)</text>
+<rect x="612" y="290" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="671" y="305.5" text-anchor="middle" class="st">Voided after</text>
+<text x="671" y="316" text-anchor="middle" class="st">collection</text>
+<rect x="612" y="410" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="425.5" text-anchor="middle" class="st">Refunded / credited</text>
+<text x="671" y="436" text-anchor="middle" class="st">/ held</text>
+<rect x="464" y="290" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="523" y="310.5" text-anchor="middle" class="st">Rerouted</text>
+<text x="20" y="352" class="note">collect-first and return legs are born at Collected</text>
+<text x="20" y="366" class="note">estimate-first legs enter Collecting with an indicative figure</text>
+<text x="20" y="380" class="note">quote fields are write-once after priced_at (invariant 5)</text>
+<rect x="85.5" y="20" width="135" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="153" y="29" text-anchor="middle" class="el" fill="#2f5d9e">price</text>
+<text x="153" y="38.5" text-anchor="middle" class="el" fill="#2f5d9e">(Ops; Finance if below margin)</text>
+<rect x="263.6" y="20" width="74.8" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="301" y="29" text-anchor="middle" class="el" fill="#2f5d9e">package sent</text>
+<text x="301" y="38.5" text-anchor="middle" class="el" fill="#2f5d9e">within freshness</text>
+<rect x="413.75" y="20" width="70.5" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="449" y="29" text-anchor="middle" class="el" fill="#2f5d9e">sender accepts</text>
+<text x="449" y="38.5" text-anchor="middle" class="el" fill="#2f5d9e">within validity</text>
+<rect x="570.35" y="20" width="53.3" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="597" y="29" text-anchor="middle" class="el" fill="#2f5d9e">destination</text>
+<text x="597" y="38.5" text-anchor="middle" class="el" fill="#2f5d9e">approved</text>
+<rect x="658.3" y="101.5" width="83.39999999999999" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="700" y="110.5" text-anchor="middle" class="el" fill="#2f5d9e">all parts verified</text>
+<rect x="559.6" y="145.5" width="74.8" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="597" y="154.5" text-anchor="middle" class="el" fill="#2f5d9e">instruct partner</text>
+<rect x="409.45" y="136" width="79.1" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="449" y="145" text-anchor="middle" class="el" fill="#2f5d9e">partner books;</text>
+<text x="449" y="154.5" text-anchor="middle" class="el" fill="#2f5d9e">margin recognised</text>
+<rect x="265.75" y="136" width="70.5" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="301" y="145" text-anchor="middle" class="el" fill="#2f5d9e">client net paid</text>
+<text x="301" y="154.5" text-anchor="middle" class="el" fill="#2f5d9e">and confirmed</text>
+<rect x="487.75" y="237.5" width="70.5" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="523" y="246.5" text-anchor="middle" class="el" fill="#b7651a">validity lapses</text>
+<rect x="267.9" y="266" width="66.19999999999999" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="301" y="275" text-anchor="middle" class="el" fill="#b7651a">late decision:</text>
+<text x="301" y="284.5" text-anchor="middle" class="el" fill="#b7651a">re-quote</text>
+<rect x="346.05" y="224" width="147.9" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="420" y="233" text-anchor="middle" class="el" fill="#b7651a">late decision: honour</text>
+<text x="420" y="242.5" text-anchor="middle" class="el" fill="#b7651a">(Finance approval, drift ≤ limit)</text>
+<rect x="39.45" y="164" width="79.1" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="79" y="173" text-anchor="middle" class="el" fill="#b7651a">void before money</text>
+<text x="79" y="182.5" text-anchor="middle" class="el" fill="#b7651a">(Ops, Finance)</text>
+<rect x="633.6" y="231.5" width="74.8" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="671" y="240.5" text-anchor="middle" class="el" fill="#b7651a">void after money</text>
+<rect x="627.15" y="347" width="87.7" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="671" y="356" text-anchor="middle" class="el" fill="#b7651a">Management approves</text>
+<text x="671" y="365.5" text-anchor="middle" class="el" fill="#b7651a">disposition</text>
+<rect x="479.15" y="231.5" width="87.7" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="523" y="240.5" text-anchor="middle" class="el" fill="#b7651a">partner unavailable</text>
+<rect x="550.3" y="242" width="83.39999999999999" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="592" y="251" text-anchor="middle" class="el" fill="#b7651a">alternate partner</text>
+<text x="592" y="260.5" text-anchor="middle" class="el" fill="#b7651a">(Finance approval)</text></svg><figcaption>Figure 1 — Deal leg lifecycle. Blue: normal path. Orange: exceptions. Rounded: end states. Collect-first and return legs enter at Collected; estimate-first enters at Collecting.</figcaption></figure>
+<h3>Transitions</h3>
+<table><thead><tr><th style="width:14%">From</th><th style="width:14%">To</th><th>Event</th><th>Guard</th><th style="width:16%">Who</th></tr></thead><tbody>
+<tr><td>Inquiry</td><td>Quoted</td><td>Price computed: partner × pair chosen, fee structure applied, rate snapshot taken, day's rate comparison created if missing</td><td>Partner rate version usable (not breached); margin ≥ floor, else Finance approval; an approved destination registration exists for the entitled group with that partner (invariant 8)</td><td>Ops; Finance if below margin</td></tr>
+<tr><td>Quoted</td><td>Sent</td><td>Quote package marked sent</td><td>Within quote_freshness_min of the snapshot; otherwise re-price</td><td>Ops</td></tr>
+<tr><td>Sent</td><td>Accepted</td><td>Sender accepts</td><td>Within quote_validity_min</td><td>Ops records</td></tr>
+<tr><td>Sent / Accepted</td><td>Expired / in grace</td><td>Validity lapses</td><td>Grace applies for grace_min only if market drift ≤ grace_drift_pct</td><td>System</td></tr>
+<tr><td>Expired / in grace</td><td>Requoted</td><td>Late decision: re-quote</td><td>New deal group reference; the original stamp is kept</td><td>Ops</td></tr>
+<tr><td>Expired / in grace</td><td>Collected</td><td>Late decision: honour the old rate</td><td>Project late_collection_policy allows it; recorded Finance approval</td><td>Finance</td></tr>
+<tr><td>Accepted</td><td>Collecting</td><td>Instructions issued (wallet, bank-in details or cash instructions)</td><td>—</td><td>Ops</td></tr>
+<tr><td>Collecting</td><td>Collected</td><td>All parts verified (hash / slip / receipt)</td><td>Collected amount matches; overpayment → sender credit; underpayment → wait or void</td><td>Ops verifies</td></tr>
+<tr><td>Collected</td><td>Converting</td><td>Conversion instructed to the partner</td><td>Rate version still usable; receiver fee taken at conversion</td><td>Ops; Finance approves</td></tr>
+<tr><td>Converting</td><td>Converted</td><td>Partner books; actual_out recorded; margin recognised; whole-unit truncation applied</td><td>Variance within tolerance, else an exception opens (the deal does not wait)</td><td>System; Finance on exception</td></tr>
+<tr><td>Converted</td><td>Settled</td><td>Every euro of client net paid out and confirmed (whole units; dust carried)</td><td>Disbursement lifecycle, Figure 2</td><td>—</td></tr>
+<tr><td>Inquiry … Collecting</td><td>Voided</td><td>Void before money moved</td><td>Reason recorded; no postings</td><td>Ops; Finance</td></tr>
+<tr><td>Collected / Converted</td><td>Voided after collection</td><td>Void after money moved</td><td>Disposition: refund (network-fee policy), sender credit, or hold</td><td>Ops; Management</td></tr>
+<tr><td>Converting / Collected</td><td>Rerouted → Collected at the alternate partner</td><td>Partner unavailable, limit reached, holiday, compliance hold</td><td>Approved REROUTE; alternate partner in the applicable set</td><td>Ops; Finance</td></tr>
+</tbody></table>
+
+<h2 class="pb">3 · Settlement, rates, reroute and approval records</h2>
+<figure class="chart"><svg viewBox="0 0 760 350" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure 2 — Settlement: a disbursement and its lines. One disbursement completes when every line is confirmed or returned.">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#2f5d9e"/></marker>
+<marker id="arrE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#b7651a"/></marker>
+<marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#a33"/></marker></defs>
+<style>.st{font:600 9.5px Helvetica,Arial,sans-serif;fill:#111}.el{font:8.2px Helvetica,Arial,sans-serif}.note{font:italic 8.6px Helvetica,Arial,sans-serif;fill:#555}</style>
+<path d="M138.0,47.0 L168.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M286.0,47.0 L316.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M227.0,64.0 L227.0,140.0" fill="none" stroke="#a33" stroke-width="1.1" stroke-dasharray="4 2.5" marker-end="url(#arrR)"/>
+<path d="M168.0,157.0 L79.0,157.0 L79.0,64.0" fill="none" stroke="#a33" stroke-width="1.1" stroke-dasharray="4 2.5" marker-end="url(#arrR)"/>
+<path d="M375.0,64.0 L375.0,140.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M434.0,157.0 L464.0,157.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M400.2,174.0 L497.8,240.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M582.0,259.0 L612.0,260.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M375.0,174.0 L375.0,240.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M545.9,140.0 L648.1,64.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M375.0,274.0 L375.0,302.0 L671.0,302.0 L671.0,64.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<rect x="20" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="2"/>
+<text x="79" y="45.5" text-anchor="middle" class="st">Prepared</text>
+<text x="79" y="56" text-anchor="middle" class="st">(Ops)</text>
+<rect x="168" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="227" y="45.5" text-anchor="middle" class="st">Approved</text>
+<text x="227" y="56" text-anchor="middle" class="st">(Finance)</text>
+<rect x="316" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="375" y="45.5" text-anchor="middle" class="st">Released</text>
+<text x="375" y="56" text-anchor="middle" class="st">by partner</text>
+<rect x="612" y="30" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="50.5" text-anchor="middle" class="st">Completed</text>
+<rect x="168" y="140" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="227" y="155.5" text-anchor="middle" class="st">Rejected →</text>
+<text x="227" y="166" text-anchor="middle" class="st">back to Ops</text>
+<rect x="316" y="140" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="375" y="155.5" text-anchor="middle" class="st">Line: Sent</text>
+<text x="375" y="166" text-anchor="middle" class="st">(in transit)</text>
+<rect x="464" y="140" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="523" y="155.5" text-anchor="middle" class="st">Line: Confirmed</text>
+<text x="523" y="166" text-anchor="middle" class="st">full</text>
+<rect x="464" y="240" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="523" y="255.5" text-anchor="middle" class="st">Line: Confirmed</text>
+<text x="523" y="266" text-anchor="middle" class="st">short</text>
+<rect x="612" y="240" width="118" height="44" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="255.5" text-anchor="middle" class="st">Shortfall open →</text>
+<text x="671" y="266" text-anchor="middle" class="st">topped up next</text>
+<text x="671" y="276.5" text-anchor="middle" class="st">settlement</text>
+<rect x="316" y="240" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="375" y="255.5" text-anchor="middle" class="st">Line: Returned</text>
+<text x="375" y="266" text-anchor="middle" class="st">(back to balance)</text>
+<text x="20" y="340" class="note">Management approves when: above settlement limit · third same-day slot · payout to another receiver group · only one Finance user on shift (countersign)</text>
+<rect x="134.95" y="15.5" width="36.099999999999994" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="153" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">approve</text>
+<rect x="263.6" y="15.5" width="74.8" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="301" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">partner executes</text>
+<rect x="185.3" y="91.5" width="83.39999999999999" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="227" y="100.5" text-anchor="middle" class="el" fill="#a33">reject with reason</text>
+<rect x="54.5" y="100" width="49" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="79" y="109" text-anchor="middle" class="el" fill="#a33">re-prepare</text>
+<rect x="352.65" y="91.5" width="44.699999999999996" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="375" y="100.5" text-anchor="middle" class="el" fill="#2f5d9e">each line</text>
+<rect x="409.45" y="125.5" width="79.1" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="449" y="134.5" text-anchor="middle" class="el" fill="#2f5d9e">receiver confirms</text>
+<rect x="409.45" y="196.5" width="79.1" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="449" y="205.5" text-anchor="middle" class="el" fill="#b7651a">bank fee deducted</text>
+<rect x="566.05" y="239.5" width="61.9" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="597" y="248.5" text-anchor="middle" class="el" fill="#b7651a">carry-forward</text>
+<text x="597" y="258" text-anchor="middle" class="el" fill="#b7651a">(Management)</text>
+<rect x="346.2" y="196.5" width="57.599999999999994" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="375" y="205.5" text-anchor="middle" class="el" fill="#b7651a">bank rejects</text>
+<rect x="559.6" y="91.5" width="74.8" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="597" y="100.5" text-anchor="middle" class="el" fill="#2f5d9e">all lines closed</text>
+<rect x="460.35" y="278" width="139.29999999999998" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="530" y="287" text-anchor="middle" class="el" fill="#b7651a">reversed; funds stay in balance</text>
+<text x="530" y="296.5" text-anchor="middle" class="el" fill="#b7651a">or fund a return leg</text></svg><figcaption>Figure 2 — Settlement: a disbursement and its lines. One disbursement completes when every line is confirmed or returned.</figcaption></figure>
+<figure class="chart"><svg viewBox="0 0 760 195" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure 3 — Partner rate version. A breach freezes quoting and conversion on that partner × pair; there is no skip path.">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#2f5d9e"/></marker>
+<marker id="arrE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#b7651a"/></marker>
+<marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#a33"/></marker></defs>
+<style>.st{font:600 9.5px Helvetica,Arial,sans-serif;fill:#111}.el{font:8.2px Helvetica,Arial,sans-serif}.note{font:italic 8.6px Helvetica,Arial,sans-serif;fill:#555}</style>
+<path d="M138.0,47.0 L316.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M110.5,64.0 L195.6,110.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M286.0,127.0 L464.0,127.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M286.0,142.3 L400.0,172.0 L671.0,172.0 L671.0,144.0" fill="none" stroke="#a33" stroke-width="1.1" stroke-dasharray="4 2.5" marker-end="url(#arrR)"/>
+<path d="M434.0,47.0 L612.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M523.0,110.0 L523.0,100.0 L375.0,100.0 L375.0,64.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<rect x="20" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="2"/>
+<text x="79" y="45.5" text-anchor="middle" class="st">Active</text>
+<text x="79" y="56" text-anchor="middle" class="st">(new version)</text>
+<rect x="316" y="30" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="375" y="50.5" text-anchor="middle" class="st">Usable</text>
+<rect x="168" y="110" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="227" y="125.5" text-anchor="middle" class="st">Breached</text>
+<text x="227" y="136" text-anchor="middle" class="st">(pair frozen)</text>
+<rect x="464" y="110" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="523" y="125.5" text-anchor="middle" class="st">Approved</text>
+<text x="523" y="136" text-anchor="middle" class="st">(Finance, reason)</text>
+<rect x="612" y="110" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="130.5" text-anchor="middle" class="st">Rejected</text>
+<rect x="612" y="30" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="50.5" text-anchor="middle" class="st">Expired</text>
+<rect x="172.4" y="6" width="109.19999999999999" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="227" y="15" text-anchor="middle" class="el" fill="#2f5d9e">spread within</text>
+<text x="227" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">avg_2w × (1 + threshold)</text>
+<rect x="111.30000000000001" y="76.5" width="83.39999999999999" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="153" y="85.5" text-anchor="middle" class="el" fill="#b7651a">spread above limit</text>
+<rect x="337.6" y="86" width="74.8" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="375" y="95" text-anchor="middle" class="el" fill="#b7651a">Finance approves</text>
+<text x="375" y="104.5" text-anchor="middle" class="el" fill="#b7651a">with reason</text>
+<rect x="496.15" y="148" width="87.7" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="540" y="157" text-anchor="middle" class="el" fill="#a33">rejected, or better</text>
+<text x="540" y="166.5" text-anchor="middle" class="el" fill="#a33">rate requested</text>
+<rect x="498.5" y="15.5" width="49" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="523" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">expires_at</text>
+<rect x="414.75" y="85.5" width="70.5" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="450" y="94.5" text-anchor="middle" class="el" fill="#2f5d9e">quoting resumes</text></svg><figcaption>Figure 3 — Partner rate version. A breach freezes quoting and conversion on that partner × pair; there is no skip path.</figcaption></figure>
+<figure class="chart"><svg viewBox="0 0 760 180" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure 4 — Reroute. The only time NPL holds client money; every resting balance carries deal, reason and age.">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#2f5d9e"/></marker>
+<marker id="arrE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#b7651a"/></marker>
+<marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#a33"/></marker></defs>
+<style>.st{font:600 9.5px Helvetica,Arial,sans-serif;fill:#111}.el{font:8.2px Helvetica,Arial,sans-serif}.note{font:italic 8.6px Helvetica,Arial,sans-serif;fill:#555}</style>
+<path d="M138.0,47.0 L168.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M227.0,64.0 L227.0,120.0" fill="none" stroke="#a33" stroke-width="1.1" stroke-dasharray="4 2.5" marker-end="url(#arrR)"/>
+<path d="M286.0,47.0 L316.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M434.0,47.0 L464.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M582.0,47.0 L612.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M523.0,64.0 L523.0,120.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M582.0,137.0 L671.0,137.0 L671.0,64.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<rect x="20" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="2"/>
+<text x="79" y="45.5" text-anchor="middle" class="st">Requested</text>
+<text x="79" y="56" text-anchor="middle" class="st">(Ops, trigger)</text>
+<rect x="168" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="227" y="45.5" text-anchor="middle" class="st">Approved</text>
+<text x="227" y="56" text-anchor="middle" class="st">(Finance)</text>
+<rect x="316" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="375" y="45.5" text-anchor="middle" class="st">In custody</text>
+<text x="375" y="56" text-anchor="middle" class="st">(own wallet)</text>
+<rect x="464" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="523" y="45.5" text-anchor="middle" class="st">Forwarded to</text>
+<text x="523" y="56" text-anchor="middle" class="st">alternate partner</text>
+<rect x="612" y="30" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="50.5" text-anchor="middle" class="st">Completed</text>
+<rect x="168" y="120" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="227" y="135.5" text-anchor="middle" class="st">Rejected →</text>
+<text x="227" y="146" text-anchor="middle" class="st">route unchanged</text>
+<rect x="464" y="120" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="523" y="135.5" text-anchor="middle" class="st">Dues recovered</text>
+<text x="523" y="146" text-anchor="middle" class="st">(Management)</text>
+<rect x="117.75" y="15.5" width="70.5" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="153" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">reason recorded</text>
+<rect x="211.1" y="81.5" width="31.799999999999997" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="227" y="90.5" text-anchor="middle" class="el" fill="#a33">reject</text>
+<rect x="263.6" y="6" width="74.8" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="301" y="15" text-anchor="middle" class="el" fill="#2f5d9e">collection lands</text>
+<text x="301" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">in own wallet</text>
+<rect x="405.15" y="6" width="87.7" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="449" y="15" text-anchor="middle" class="el" fill="#2f5d9e">outbound: Finance +</text>
+<text x="449" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">Management, signers</text>
+<rect x="557.45" y="-3.5" width="79.1" height="31.5" fill="#fff" fill-opacity="0.95"/>
+<text x="597" y="5.5" text-anchor="middle" class="el" fill="#2f5d9e">alternate partner</text>
+<text x="597" y="15" text-anchor="middle" class="el" fill="#2f5d9e">converts (margin</text>
+<text x="597" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">captured there)</text>
+<rect x="468.4" y="81.5" width="109.19999999999999" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="523" y="90.5" text-anchor="middle" class="el" fill="#b7651a">forward_and_recover_dues</text>
+<rect x="620.7" y="90" width="100.6" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="671" y="99" text-anchor="middle" class="el" fill="#b7651a">receivable ↓, wallet ↑</text></svg><figcaption>Figure 4 — Reroute. The only time NPL holds client money; every resting balance carries deal, reason and age.</figcaption></figure>
+<figure class="chart"><svg viewBox="0 0 760 170" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure 5 — An APPROVAL record. Approver ≠ initiator is enforced at the endpoint; a rejection never deletes anything.">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#2f5d9e"/></marker>
+<marker id="arrE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#b7651a"/></marker>
+<marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#a33"/></marker></defs>
+<style>.st{font:600 9.5px Helvetica,Arial,sans-serif;fill:#111}.el{font:8.2px Helvetica,Arial,sans-serif}.note{font:italic 8.6px Helvetica,Arial,sans-serif;fill:#555}</style>
+<path d="M138.0,47.0 L316.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<path d="M110.5,64.0 L195.6,110.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M258.4,110.0 L343.6,64.0" fill="none" stroke="#b7651a" stroke-width="1.1" marker-end="url(#arrE)"/>
+<path d="M286.0,127.0 L464.0,127.0" fill="none" stroke="#a33" stroke-width="1.1" stroke-dasharray="4 2.5" marker-end="url(#arrR)"/>
+<path d="M79.0,64.0 L79.0,127.0 L464.0,127.0" fill="none" stroke="#a33" stroke-width="1.1" stroke-dasharray="4 2.5" marker-end="url(#arrR)"/>
+<path d="M434.0,47.0 L612.0,47.0" fill="none" stroke="#2f5d9e" stroke-width="1.1" marker-end="url(#arr)"/>
+<rect x="20" y="30" width="118" height="34" rx="6" fill="#fff" stroke="#2f5d9e" stroke-width="2"/>
+<text x="79" y="45.5" text-anchor="middle" class="st">Requested</text>
+<text x="79" y="56" text-anchor="middle" class="st">(initiator)</text>
+<rect x="316" y="30" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="375" y="50.5" text-anchor="middle" class="st">Approved</text>
+<rect x="168" y="110" width="118" height="34" rx="6" fill="#fdf1ea" stroke="#b7651a" stroke-width="1.2"/>
+<text x="227" y="125.5" text-anchor="middle" class="st">Escalated to</text>
+<text x="227" y="136" text-anchor="middle" class="st">Management</text>
+<rect x="464" y="110" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="523" y="125.5" text-anchor="middle" class="st">Rejected</text>
+<text x="523" y="136" text-anchor="middle" class="st">(reason)</text>
+<rect x="612" y="30" width="118" height="34" rx="17" fill="#e8eef7" stroke="#2f5d9e" stroke-width="1.2"/>
+<text x="671" y="50.5" text-anchor="middle" class="st">Executed</text>
+<rect x="191.75" y="6" width="70.5" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="227" y="15" text-anchor="middle" class="el" fill="#2f5d9e">approving role,</text>
+<text x="227" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">different user</text>
+<rect x="109.15" y="67" width="87.7" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="153" y="76" text-anchor="middle" class="el" fill="#b7651a">limit or rule</text>
+<text x="153" y="85.5" text-anchor="middle" class="el" fill="#b7651a">requires Management</text>
+<rect x="257.15" y="76.5" width="87.7" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="301" y="85.5" text-anchor="middle" class="el" fill="#b7651a">Management approves</text>
+<rect x="333.3" y="95.5" width="83.39999999999999" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="375" y="104.5" text-anchor="middle" class="el" fill="#a33">Management rejects</text>
+<rect x="234.1" y="116.5" width="74.8" height="12.5" fill="#fff" fill-opacity="0.95"/>
+<text x="271.5" y="125.5" text-anchor="middle" class="el" fill="#a33">approver rejects</text>
+<rect x="492.05" y="6" width="61.9" height="22" fill="#fff" fill-opacity="0.95"/>
+<text x="523" y="15" text-anchor="middle" class="el" fill="#2f5d9e">action runs;</text>
+<text x="523" y="24.5" text-anchor="middle" class="el" fill="#2f5d9e">audit written</text></svg><figcaption>Figure 5 — An APPROVAL record. Approver ≠ initiator is enforced at the endpoint; a rejection never deletes anything.</figcaption></figure>
+
+<section class="land"><h2>4 · Controlled actions: who initiates, who approves, what rejection means</h2>
+<p>The approving role is always a different user from the initiator. "Escalates to Management when" lists the conditions that add a Management approval on top of, not instead of, the approving role's.</p>
+<table style="font-size:8.6pt"><thead><tr><th style="width:21%">Controlled action</th><th style="width:9%">Initiates</th><th style="width:11%">Approves</th><th style="width:29%">Escalates to Management when</th><th>On rejection</th></tr></thead><tbody>
+<tr><td>Quote a deal (price, fee, partner × pair)</td><td>Operations</td><td>Finance</td><td>Below-margin quote: Finance approval mandatory before sending</td><td>Returns to Ops with reason; the quote package is not sent; Ops re-prices as a new quote</td></tr><tr><td>Honour an expired quote (late decision)</td><td>Operations</td><td>Finance</td><td>Project policy must allow honouring; market drift within grace_drift_pct</td><td>Re-quote at today's rate with a new deal reference; the original stamp is kept</td></tr><tr><td>Enter a manual rate (reference feed outage)</td><td>Operations</td><td>Finance</td><td>Evidence attached (both feeds down)</td><td>No rate; quoting waits for the feed or a new manual entry</td></tr><tr><td>Confirm a partner rate version</td><td>Operations (enters)</td><td>Finance (confirms)</td><td>Breached version: Finance approval with recorded reason, or rejection; no skip path</td><td>Pair stays frozen; Ops may request a better rate from the partner, which is a new version</td></tr><tr><td>Verify a collection (hash / slip / receipt)</td><td>Operations</td><td>— (audited; Finance reviews in reconciliation)</td><td>Underpayment left open beyond policy: Finance decides wait or void</td><td>Collection stays unverified; funds are not attributed</td></tr><tr><td>Instruct a conversion</td><td>Operations</td><td>Finance</td><td>Variance beyond tolerance opens an exception that Finance resolves</td><td>Conversion not instructed; deal stays Collected</td></tr><tr><td>Resolve a conversion variance exception</td><td>Finance</td><td>Finance (second user)</td><td>Variance above the project's exception limit → Management</td><td>Exception stays open; the deal is already converted and does not wait</td></tr><tr><td>Prepare and release a disbursement</td><td>Operations</td><td>Finance</td><td>Above settlement limit; third same-day slot; payout to a receiver in another group (offset); only one Finance user on shift → Management countersigns</td><td>Back to Prepared with reason; lines can be changed and re-submitted</td></tr><tr><td>Override the bank-fee treatment on one settlement</td><td>Operations</td><td>Finance</td><td>—</td><td>Project default applies</td></tr><tr><td>Top up a shortfall from the pool</td><td>Finance</td><td>Management</td><td>Always Management (company money becomes client money)</td><td>Shortfall stays open; receiver remains short</td></tr><tr><td>Pay a receiver in another receiver group (offset)</td><td>Operations</td><td>Finance</td><td>Always Management, with tighter aging on the resulting offset</td><td>Lines must stay within the entitled group</td></tr><tr><td>Request a reroute</td><td>Operations</td><td>Finance</td><td>Contingency route set (applicable_for_reroute) is configuration: Management</td><td>Deal stays on its route; if the partner is unavailable the deal waits or is voided</td></tr><tr><td>Outbound transfer from NPL's own wallet</td><td>Finance</td><td>Management (dual approval)</td><td>Always; executed by NPL signers outside the platform (hardware or multisig)</td><td>Funds stay in custody; aging continues to be reported</td></tr><tr><td>Recover dues on a reroute (net against forwarded funds)</td><td>Finance</td><td>Management</td><td>Always; amount ≤ outstanding receivable at that partner; partner's agreement recorded</td><td>Forward the full amount</td></tr><tr><td>Balance conversion (client balance to another currency)</td><td>Finance</td><td>Management</td><td>Always; any excess over the served group's entitlement is an offset and needs the offset approval too</td><td>Balance stays in its currency</td></tr><tr><td>Open a return leg after a rejected payout</td><td>Operations</td><td>Finance</td><td>Destination other than the sender's own return receiver → Management with reason; markup apply / waive is a FEE_DECISION approved by Finance</td><td>Returned funds stay in balance for later payouts</td></tr><tr><td>Override the network-fee policy on a refund</td><td>Operations</td><td>Finance</td><td>—</td><td>Project default applies</td></tr><tr><td>Void a deal before money moved</td><td>Operations</td><td>Finance</td><td>—</td><td>Deal continues</td></tr><tr><td>Void a deal after collection (refund / sender credit / hold)</td><td>Operations</td><td>Management</td><td>Always</td><td>Deal continues; funds stay attributed</td></tr><tr><td>Record a partner's destination approval (SETTLEMENT_REGISTRATION)</td><td>Operations</td><td>Finance</td><td>—</td><td>Registration stays pending_partner; quote-first deals for it cannot leave Inquiry</td></tr><tr><td>Change thresholds, fee structures, partner configuration, rates sources</td><td>Finance</td><td>Management</td><td>Always; all versioned</td><td>Current version stays in force</td></tr><tr><td>Create, change or remove a user or role</td><td>Management</td><td>Management (second user)</td><td>Always</td><td>No change</td></tr><tr><td>Ledger adjustment (reversal and re-posting)</td><td>Finance</td><td>Management</td><td>Always; the reversal names the transaction it reverses</td><td>Books unchanged; the discrepancy stays on the exception list</td></tr>
+</tbody></table>
+</section>
+
+<h2>5 · Rejection handling, the same way everywhere</h2>
+<ol>
+<li><b>Nothing is deleted.</b> The request, the rejection and its reason stay on the APPROVAL record and in the audit log. A re-submission is a new approval request that points at the rejected one.</li>
+<li><b>The record returns to the initiator's last safe state.</b> A rejected quote is not sent; a rejected disbursement goes back to Prepared; a rejected reroute leaves the route unchanged; a rejected balance conversion leaves the balance in its currency.</li>
+<li><b>Money that already moved is never rolled back by a rejection.</b> A conversion the partner has booked stands; a variance exception is resolved by a decision and, if needed, a reversing ledger entry, not by editing the conversion.</li>
+<li><b>A rejection reason is mandatory</b> and is visible to the initiator; derived-economics fields are stripped from the reason shown to Operations.</li>
+<li><b>Frozen states need a decision, not time.</b> A breached rate version, an open variance exception, an open offset and custody in NPL's wallet all stay on the daily exception list until a role with authority acts.</li>
+<li><b>Escalation never skips a level.</b> Management approves in addition to Finance; when only one Finance user is on shift, Management's countersignature stands in for the second Finance user.</li>
+</ol>
+
+<h2>6 · State tables by entity</h2>
+<table><thead><tr><th style="width:22%">Entity</th><th>States and transitions</th><th style="width:34%">Notes</th></tr></thead><tbody>
+<tr><td class="mono">DEAL_GROUP</td><td>Inquiry → Quoted → Sent → Accepted → Collecting → Collected → Converting → Converted → Settled; Expired / in grace; Requoted; Voided; Voided after collection → Refunded / Credited / Held</td><td>The group's state follows its legs: Settled when every forward leg is settled and no return leg is open.</td></tr><tr><td class="mono">DEAL (leg)</td><td>As Figure 1. A collect-first or return leg is born at Collected; an estimate-first leg enters Collecting; a leg 2 of a route is born at Collected when leg 1 pays the transit receiver</td><td>leg_type and funding_source decide the entry point. Pricing fields are write-once after priced_at.</td></tr><tr><td class="mono">COLLECTION</td><td>Pending → Received → Verified; Rejected</td><td>Parts post as verified. Overpayment creates SENDER_CREDIT; underpayment waits or is voided.</td></tr><tr><td class="mono">CONVERSION</td><td>Expected → Booked → Approved; Variance exception (Booked, beyond tolerance) → Resolved</td><td>The booked figure is what the partner did; the exception is resolved by Finance; the deal does not wait.</td></tr><tr><td class="mono">BALANCE_CONVERSION</td><td>Requested (Finance) → Approved (Management) → Booked; Rejected</td><td>Owns exactly one CONVERSION; entitlement re-attributed to the served group on booking.</td></tr><tr><td class="mono">REROUTE</td><td>Requested → Approved → In custody → Forwarded → Completed; Rejected</td><td>Phase pre_collection or post_collection; outcome via_own_wallet or refund_sender.</td></tr><tr><td class="mono">DISBURSEMENT</td><td>Prepared → Approved → Released → Completed; Rejected (back to Prepared)</td><td>Completed when every line is confirmed or returned.</td></tr><tr><td class="mono">DISBURSEMENT_LINE (outcome)</td><td>sent → confirmed; sent → returned</td><td>A returned line is reversed into the balance before anything else happens.</td></tr><tr><td class="mono">CONFIRMATION (result)</td><td>full | short</td><td>Short opens a SHORTFALL unless the treatment is waived.</td></tr><tr><td class="mono">SHORTFALL</td><td>open → topped_up</td><td>Top-up funded from the pool, Management approval, paid with the next disbursement.</td></tr><tr><td class="mono">BANK_FEE_EVENT</td><td>open → applied</td><td>Applied to the disbursement that carried the true-up.</td></tr><tr><td class="mono">DISBURSEMENT_RETURN</td><td>recorded (terminal)</td><td>Fund a return leg or stay in balance.</td></tr><tr><td class="mono">RATE_COMPARISON</td><td>open → closed</td><td>One per partner × pair × date; closed at end of day.</td></tr><tr><td class="mono">PARTNER_RATE_VERSION</td><td>active → usable → expired; active → breached → approved → usable, or rejected</td><td>Never overwritten; each conversion names its version.</td></tr><tr><td class="mono">SETTLEMENT_REGISTRATION (approval_status)</td><td>pending_partner → approved → suspended → approved</td><td>A quote-first deal leaves Inquiry only if the entitled group has an approved registration with the chosen partner.</td></tr><tr><td class="mono">FEE_DECISION</td><td>proposed → approved → applied; rejected</td><td>One subject (deal leg, disbursement or balance conversion); standing rules are unaffected.</td></tr><tr><td class="mono">SENDER_CREDIT</td><td>open → applied</td><td>Applied to a later deal or refunded (a void disposition).</td></tr><tr><td class="mono">EARNINGS_RECEIVABLE</td><td>outstanding → recovered</td><td>Recovered on the partner's fee cycle or by netting on a reroute.</td></tr><tr><td class="mono">REFERRAL_ACCRUAL</td><td>accrued → paid</td><td>Paid from NPL's earnings.</td></tr><tr><td class="mono">PARTNER_REBATE_ACCRUAL</td><td>expected → reconciled → received</td><td>Monthly against the partner's statement.</td></tr><tr><td class="mono">APPROVAL</td><td>requested → approved | rejected; requested → escalated → approved | rejected</td><td>As Figure 5.</td></tr>
+</tbody></table>
+
+<h2>7 · Aging and the daily exception list</h2>
+<p>Four things age and are reported daily with deal, reason and hours since the event: client money in NPL's own wallet (custody), open offsets across receiver groups, open shortfalls, and open variance exceptions. Breached rate versions and frozen partner × pairs appear on the same list. Time limits for each are project configuration (THRESHOLD) and are not fixed by this document.</p>
+<p class="small"><i>Draft v1.0 — for review with NPL. State names are the proposal for the state columns the ERD leaves as free text; once agreed they become the enumerations of those columns.</i></p>
+</body></html>

@@ -296,7 +296,7 @@ L.tx("T20 · Balance conversion at PT: 5,000 SGD of client balance → USDT at 0
   [`CL.PT.USDT.DUE`, "Dr", bcWhole, USDT, CLIENT, "principal", "USDT balance arrives, whole units"],
   [`CL.PT.USDT.DUE`, "Dr", bcDust, USDT, CLIENT, "rounding", ""],
   [`CL.PROJECT.USDT.PAYABLE`, "Cr", bcOut, USDT, CLIENT, "principal", "same obligation, new currency"],
-], "No sender, receiver or collection: Finance requests and approves. ENTITLEMENT_REATTRIBUTION moves Group B's SGD entitlement into USDT; if Group B held less than 5,000 SGD of entitlement, the excess is another group's flow and is booked as an approved offset.");
+], "No sender, receiver or collection: Finance requests, Management approves. ENTITLEMENT_REATTRIBUTION moves Group B's SGD entitlement into USDT; if Group B held less than 5,000 SGD of entitlement, the excess is another group's flow and is booked as an approved offset.");
 
 // Referral commission and partner rebate on deal 3 (Jeton)
 const refShare = 0.25, referral = r2(DJ.earnings * refShare);
@@ -479,7 +479,7 @@ ${L.html('T16')}${L.html('T17')}${L.html('T18')}${L.html('T19')}
 <p><b>Advances.</b> NPL never pays a receiver before the client's money has arrived, so there is no advance account and no advance posting pattern in this design.</p>
 
 <h2>12 · Pattern H — balance conversion</h2>
-<p>NPL may convert a client's held balance from one currency to another to fund a payout, for example 5,000 SGD to USDT at PT. It is not a deal: there is no sender, receiver or collection, and Finance requests and approves it. The posting moves the client's asset and obligation from one currency to the other; a markup, if a <code>FEE_DECISION</code> applies one, posts to the pool and to gross earnings as in T2.</p>
+<p>NPL may convert a client's held balance from one currency to another to fund a payout, for example 5,000 SGD to USDT at PT. It is not a deal: there is no sender, receiver or collection; Finance requests it and Management approves it. The posting moves the client's asset and obligation from one currency to the other; a markup, if a <code>FEE_DECISION</code> applies one, posts to the pool and to gross earnings as in T2.</p>
 ${L.html('T20a')}${L.html('T20')}
 
 <h2>13 · Pattern I — referral commissions and partner rebates</h2>

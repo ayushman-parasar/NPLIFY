@@ -1769,7 +1769,7 @@
   "BALANCE_CONVERSION": {
    "d": "deal",
    "col": 5,
-   "desc": "NPL converting a client’s held balance at a partner (5K SGD → USDT to fund a 15K USDT payout). Not a deal leg: no sender, receiver or collection; Finance requests and approves. Uses the same rate machinery; markup is a FEE_DECISION. Names the receiver group it serves (chosen split).",
+   "desc": "NPL converting a client’s held balance at a partner (5K SGD → USDT to fund a 15K USDT payout). Not a deal leg: no sender, receiver or collection; Finance requests, Management approves. Uses the same rate machinery; markup is a FEE_DECISION. Names the receiver group it serves (chosen split).",
    "f": [
     [
      "id",
@@ -1842,12 +1842,14 @@
     [
      "requested_by",
      "int",
-     "FK"
+     "FK",
+     "Finance"
     ],
     [
      "approved_by",
      "int",
-     "FK"
+     "FK",
+     "Management"
     ],
     [
      "converted_at",
