@@ -1,0 +1,501 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Configuration Schema Specification v1.0</title><style>
+@page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
+body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
+h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
+h2{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:18pt 0 6pt;break-after:avoid}
+h3{font:700 11pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:14pt 0 4pt;break-after:avoid}
+h4{font:700 10pt Helvetica,Arial,sans-serif;margin:14pt 0 2pt;break-after:avoid}
+h4 .scope{font-weight:400;color:#666;font-size:9pt}
+p{margin:0 0 7pt} .desc{font-size:9.6pt;color:#333} ul,ol{margin:0 0 8pt 16pt;padding:0} li{margin:0 0 3pt}
+ul.rules{font-size:9.3pt;color:#333}
+code,.mono{font:8.8pt Menlo,Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:4pt 0 6pt;font-size:9.2pt}
+th{text-align:left;font-weight:600;border-bottom:1px solid #333;padding:3pt 5pt;vertical-align:bottom}
+td{padding:3pt 5pt;border-bottom:1px solid #ddd;vertical-align:top}
+table.dd{font-size:8.8pt} table.dd td,table.dd th{padding:2pt 5pt}
+tr{break-inside:avoid}
+.title{text-align:center;margin-top:40mm}
+.title .sub{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:0 0 10pt}
+.title .org{margin:0 0 2pt} .title .date{margin:0 0 16pt}
+.rule{border-top:2px solid #222;border-bottom:1px solid #222;height:2px;margin:10pt 0 14pt}
+.pb{break-before:page}
+figure.chart{margin:8pt 0 12pt;break-inside:avoid} figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
+pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left:3px solid #2f5d9e;padding:8pt 10pt;white-space:pre-wrap;margin:4pt 0 10pt}
+.box{border:1px solid #2f5d9e;background:#f3f6fb;padding:6pt 9pt;margin:8pt 0;font-size:9.8pt}
+.small{font-size:9pt;color:#444}
+</style></head><body>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 5 — Configuration Schema Specification · Draft v1.0</p><p class="org">New XP Technologies Limited</p><p class="date">7 October 2026 · Confidential</p></div>
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v4.0, the Calculation Specification v1.0 and the Project Understanding v1.0 with NPL's review comments. It specifies every configuration entity (fields, allowed values, defaults, validation rules) in a project-agnostic way, and expresses one existing NPL project, the FRS "Client 1" USDT → EUR flow, end to end in that schema. The worked example was validated against the rules in this document by the script that produced it.<br>
+<b>Audience:</b> NPL Finance and Management, who own configuration, and the New XP engineering team.</p>
+<div class="rule"></div>
+
+<h2>1 · How configuration is organised</h2>
+<p>Three ideas carry the whole model. <b>A project is a client.</b> Everything a client needs sits under its project: settings, currency pairs, senders, receiver groups, and one partner configuration block per partner the client uses. <b>Parties are partner-independent.</b> Senders, receiver groups and receiving entities belong to the project, so the same Ayush → Raj flow can run through Ali today and Jeton tomorrow. <b>How a partner is used is a block.</b> Fees, vehicles, collection endpoints, narratives, rails, destination approvals and rebate terms for one partner in one project all hang off a single PARTNER_CONFIG.</p>
+<figure class="chart"><svg viewBox="0 0 760 420" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The configuration model: global master data, the project, its parties and groups, and one partner configuration block per partner">
+<style>.b{fill:#fff;stroke:#2f5d9e;stroke-width:1.2}.g{fill:#f3f6fb;stroke:#2f5d9e;stroke-width:1.2}.gl{fill:#fff;stroke:#777;stroke-width:1.2;stroke-dasharray:3 2}.t{font:600 9.5px Helvetica,Arial,sans-serif;fill:#111}.s{font:8.3px Helvetica,Arial,sans-serif;fill:#444}.h{font:700 10px Helvetica,Arial,sans-serif;fill:#2f5d9e}.l{stroke:#2f5d9e;stroke-width:1.1;fill:none}</style>
+<text x="20" y="22" class="h">Global master data (shared by all projects)</text>
+<rect x="20" y="30" width="150" height="34" rx="6" class="gl"/><text x="95" y="51" text-anchor="middle" class="t">PARTNER</text>
+<rect x="190" y="30" width="150" height="34" rx="6" class="gl"/><text x="265" y="51" text-anchor="middle" class="t">RATE_SOURCE</text>
+<rect x="360" y="30" width="150" height="34" rx="6" class="gl"/><text x="435" y="51" text-anchor="middle" class="t">INTRODUCER</text>
+<text x="20" y="100" class="h">One project = one client</text>
+<rect x="20" y="108" width="720" height="296" rx="8" class="g"/>
+<rect x="36" y="122" width="150" height="34" rx="6" class="b"/><text x="111" y="143" text-anchor="middle" class="t">PROJECT</text>
+<rect x="36" y="172" width="150" height="30" rx="6" class="b"/><text x="111" y="191" text-anchor="middle" class="t">THRESHOLD</text>
+<rect x="36" y="212" width="150" height="30" rx="6" class="b"/><text x="111" y="231" text-anchor="middle" class="t">CURRENCY_PAIR</text>
+<text x="111" y="256" text-anchor="middle" class="s">→ PAIR_RATE_SOURCE (chain)</text>
+<rect x="36" y="268" width="150" height="30" rx="6" class="b"/><text x="111" y="287" text-anchor="middle" class="t">OWN_WALLET</text>
+<rect x="36" y="308" width="150" height="30" rx="6" class="b"/><text x="111" y="327" text-anchor="middle" class="t">SENDER</text>
+<text x="111" y="352" text-anchor="middle" class="s">allow-list → groups</text>
+<text x="111" y="364" text-anchor="middle" class="s">provenance · fee overrides</text>
+<rect x="214" y="122" width="170" height="30" rx="6" class="b"/><text x="299" y="141" text-anchor="middle" class="t">RECEIVER_GROUP</text>
+<text x="299" y="165" text-anchor="middle" class="s">one default · one return</text>
+<rect x="214" y="178" width="170" height="30" rx="6" class="b"/><text x="299" y="197" text-anchor="middle" class="t">RECEIVER (kind)</text>
+<rect x="214" y="222" width="170" height="30" rx="6" class="b"/><text x="299" y="241" text-anchor="middle" class="t">RECEIVING_ENTITY</text>
+<rect x="214" y="266" width="170" height="30" rx="6" class="b"/><text x="299" y="285" text-anchor="middle" class="t">RECEIVING_ENTITY_ACCOUNT</text>
+<text x="299" y="309" text-anchor="middle" class="s">currency × rail</text>
+<rect x="214" y="330" width="170" height="30" rx="6" class="b"/><text x="299" y="349" text-anchor="middle" class="t">REFERRAL_RULE</text>
+<path class="l" d="M299,152 V178 M299,208 V222 M299,252 V266"/>
+<text x="420" y="134" class="h">Partner configuration block (one per partner used)</text>
+<rect x="412" y="142" width="312" height="250" rx="6" class="b"/>
+<rect x="424" y="152" width="140" height="28" rx="5" class="b"/><text x="494" y="170" text-anchor="middle" class="t">PARTNER_CONFIG</text>
+<text x="430" y="200" class="s">PARTNER_PAIR → FEE_STRUCTURE (versioned)</text>
+<text x="430" y="216" class="s">FACILITATING_ENTITY → WALLET (crypto-in)</text>
+<text x="430" y="232" class="s">COLLECTION_RECEIVING_ENTITY (bank-in)</text>
+<text x="430" y="248" class="s">SETTLEMENT_SENDING_ENTITY (narrative)</text>
+<text x="430" y="264" class="s">SETTLEMENT_RAIL (bank / EMI that executes)</text>
+<text x="430" y="280" class="s">SETTLEMENT_REGISTRATION → account (approval per partner)</text>
+<text x="430" y="296" class="s">PARTNER_REBATE_RULE</text>
+<text x="430" y="326" class="s">applicable_for_reroute puts the partner in the</text>
+<text x="430" y="338" class="s">project's alternate set</text>
+<text x="430" y="366" class="s">Deals reference the block: partner × pair, fee version,</text>
+<text x="430" y="378" class="s">facilitating entity and registration are stamped on the leg.</text>
+<path class="l" d="M186,139 H214 M186,139 H412 V152 M95,64 V108 M265,64 V108 M435,64 V108" stroke-dasharray="3 2"/>
+</svg><figcaption>Figure 1 — The configuration model. Dashed boxes are global; everything inside the shaded area belongs to one project.</figcaption></figure>
+<div class="box"><b>Change control.</b> Configuration is versioned: thresholds, fee structures and policies are new rows with an effective date, never edits. Finance proposes, Management approves (approver ≠ proposer), and every change is audited. Deals keep the versions they were priced on.</div>
+
+<h2>2 · Global master data</h2>
+<h4 id="PARTNER">PARTNER <span class="scope">· Global</span></h4>
+<p class="desc">A global counterparty (Ali, Jeton, PT): remittance companies, fintechs, EMIs, neobanks or crypto exchanges. How a partner is used in a project lives in PARTNER_CONFIG. disclosure_style records whether the partner’s markup is visible.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>string</td><td>yes</td><td>Ali, Jeton, PT</td></tr><tr><td class="mono">disclosure_style</td><td>string</td><td>yes</td><td>markup_included / market_plus</td></tr><tr><td class="mono">rate_expiry_time</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">holiday_calendar</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>A partner is set up once and reused by any project through a PARTNER_CONFIG.</li><li>disclosure_style decides how its price is read: markup_included (its rate contains its margin) or market_plus (it states market + x %).</li></ul><h4 id="RATE_SOURCE">RATE_SOURCE <span class="scope">· Global</span></h4>
+<p class="desc">A market data source. Cross-source slippage is a query over MARKET_RATE across sources for the same pair and window.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">code</td><td>string</td><td>yes</td><td>KRAKEN / CMC / OANDA / XE</td></tr><tr><td class="mono">staleness_threshold_s</td><td>int</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>A snapshot older than staleness_threshold_s is not used for pricing; the next source in the pair's chain is tried.</li></ul><h4 id="INTRODUCER">INTRODUCER <span class="scope">· Global</span></h4>
+<p class="desc">An external introducer who brought in a client and is owed referral commission (Understanding §4.2a). Paid either a share of NPL’s earnings or a fixed % per transaction; several introducers may share one deal.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Only needed where NPL pays referral commissions.</li></ul>
+
+<h2 class="pb">3 · Project settings</h2>
+<h4 id="PROJECT">PROJECT <span class="scope">· Per client</span></h4>
+<p class="desc">The client. Owns its whole configuration: parties, groups, pairs, thresholds, partner configurations. Its policies govern every deal. In v4.0 it also carries the disburse policy with an exposure cap (Q5), the network-fee policy (Q7) and the receiver-fee default at conversion (Q6).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">client_label</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">quote_freshness_min</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">quote_validity_min</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">grace_min</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">grace_drift_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">late_collection_policy</td><td>string</td><td>yes</td><td>requote / honor_with_approval · default <b>requote</b></td></tr><tr><td class="mono">bank_fee_treatment_default</td><td>string</td><td>yes</td><td>waived / carry_forward / absorbed</td></tr><tr><td class="mono">receiver_fee_timing</td><td>string</td><td>yes</td><td>at_conversion (default, Q6) / post_confirmation · default <b>at_conversion</b></td></tr><tr><td class="mono">network_fee_policy</td><td>string</td><td>yes</td><td>absorbed / charged_back (project default; per-transaction override via FEE_DECISION)</td></tr><tr><td class="mono">disburse_policy</td><td>string</td><td>yes</td><td>to_zero / hold_allowed (Q5) · default <b>to_zero</b></td></tr><tr><td class="mono">shortfall_tolerance</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">exposure_ceiling</td><td>decimal</td><td>yes</td><td>cap on balance resting at a partner</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>The project is the client: everything below belongs to exactly one project.</li><li>Creating a project creates its default RECEIVER_GROUP automatically.</li><li>exposure_ceiling is the most client money that may rest at any one partner; it is enforced at every release.</li><li>Every change is versioned, proposed by Finance and approved by Management.</li></ul><h4 id="THRESHOLD">THRESHOLD <span class="scope">· Per project</span></h4>
+<p class="desc">Project-level system settings: limits and escalation rules evaluated at write time. settlement_limit now also bounds balance held at a partner under disburse_policy = hold_allowed.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>max_amount / settlement_limit / daily_slots / rate_variation_rel / custom</td></tr><tr><td class="mono">currency</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">value</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">condition_expr</td><td>string</td><td>no</td><td>custom conditions</td></tr><tr><td class="mono">escalation</td><td>string</td><td>no</td><td>finance / management</td></tr>
+</tbody></table>
+<ul class="rules"><li>One row per kind and currency; currency may be blank for kinds that are not amounts (daily_slots, rate_variation_rel).</li><li>escalation names who decides when the threshold is hit: finance or management.</li><li>condition_expr is only read for kind = custom.</li></ul><h4 id="CURRENCY_PAIR">CURRENCY_PAIR <span class="scope">· Per project</span></h4>
+<p class="desc">A pair the project trades, with quote direction and rate precision. v4.0 adds the amount rounding rule: amounts are truncated to whole units at conversion (Q8) and cash collections round to the nearest 100 / 500 / 1000 units.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">from_currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">to_currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">quote_direction</td><td>string</td><td>yes</td><td>out_per_in / in_per_out · default <b>out_per_in</b></td></tr><tr><td class="mono">rate_precision</td><td>int</td><td>yes</td><td> · default <b>5</b></td></tr><tr><td class="mono">amount_rounding</td><td>string</td><td>yes</td><td>truncate_whole_unit (Q8) · default <b>truncate_whole_unit</b></td></tr><tr><td class="mono">cash_rounding_unit</td><td>int</td><td>no</td><td>100 / 500 / 1000 by currency</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>from_currency is the collection currency, to_currency the payout currency.</li><li>rate_precision is 5 for ordinary pairs and 8 for sub-unit pairs such as USDT → BTC.</li><li>cash_rounding_unit applies only when the pair is collected in cash (100, 500 or 1000 by currency).</li><li>At least one PAIR_RATE_SOURCE is required before the pair can be used.</li></ul><h4 id="PAIR_RATE_SOURCE">PAIR_RATE_SOURCE <span class="scope">· Per pair</span></h4>
+<p class="desc">The prioritised source chain for a currency pair.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">currency_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">rate_source_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">priority</td><td>int</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Priority 1 is tried first; the chain continues on staleness or outage; with every source down a manual rate needs Finance approval and evidence.</li></ul><h4 id="OWN_WALLET">OWN_WALLET <span class="scope">· Per project</span></h4>
+<p class="desc">Exists only for rerouting and pass-through. AQN-LT-Sub is an own wallet at Aquanow (Q10). No custody in the normal path: CL.OWN.*.HELD may only be debited by a collection on a deal with an approved REROUTE. Also receives recovered dues.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">provider</td><td>string</td><td>yes</td><td>e.g. Aquanow (Q10)</td></tr><tr><td class="mono">account_label</td><td>string</td><td>no</td><td>e.g. LT Sub</td></tr><tr><td class="mono">network</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">address</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">signer_arrangement</td><td>string</td><td>yes</td><td>hardware / multisig</td></tr><tr><td class="mono">custody_max_hours</td><td>int</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Optional. Needed only if the project may reroute through NPL's own wallet.</li><li>custody_max_hours is the aging limit reported on the custody view.</li></ul>
+
+<h2 class="pb">4 · Parties: senders, receiver groups, receivers, entities, accounts</h2>
+<h4 id="SENDER">SENDER <span class="scope">· Per project</span></h4>
+<p class="desc">A sending party of the project (Ayush, Naveen). Which receiver groups a sender may pay is SENDER_RECEIVER_ALLOW. A sender’s refunds go to a RECEIVER of kind sender_return linked to it.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>Ayush, Naveen</td></tr><tr><td class="mono">risk_tier</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>A single paying party. Not tied to a partner.</li><li>Must have at least one SENDER_RECEIVER_ALLOW row before it can be chosen on a deal.</li></ul><h4 id="SENDER_RECEIVER_ALLOW">SENDER_RECEIVER_ALLOW <span class="scope">· Per sender</span></h4>
+<p class="desc">sendable_to: which receiver groups a sender may pay. Must pre-exist for collect-first attribution (Q1). v4.0 targets the group, the unit a sender’s flow is attributed to.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">receiver_group_id</td><td>int</td><td>yes</td><td>sendable_to (was receiver_id)</td></tr>
+</tbody></table>
+<ul class="rules"><li>The allow-list (sendable_to). A sender may pay only the groups listed here; the group must belong to the same project and must not be the return group.</li><li>Required for collect-first attribution (open question 1).</li></ul><h4 id="COLLECTION_SENDING_ENTITY">COLLECTION_SENDING_ENTITY <span class="scope">· Per sender</span></h4>
+<p class="desc">Provenance: where the sender’s funds originated. Reference only; never a payout destination (a refund goes to the sender_return receiver’s chosen account, not back to the source wallet).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>sender’s own account or a client’s account</td></tr><tr><td class="mono">account_ref</td><td>string</td><td>no</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Provenance only: where the sender's funds come from. Never a payout destination.</li></ul><h4 id="FEE_OVERRIDE">FEE_OVERRIDE <span class="scope">· Per sender × partner pair</span></h4>
+<p class="desc">A standing sender-specific override of the fee on a partner × pair. One-off decisions on a single transaction are FEE_DECISION.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">approved_by</td><td>int</td><td>yes</td><td>reference</td></tr>
+</tbody></table>
+<ul class="rules"><li>Replaces the fee structure's total pct for that sender from effective_from; the sender : receiver proportion of the structure is kept. pct may be 0.</li></ul><h4 id="RECEIVER_GROUP">RECEIVER_GROUP <span class="scope">· Per project</span></h4>
+<p class="desc">The unit entitlement is tracked on (design F). Every project has one default group created with it; receivers sit in the default group unless further groups are created and receivers are allocated to them. Payouts within a group are ordinary settlement; across groups they are offsets. With a single group no offset can arise. Each project also has a group of kind return that holds its sender_return receivers.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">is_default</td><td>bool</td><td>yes</td><td>exactly one per project</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>client / return · default <b>client</b></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Exactly one group per project has is_default = true; it is created with the project.</li><li>Each project also has one group of kind return, created automatically when the first sender_return receiver is needed.</li><li>Create further client groups only when flows must be kept apart; with a single group no offset can arise.</li></ul><h4 id="RECEIVER">RECEIVER <span class="scope">· Per group</span></h4>
+<p class="desc">A party within a receiver group (Sud, Raj), owning one or more RECEIVING_ENTITY rows. v4.0 adds a kind: counterparty (a client receiver), sender_return (stands for a SENDER so refunds use the normal payout path) or partner_transit (stands for a partner’s collection endpoint for the hop of a two-leg route).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">group_id</td><td>int</td><td>yes</td><td>receiver group</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>counterparty / sender_return / partner_transit · default <b>counterparty</b></td></tr><tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>when kind = sender_return</td></tr><tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>when kind = partner_transit</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>the group: Sud, Raj</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>kind sender_return requires sender_id and the return group; kind partner_transit requires partner_config_id.</li><li>A receiver is in exactly one group; moving it is a Management-approved change because it re-attributes entitlement.</li></ul><h4 id="RECEIVING_ENTITY">RECEIVING_ENTITY <span class="scope">· Per receiver</span></h4>
+<p class="desc">A member of a receiver (NewXP Entity, ReferScout Entity). Bank or wallet details and currency move down to RECEIVING_ENTITY_ACCOUNT in v4.0 (Q4).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">receiver_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>NewXP Entity, ReferScout Entity</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>A legal entity of the receiver. Bank and wallet details live on its accounts, not here.</li></ul><h4 id="RECEIVING_ENTITY_ACCOUNT">RECEIVING_ENTITY_ACCOUNT <span class="scope">· Per entity</span></h4>
+<p class="desc">One account of a receiving entity, with its own currency and rail (Q4: EUR via SWIFT and EUR via SEPA are two accounts). Registrations and payout lines point at the account. A sender_return receiver’s USDT wallet is an account like any other.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">receiving_entity_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>yes</td><td>SWIFT / SEPA / TRC-20 / ERC-20 / …</td></tr><tr><td class="mono">details_ref</td><td>string</td><td>yes</td><td>bank or wallet details</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>One row per currency × rail (EUR via SWIFT and EUR via SEPA are two accounts).</li><li>An account can be paid only through a SETTLEMENT_REGISTRATION with status approved at the paying partner.</li></ul><h4 id="REFERRAL_RULE">REFERRAL_RULE <span class="scope">· Per introducer × project</span></h4>
+<p class="desc">How an introducer is paid on a project (and optionally only on one partner × pair): a share of NPL’s earnings in a ratio, or a fixed % applied inside the sender-facing markup (§4.2a).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">introducer_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pair_id</td><td>int</td><td>yes</td><td>optional</td></tr><tr><td class="mono">basis</td><td>string</td><td>yes</td><td>share_of_earnings / fixed_pct</td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>basis fixed_pct adds pct to the sender share before the sender rate is computed; basis share_of_earnings pays pct of NPL's earnings per deal.</li><li>partner_pair_id narrows the rule to one partner × pair; blank means the whole project.</li></ul>
+
+<h2 class="pb">5 · The partner configuration block</h2>
+<h4 id="PARTNER_CONFIG">PARTNER_CONFIG <span class="scope">· Per project × partner</span></h4>
+<p class="desc">How a partner is used in this project. Fees, vehicles, endpoints, registrations and rebate rules hang off it. applicable_for_reroute defines the alternate-partner set.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">applicable_for_reroute</td><td>bool</td><td>yes</td><td> · default <b>false</b></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>How this partner is used in this project. Everything in the partner block hangs off it.</li><li>applicable_for_reroute = true puts the partner in the project's alternate set (Management approval).</li></ul><h4 id="PARTNER_PAIR">PARTNER_PAIR <span class="scope">· Per partner config × pair</span></h4>
+<p class="desc">A pair handled by a partner in this project. Fees are per partner × pair, so choosing the partner is part of pricing.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">currency_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pricing</td><td>string</td><td>yes</td><td>market_plus_pct / disclosed_rate</td></tr><tr><td class="mono">partner_markup_pct</td><td>decimal</td><td>no</td><td>known only for market_plus</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>currency_pair_id must be one of the project's pairs.</li><li>partner_markup_pct is required when partner_pricing = market_plus_pct and must be blank otherwise.</li></ul><h4 id="FEE_STRUCTURE">FEE_STRUCTURE <span class="scope">· Per partner pair, versioned</span></h4>
+<p class="desc">The versioned NPL client-side fee for a partner × pair. Stamped on the deal group at pricing.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">rate_basis</td><td>string</td><td>yes</td><td>market / partner</td></tr><tr><td class="mono">mode</td><td>string</td><td>yes</td><td>fixed / variable</td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">sender_share_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">receiver_share_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">floor_pct</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">cap_pct</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">min_margin_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">variance_threshold_rel</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">quoting_rate_policy</td><td>string</td><td>yes</td><td>worst_applicable / designated / best_applicable · default <b>worst_applicable</b></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>sender_share_pct + receiver_share_pct = pct.</li><li>mode variable requires floor_pct ≤ cap_pct and min_margin_pct; mode fixed ignores floor and cap.</li><li>A new version is a new row with a later effective_from; rows are never edited (deals keep the version they were priced on).</li><li>variance_threshold_rel is the tolerance used by the partner-rate breach check for this partner × pair.</li></ul><h4 id="FACILITATING_ENTITY">FACILITATING_ENTITY <span class="scope">· Per partner config</span></h4>
+<p class="desc">A partner vehicle or channel (PT-tour, PT Global Inc, PT Sukses). Fixed on a deal leg at quote; only a REROUTE changes it. Owns the crypto-in WALLET registry.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>PT-tour, PT Global Inc</td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>no</td><td>optional</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>The partner's legal vehicle or channel (e.g. PT Sukses for Ali). Fixed on a deal leg at quote.</li></ul><h4 id="WALLET">WALLET <span class="scope">· Per facilitating entity</span></h4>
+<p class="desc">Crypto-in collection endpoint under a facilitating entity.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">facilitating_entity_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">network</td><td>string</td><td>yes</td><td>TRC-20 / ERC-20</td></tr><tr><td class="mono">address</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Crypto-in collection endpoint. One per network and currency.</li></ul><h4 id="COLLECTION_RECEIVING_ENTITY">COLLECTION_RECEIVING_ENTITY <span class="scope">· Per partner config</span></h4>
+<p class="desc">Bank-in collection endpoint at the partner.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Bank-in collection endpoint at the partner. Cash collections have no endpoint record.</li></ul><h4 id="SETTLEMENT_SENDING_ENTITY">SETTLEMENT_SENDING_ENTITY <span class="scope">· Per partner config</span></h4>
+<p class="desc">The narrative on an outgoing transfer: what the receiver sees. Holds no money.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">narrative_name</td><td>string</td><td>yes</td><td>what the receiver sees</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>The name the receiver sees on an outgoing transfer. Holds no money.</li></ul><h4 id="SETTLEMENT_RAIL">SETTLEMENT_RAIL <span class="scope">· Per partner config</span></h4>
+<p class="desc">The bank or EMI that executes an outgoing transfer. Holds no money. Carries the expected bank fee.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>bank or EMI executing the transfer</td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">expected_bank_fee</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>The bank or EMI that executes the transfer. expected_bank_fee is the figure the bank-fee true-up compares against. Holds no money.</li></ul><h4 id="SETTLEMENT_REGISTRATION">SETTLEMENT_REGISTRATION <span class="scope">· Per partner config × account</span></h4>
+<p class="desc">Destination approval per partner: a receiving-entity account as registered with this partner, with the partner’s approval status and payout details. Invariant 8 is restated per group: a quote-first deal leaves Inquiry only if at least one account in the entitled group is approved with the chosen partner.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">receiving_entity_account_id</td><td>int</td><td>yes</td><td>was receiving_entity_id</td></tr><tr><td class="mono">approval_status</td><td>string</td><td>yes</td><td>pending_partner / approved / suspended · default <b>pending_partner</b></td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>no</td><td>as paid by this partner</td></tr><tr><td class="mono">approved_at</td><td>datetime</td><td>no</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Destination approval is per partner: the same account is registered separately with each partner that may pay it.</li><li>A quote-first deal cannot leave Inquiry unless the entitled group has at least one approved registration with the chosen partner (invariant 8).</li></ul><h4 id="PARTNER_REBATE_RULE">PARTNER_REBATE_RULE <span class="scope">· Per partner config</span></h4>
+<p class="desc">A partner rebating part of its fee to NPL (§4.2b: Jeton charges 1.25% and gives back 0.4%). Reconciled monthly through PARTNER_REBATE_ACCRUAL.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">pct_of_partner_fee</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Only for partners that return part of their fee; drives the monthly Partner Commissions reconciliation.</li></ul>
+
+<h2 class="pb">6 · Cross-entity rules the system enforces on save</h2>
+<ol>
+<li>Every project has exactly one default receiver group and at most one return group; both are created by the system.</li>
+<li>A receiver is in exactly one group; a counterparty receiver is in a client group; a sender_return receiver is in the return group and names its sender; a partner_transit receiver names its partner configuration.</li>
+<li>A sender's allow-list names groups of the same project and never the return group; a sender with no allow-list cannot be chosen on a deal.</li>
+<li>Every receiving entity has at least one account; account rows are unique per entity, currency and rail.</li>
+<li>A partner pair's currency pair belongs to the same project; partner_markup_pct is present exactly when partner_pricing is market_plus_pct, and partner_pricing agrees with the partner's disclosure_style.</li>
+<li>A fee structure's sender and receiver shares add up to its pct; variable mode needs floor ≤ cap and a minimum margin; a new version is a new row with a later effective_from.</li>
+<li>A partner configuration that will pay out needs at least one facilitating entity, one settlement sending entity (narrative) and one settlement rail.</li>
+<li>A currency pair needs at least one rate source with a unique priority before it is usable.</li>
+<li>A registration points at an account of a receiving entity in the same project; a quote-first deal for a group needs at least one approved registration with the chosen partner (invariant 8).</li>
+<li>quote_freshness_min is shorter than quote_validity_min; grace_drift_pct and all percentages are stored as decimals.</li>
+<li>applicable_for_reroute, exposure_ceiling, thresholds and fee structures are Management-approved changes.</li>
+</ol>
+
+<h2 class="pb">7 · Worked example: the FRS project, end to end</h2>
+<p>The FRS describes one client flow: senders Ayush and Naveen pay USDT, partners Ali (through its PT vehicles) or Jeton convert to EUR, and receivers Sud (NewXP Entity, ReferScout Entity) and Raj (VoiceAIWrapper) are paid in euros. Below is that project expressed in the schema. Names, policies and the fee split come from NPL's documents; rates of fee, thresholds, addresses and reference numbers are <b>illustrative placeholders</b> to be replaced with NPL's values.</p>
+<p>How to read it: one block per entity type, in the order of Sections 2 to 5. A code such as <code>DEFAULT</code> or <code>NEWXP-EUR-SEPA</code> is how one row refers to another; the system assigns the numeric ids.</p>
+<pre class="yaml">partners:
+  - code: ALI
+      name: Ali
+      disclosure_style: markup_included
+      rate_expiry_time: &quot;17:00 local&quot;
+      holiday_calendar: ID
+      status: active
+  - code: JETON
+      name: Jeton
+      disclosure_style: market_plus
+      rate_expiry_time: &quot;16:00 local&quot;
+      holiday_calendar: EU
+      status: active
+rate_sources:
+  - code: KRAKEN
+      staleness_threshold_s: 120
+  - code: CMC
+      staleness_threshold_s: 300
+  - code: OANDA
+      staleness_threshold_s: 300
+  - code: XE
+      staleness_threshold_s: 300
+project:
+  code: CLIENT1
+  name: Client 1 (FRS project)
+  client_label: Client 1
+  quote_freshness_min: 5
+  quote_validity_min: 60
+  grace_min: 15
+  grace_drift_pct: 0.001
+  late_collection_policy: requote
+  bank_fee_treatment_default: carry_forward
+  receiver_fee_timing: at_conversion
+  network_fee_policy: absorbed
+  disburse_policy: to_zero
+  shortfall_tolerance: 0
+  exposure_ceiling: 250000
+  status: active
+thresholds:
+  - kind: max_amount
+      currency: USDT
+      value: 100000
+      escalation: finance
+  - kind: settlement_limit
+      currency: EUR
+      value: 50000
+      escalation: management
+  - kind: daily_slots
+      value: 2
+      escalation: management
+  - kind: rate_variation_rel
+      value: 0.002
+      escalation: finance
+currency_pairs:
+  - code: USDT-EUR
+      from_currency: USDT
+      to_currency: EUR
+      quote_direction: out_per_in
+      rate_precision: 5
+      amount_rounding: truncate_whole_unit
+      status: active
+      sources:
+        - rate_source: KRAKEN
+            priority: 1
+        - rate_source: CMC
+            priority: 2
+own_wallet:
+  provider: Aquanow
+  account_label: LT Sub
+  network: TRC-20
+  address: T…(wallet address)
+  signer_arrangement: multisig
+  custody_max_hours: 48
+receiver_groups:
+  - code: DEFAULT
+      name: Default group
+      is_default: true
+      kind: client
+      status: active
+  - code: RETURNS
+      name: Return group
+      is_default: false
+      kind: return
+      status: active
+receivers:
+  - code: SUD
+      group: DEFAULT
+      kind: counterparty
+      name: Sud
+      status: active
+      entities:
+        - code: NEWXP
+            name: NewXP Entity
+            status: active
+            accounts:
+              - code: NEWXP-EUR-SEPA
+                  currency: EUR
+                  rail: SEPA
+                  details_ref: bank-ref-001
+                  status: active
+        - code: REFERSCOUT
+            name: ReferScout Entity
+            status: active
+            accounts:
+              - code: RS-EUR-SEPA
+                  currency: EUR
+                  rail: SEPA
+                  details_ref: bank-ref-002
+                  status: active
+  - code: RAJ
+      group: DEFAULT
+      kind: counterparty
+      name: Raj
+      status: active
+      entities:
+        - code: VOICEAI
+            name: VoiceAIWrapper
+            status: active
+            accounts:
+              - code: VAI-EUR-SWIFT
+                  currency: EUR
+                  rail: SWIFT
+                  details_ref: bank-ref-003
+                  status: active
+senders:
+  - code: AYUSH
+      name: Ayush
+      risk_tier: standard
+      status: active
+      sendable_to:
+        - DEFAULT
+      provenance:
+        - label: own account
+            account_ref: wallet-ayush-1
+  - code: NAVEEN
+      name: Naveen
+      risk_tier: standard
+      status: active
+      sendable_to:
+        - DEFAULT
+      provenance:
+        - label: own account
+            account_ref: wallet-naveen-1
+partner_configs:
+  - code: CLIENT1-ALI
+      partner: ALI
+      applicable_for_reroute: false
+      status: active
+      pairs:
+        - currency_pair: USDT-EUR
+            partner_pricing: disclosed_rate
+            status: active
+            fee_structures:
+              - rate_basis: market
+                  mode: fixed
+                  pct: 0.01
+                  sender_share_pct: 0.004
+                  receiver_share_pct: 0.006
+                  min_margin_pct: 0.003
+                  variance_threshold_rel: 0.2
+                  quoting_rate_policy: worst_applicable
+                  effective_from: &quot;2026-10-01&quot;
+      facilitating_entities:
+        - code: PT-TOUR
+            name: PT-tour
+            status: active
+            wallets:
+              - network: TRC-20
+                  address: T…(PT-tour wallet)
+                  currency: USDT
+                  status: active
+        - code: PT-GLOBAL
+            name: PT Global Inc
+            status: active
+            wallets:
+              - network: TRC-20
+                  address: T…(PT Global wallet)
+                  currency: USDT
+                  status: active
+      collection_receiving_entities: []
+      settlement_sending_entities:
+        - narrative_name: PT Global Inc
+            status: active
+      settlement_rails:
+        - name: &quot;Ali's EU bank / EMI&quot;
+            bank_details_ref: rail-ref-ali-eur
+            expected_bank_fee: 25
+            currency: EUR
+      registrations:
+        - account: NEWXP-EUR-SEPA
+            approval_status: approved
+        - account: RS-EUR-SEPA
+            approval_status: approved
+        - account: VAI-EUR-SWIFT
+            approval_status: approved
+      rebate_rule: null
+  - code: CLIENT1-JETON
+      partner: JETON
+      applicable_for_reroute: true
+      status: active
+      pairs:
+        - currency_pair: USDT-EUR
+            partner_pricing: market_plus_pct
+            partner_markup_pct: 0.005
+            status: active
+            fee_structures:
+              - rate_basis: market
+                  mode: fixed
+                  pct: 0.01
+                  sender_share_pct: 0.004
+                  receiver_share_pct: 0.006
+                  min_margin_pct: 0.003
+                  variance_threshold_rel: 0.2
+                  quoting_rate_policy: worst_applicable
+                  effective_from: &quot;2026-10-01&quot;
+      facilitating_entities:
+        - code: JETON-EMI
+            name: Jeton EMI
+            status: active
+            wallets:
+              - network: TRC-20
+                  address: T…(Jeton wallet)
+                  currency: USDT
+                  status: active
+      collection_receiving_entities: []
+      settlement_sending_entities:
+        - narrative_name: Jeton
+            status: active
+      settlement_rails:
+        - name: Jeton EMI (SEPA)
+            bank_details_ref: rail-ref-jeton-eur
+            expected_bank_fee: 0
+            currency: EUR
+      registrations:
+        - account: NEWXP-EUR-SEPA
+            approval_status: approved
+        - account: RS-EUR-SEPA
+            approval_status: approved
+        - account: VAI-EUR-SWIFT
+            approval_status: approved
+      rebate_rule: null
+introducers: []
+referral_rules: []</pre>
+
+<h3>What each part does in one deal</h3>
+<table><thead><tr><th style="width:30%">Step of the deal</th><th>Configuration it reads</th></tr></thead><tbody>
+<tr><td>Ayush asks to send USDT for Raj</td><td>SENDER Ayush; his allow-list names the default group, so the deal is attributed to <code>DEFAULT</code>; Raj is a receiver in it.</td></tr>
+<tr><td>Operations picks Ali for USDT → EUR</td><td>PARTNER_CONFIG CLIENT1-ALI, PARTNER_PAIR USDT-EUR (disclosed rate: Ali's margin is inside its rate), its current FEE_STRUCTURE: basis market (the FRS prices on Kraken), fixed 1.00 % (0.40 % sender, 0.60 % receiver). Jeton, the alternative, states market + 0.50 % instead.</td></tr>
+<tr><td>Market rate</td><td>CURRENCY_PAIR USDT-EUR, source chain Kraken then CMC, 5 decimals; a snapshot older than 120 s is not used.</td></tr>
+<tr><td>Quote clocks</td><td>PROJECT: freshness 5 min, validity 60 min, grace 15 min if drift ≤ 0.10 %; beyond grace the policy is re-quote.</td></tr>
+<tr><td>Can the quote leave Inquiry?</td><td>SETTLEMENT_REGISTRATION: Raj's account VAI-EUR-SWIFT is approved with Ali, so yes. In the FRS project every destination is approved with both partners; a project where a registration is still pending_partner could not quote that group through that partner.</td></tr>
+<tr><td>Where does Ayush pay?</td><td>FACILITATING_ENTITY PT-tour, its TRC-20 USDT WALLET. Provenance recorded against his COLLECTION_SENDING_ENTITY.</td></tr>
+<tr><td>Conversion</td><td>Receiver fee taken at conversion (receiver_fee_timing); amounts truncated to whole euros (amount_rounding); variance tolerance 0.20 % (THRESHOLD rate_variation_rel).</td></tr>
+<tr><td>Payout</td><td>DISBURSEMENT from Ali through SETTLEMENT_RAIL "Ali's EU bank / EMI" under the narrative "PT Global Inc" to VAI-EUR-SWIFT; whole euros; disburse_policy to_zero; expected bank fee 25 EUR, treatment carry_forward; Management approval above 50,000 EUR or for a third same-day slot.</td></tr>
+<tr><td>If Ali is unavailable</td><td>REROUTE to Jeton (applicable_for_reroute = true) via the OWN_WALLET at Aquanow, custody limit 48 hours.</td></tr>
+</tbody></table>
+
+<h2>8 · Import and export format</h2>
+<p>A project's configuration can be exchanged as the YAML or JSON document shown above: one file per project plus one for global master data. Codes are the keys; the system resolves them to ids on import and rejects the file with the list of broken rules from Section 6 rather than importing part of it. Exports carry the version and effective dates of every fee structure and threshold so a file is a faithful snapshot of what deals were priced on.</p>
+<p class="small"><i>Draft v1.0 — for review with NPL. Illustrative values are marked as such in Section 7.</i></p>
+</body></html>

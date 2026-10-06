@@ -1,0 +1,378 @@
+{
+  "partners": [
+    {
+      "code": "ALI",
+      "name": "Ali",
+      "disclosure_style": "markup_included",
+      "rate_expiry_time": "17:00 local",
+      "holiday_calendar": "ID",
+      "status": "active"
+    },
+    {
+      "code": "JETON",
+      "name": "Jeton",
+      "disclosure_style": "market_plus",
+      "rate_expiry_time": "16:00 local",
+      "holiday_calendar": "EU",
+      "status": "active"
+    }
+  ],
+  "rate_sources": [
+    {
+      "code": "KRAKEN",
+      "staleness_threshold_s": 120
+    },
+    {
+      "code": "CMC",
+      "staleness_threshold_s": 300
+    },
+    {
+      "code": "OANDA",
+      "staleness_threshold_s": 300
+    },
+    {
+      "code": "XE",
+      "staleness_threshold_s": 300
+    }
+  ],
+  "project": {
+    "code": "CLIENT1",
+    "name": "Client 1 (FRS project)",
+    "client_label": "Client 1",
+    "quote_freshness_min": 5,
+    "quote_validity_min": 60,
+    "grace_min": 15,
+    "grace_drift_pct": 0.001,
+    "late_collection_policy": "requote",
+    "bank_fee_treatment_default": "carry_forward",
+    "receiver_fee_timing": "at_conversion",
+    "network_fee_policy": "absorbed",
+    "disburse_policy": "to_zero",
+    "shortfall_tolerance": 0,
+    "exposure_ceiling": 250000,
+    "status": "active"
+  },
+  "thresholds": [
+    {
+      "kind": "max_amount",
+      "currency": "USDT",
+      "value": 100000,
+      "escalation": "finance"
+    },
+    {
+      "kind": "settlement_limit",
+      "currency": "EUR",
+      "value": 50000,
+      "escalation": "management"
+    },
+    {
+      "kind": "daily_slots",
+      "value": 2,
+      "escalation": "management"
+    },
+    {
+      "kind": "rate_variation_rel",
+      "value": 0.002,
+      "escalation": "finance"
+    }
+  ],
+  "currency_pairs": [
+    {
+      "code": "USDT-EUR",
+      "from_currency": "USDT",
+      "to_currency": "EUR",
+      "quote_direction": "out_per_in",
+      "rate_precision": 5,
+      "amount_rounding": "truncate_whole_unit",
+      "status": "active",
+      "sources": [
+        {
+          "rate_source": "KRAKEN",
+          "priority": 1
+        },
+        {
+          "rate_source": "CMC",
+          "priority": 2
+        }
+      ]
+    }
+  ],
+  "own_wallet": {
+    "provider": "Aquanow",
+    "account_label": "LT Sub",
+    "network": "TRC-20",
+    "address": "T…(wallet address)",
+    "signer_arrangement": "multisig",
+    "custody_max_hours": 48
+  },
+  "receiver_groups": [
+    {
+      "code": "DEFAULT",
+      "name": "Default group",
+      "is_default": true,
+      "kind": "client",
+      "status": "active"
+    },
+    {
+      "code": "RETURNS",
+      "name": "Return group",
+      "is_default": false,
+      "kind": "return",
+      "status": "active"
+    }
+  ],
+  "receivers": [
+    {
+      "code": "SUD",
+      "group": "DEFAULT",
+      "kind": "counterparty",
+      "name": "Sud",
+      "status": "active",
+      "entities": [
+        {
+          "code": "NEWXP",
+          "name": "NewXP Entity",
+          "status": "active",
+          "accounts": [
+            {
+              "code": "NEWXP-EUR-SEPA",
+              "currency": "EUR",
+              "rail": "SEPA",
+              "details_ref": "bank-ref-001",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "code": "REFERSCOUT",
+          "name": "ReferScout Entity",
+          "status": "active",
+          "accounts": [
+            {
+              "code": "RS-EUR-SEPA",
+              "currency": "EUR",
+              "rail": "SEPA",
+              "details_ref": "bank-ref-002",
+              "status": "active"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "RAJ",
+      "group": "DEFAULT",
+      "kind": "counterparty",
+      "name": "Raj",
+      "status": "active",
+      "entities": [
+        {
+          "code": "VOICEAI",
+          "name": "VoiceAIWrapper",
+          "status": "active",
+          "accounts": [
+            {
+              "code": "VAI-EUR-SWIFT",
+              "currency": "EUR",
+              "rail": "SWIFT",
+              "details_ref": "bank-ref-003",
+              "status": "active"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "senders": [
+    {
+      "code": "AYUSH",
+      "name": "Ayush",
+      "risk_tier": "standard",
+      "status": "active",
+      "sendable_to": [
+        "DEFAULT"
+      ],
+      "provenance": [
+        {
+          "label": "own account",
+          "account_ref": "wallet-ayush-1"
+        }
+      ]
+    },
+    {
+      "code": "NAVEEN",
+      "name": "Naveen",
+      "risk_tier": "standard",
+      "status": "active",
+      "sendable_to": [
+        "DEFAULT"
+      ],
+      "provenance": [
+        {
+          "label": "own account",
+          "account_ref": "wallet-naveen-1"
+        }
+      ]
+    }
+  ],
+  "partner_configs": [
+    {
+      "code": "CLIENT1-ALI",
+      "partner": "ALI",
+      "applicable_for_reroute": false,
+      "status": "active",
+      "pairs": [
+        {
+          "currency_pair": "USDT-EUR",
+          "partner_pricing": "disclosed_rate",
+          "status": "active",
+          "fee_structures": [
+            {
+              "rate_basis": "market",
+              "mode": "fixed",
+              "pct": 0.01,
+              "sender_share_pct": 0.004,
+              "receiver_share_pct": 0.006,
+              "min_margin_pct": 0.003,
+              "variance_threshold_rel": 0.2,
+              "quoting_rate_policy": "worst_applicable",
+              "effective_from": "2026-10-01"
+            }
+          ]
+        }
+      ],
+      "facilitating_entities": [
+        {
+          "code": "PT-TOUR",
+          "name": "PT-tour",
+          "status": "active",
+          "wallets": [
+            {
+              "network": "TRC-20",
+              "address": "T…(PT-tour wallet)",
+              "currency": "USDT",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "code": "PT-GLOBAL",
+          "name": "PT Global Inc",
+          "status": "active",
+          "wallets": [
+            {
+              "network": "TRC-20",
+              "address": "T…(PT Global wallet)",
+              "currency": "USDT",
+              "status": "active"
+            }
+          ]
+        }
+      ],
+      "collection_receiving_entities": [],
+      "settlement_sending_entities": [
+        {
+          "narrative_name": "PT Global Inc",
+          "status": "active"
+        }
+      ],
+      "settlement_rails": [
+        {
+          "name": "Ali's EU bank / EMI",
+          "bank_details_ref": "rail-ref-ali-eur",
+          "expected_bank_fee": 25,
+          "currency": "EUR"
+        }
+      ],
+      "registrations": [
+        {
+          "account": "NEWXP-EUR-SEPA",
+          "approval_status": "approved"
+        },
+        {
+          "account": "RS-EUR-SEPA",
+          "approval_status": "approved"
+        },
+        {
+          "account": "VAI-EUR-SWIFT",
+          "approval_status": "approved"
+        }
+      ],
+      "rebate_rule": null
+    },
+    {
+      "code": "CLIENT1-JETON",
+      "partner": "JETON",
+      "applicable_for_reroute": true,
+      "status": "active",
+      "pairs": [
+        {
+          "currency_pair": "USDT-EUR",
+          "partner_pricing": "market_plus_pct",
+          "partner_markup_pct": 0.005,
+          "status": "active",
+          "fee_structures": [
+            {
+              "rate_basis": "market",
+              "mode": "fixed",
+              "pct": 0.01,
+              "sender_share_pct": 0.004,
+              "receiver_share_pct": 0.006,
+              "min_margin_pct": 0.003,
+              "variance_threshold_rel": 0.2,
+              "quoting_rate_policy": "worst_applicable",
+              "effective_from": "2026-10-01"
+            }
+          ]
+        }
+      ],
+      "facilitating_entities": [
+        {
+          "code": "JETON-EMI",
+          "name": "Jeton EMI",
+          "status": "active",
+          "wallets": [
+            {
+              "network": "TRC-20",
+              "address": "T…(Jeton wallet)",
+              "currency": "USDT",
+              "status": "active"
+            }
+          ]
+        }
+      ],
+      "collection_receiving_entities": [],
+      "settlement_sending_entities": [
+        {
+          "narrative_name": "Jeton",
+          "status": "active"
+        }
+      ],
+      "settlement_rails": [
+        {
+          "name": "Jeton EMI (SEPA)",
+          "bank_details_ref": "rail-ref-jeton-eur",
+          "expected_bank_fee": 0,
+          "currency": "EUR"
+        }
+      ],
+      "registrations": [
+        {
+          "account": "NEWXP-EUR-SEPA",
+          "approval_status": "approved"
+        },
+        {
+          "account": "RS-EUR-SEPA",
+          "approval_status": "approved"
+        },
+        {
+          "account": "VAI-EUR-SWIFT",
+          "approval_status": "approved"
+        }
+      ],
+      "rebate_rule": null
+    }
+  ],
+  "introducers": [],
+  "referral_rules": []
+}
