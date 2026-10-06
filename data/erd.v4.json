@@ -1,0 +1,4986 @@
+{
+ "DOMS": {
+  "config": {
+   "name": "Configuration",
+   "c": "var(--dom-config)"
+  },
+  "rates": {
+   "name": "Rates",
+   "c": "var(--dom-rates)"
+  },
+  "deal": {
+   "name": "Deal lifecycle",
+   "c": "var(--dom-deal)"
+  },
+  "settle": {
+   "name": "Disbursement & confirmation",
+   "c": "var(--dom-settle)"
+  },
+  "ledger": {
+   "name": "Ledger & controls",
+   "c": "var(--dom-ledger)"
+  },
+  "view": {
+   "name": "Derived view (never stored)",
+   "c": "var(--dom-view)"
+  }
+ },
+ "COLS": [
+  {
+   "t": "Configuration",
+   "s": "project & parties"
+  },
+  {
+   "t": "Configuration",
+   "s": "party detail"
+  },
+  {
+   "t": "Configuration",
+   "s": "partner configuration block"
+  },
+  {
+   "t": "Configuration",
+   "s": "fees, registrations, wallets"
+  },
+  {
+   "t": "Rates",
+   "s": "rate day"
+  },
+  {
+   "t": "Deal lifecycle",
+   "s": "deal · collection · conversion · reroute"
+  },
+  {
+   "t": "Deal lifecycle",
+   "s": "disbursement · confirmation · fees"
+  },
+  {
+   "t": "Ledger",
+   "s": "append-only postings"
+  },
+  {
+   "t": "Controls & views",
+   "s": "users, approvals, derived figures"
+  }
+ ],
+ "E": {
+  "PROJECT": {
+   "d": "config",
+   "col": 0,
+   "desc": "The client. Owns its whole configuration: parties, groups, pairs, thresholds, partner configurations. Its policies govern every deal. In v4.0 it also carries the disburse policy with an exposure cap (Q5), the network-fee policy (Q7) and the receiver-fee default at conversion (Q6).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "name",
+     "string"
+    ],
+    [
+     "client_label",
+     "string"
+    ],
+    [
+     "quote_freshness_min",
+     "int"
+    ],
+    [
+     "quote_validity_min",
+     "int"
+    ],
+    [
+     "grace_min",
+     "int"
+    ],
+    [
+     "grace_drift_pct",
+     "decimal"
+    ],
+    [
+     "late_collection_policy",
+     "string",
+     "",
+     "requote / honor_with_approval"
+    ],
+    [
+     "bank_fee_treatment_default",
+     "string",
+     "",
+     "waived / carry_forward / absorbed"
+    ],
+    [
+     "receiver_fee_timing",
+     "string",
+     "",
+     "at_conversion (default, Q6) / post_confirmation"
+    ],
+    [
+     "network_fee_policy",
+     "string",
+     "",
+     "absorbed / charged_back (project default; per-transaction override via FEE_DECISION)"
+    ],
+    [
+     "disburse_policy",
+     "string",
+     "",
+     "to_zero / hold_allowed (Q5)"
+    ],
+    [
+     "shortfall_tolerance",
+     "decimal"
+    ],
+    [
+     "exposure_ceiling",
+     "decimal",
+     "",
+     "cap on balance resting at a partner"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ network_fee_policy (Q7)",
+    "+ disburse_policy (Q5); exposure_ceiling now the cap on held balance",
+    "receiver_fee_timing default moves to at_conversion (Q6)"
+   ]
+  },
+  "PARTNER": {
+   "d": "config",
+   "col": 0,
+   "desc": "A global counterparty (Ali, Jeton, PT): remittance companies, fintechs, EMIs, neobanks or crypto exchanges. How a partner is used in a project lives in PARTNER_CONFIG. disclosure_style records whether the partner’s markup is visible.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "name",
+     "string",
+     "",
+     "Ali, Jeton, PT"
+    ],
+    [
+     "disclosure_style",
+     "string",
+     "",
+     "markup_included / market_plus"
+    ],
+    [
+     "rate_expiry_time",
+     "string"
+    ],
+    [
+     "holiday_calendar",
+     "string"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "RATE_SOURCE": {
+   "d": "config",
+   "col": 0,
+   "desc": "A market data source. Cross-source slippage is a query over MARKET_RATE across sources for the same pair and window.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "code",
+     "string",
+     "",
+     "KRAKEN / CMC / OANDA / XE"
+    ],
+    [
+     "staleness_threshold_s",
+     "int"
+    ]
+   ]
+  },
+  "INTRODUCER": {
+   "d": "config",
+   "col": 0,
+   "desc": "An external introducer who brought in a client and is owed referral commission (Understanding §4.2a). Paid either a share of NPL’s earnings or a fixed % per transaction; several introducers may share one deal.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "name",
+     "string"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ],
+   "v": "new"
+  },
+  "SENDER": {
+   "d": "config",
+   "col": 1,
+   "desc": "A sending party of the project (Ayush, Naveen). Which receiver groups a sender may pay is SENDER_RECEIVER_ALLOW. A sender’s refunds go to a RECEIVER of kind sender_return linked to it.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "name",
+     "string",
+     "",
+     "Ayush, Naveen"
+    ],
+    [
+     "risk_tier",
+     "string"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "RECEIVER_GROUP": {
+   "d": "config",
+   "col": 1,
+   "desc": "The unit entitlement is tracked on (design F). Every project has one default group created with it; receivers sit in the default group unless further groups are created and receivers are allocated to them. Payouts within a group are ordinary settlement; across groups they are offsets. With a single group no offset can arise. Each project also has a group of kind return that holds its sender_return receivers.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "name",
+     "string"
+    ],
+    [
+     "is_default",
+     "bool",
+     "",
+     "exactly one per project"
+    ],
+    [
+     "kind",
+     "string",
+     "",
+     "client / return"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ],
+   "v": "new"
+  },
+  "RECEIVER": {
+   "d": "config",
+   "col": 1,
+   "desc": "A party within a receiver group (Sud, Raj), owning one or more RECEIVING_ENTITY rows. v4.0 adds a kind: counterparty (a client receiver), sender_return (stands for a SENDER so refunds use the normal payout path) or partner_transit (stands for a partner’s collection endpoint for the hop of a two-leg route).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "group_id",
+     "int",
+     "FK",
+     "receiver group"
+    ],
+    [
+     "kind",
+     "string",
+     "",
+     "counterparty / sender_return / partner_transit"
+    ],
+    [
+     "sender_id",
+     "int",
+     "FK",
+     "when kind = sender_return"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK",
+     "when kind = partner_transit"
+    ],
+    [
+     "name",
+     "string",
+     "",
+     "the group: Sud, Raj"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ group_id (D1)",
+    "+ kind, sender_id, partner_config_id (D3)",
+    "sender_return receivers never appear on forward deals or allow lists"
+   ]
+  },
+  "OWN_WALLET": {
+   "d": "config",
+   "col": 1,
+   "desc": "Exists only for rerouting and pass-through. AQN-LT-Sub is an own wallet at Aquanow (Q10). No custody in the normal path: CL.OWN.*.HELD may only be debited by a collection on a deal with an approved REROUTE. Also receives recovered dues.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "provider",
+     "string",
+     "",
+     "e.g. Aquanow (Q10)"
+    ],
+    [
+     "account_label",
+     "string",
+     "",
+     "e.g. LT Sub"
+    ],
+    [
+     "network",
+     "string"
+    ],
+    [
+     "address",
+     "string"
+    ],
+    [
+     "signer_arrangement",
+     "string",
+     "",
+     "hardware / multisig"
+    ],
+    [
+     "custody_max_hours",
+     "int"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ provider, account_label (Q10)"
+   ]
+  },
+  "THRESHOLD": {
+   "d": "config",
+   "col": 1,
+   "desc": "Project-level system settings: limits and escalation rules evaluated at write time. settlement_limit now also bounds balance held at a partner under disburse_policy = hold_allowed.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "kind",
+     "string",
+     "",
+     "max_amount / settlement_limit / daily_slots / rate_variation_rel / custom"
+    ],
+    [
+     "currency",
+     "string"
+    ],
+    [
+     "value",
+     "decimal"
+    ],
+    [
+     "condition_expr",
+     "string",
+     "",
+     "custom conditions"
+    ],
+    [
+     "escalation",
+     "string",
+     "",
+     "finance / management"
+    ]
+   ]
+  },
+  "CURRENCY_PAIR": {
+   "d": "config",
+   "col": 1,
+   "desc": "A pair the project trades, with quote direction and rate precision. v4.0 adds the amount rounding rule: amounts are truncated to whole units at conversion (Q8) and cash collections round to the nearest 100 / 500 / 1000 units.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "from_currency",
+     "string"
+    ],
+    [
+     "to_currency",
+     "string"
+    ],
+    [
+     "quote_direction",
+     "string",
+     "",
+     "out_per_in / in_per_out"
+    ],
+    [
+     "rate_precision",
+     "int"
+    ],
+    [
+     "amount_rounding",
+     "string",
+     "",
+     "truncate_whole_unit (Q8)"
+    ],
+    [
+     "cash_rounding_unit",
+     "int",
+     "",
+     "100 / 500 / 1000 by currency"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ amount_rounding, cash_rounding_unit (Q8, Sud)"
+   ]
+  },
+  "PARTNER_CONFIG": {
+   "d": "config",
+   "col": 1,
+   "desc": "How a partner is used in this project. Fees, vehicles, endpoints, registrations and rebate rules hang off it. applicable_for_reroute defines the alternate-partner set.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_id",
+     "int",
+     "FK"
+    ],
+    [
+     "applicable_for_reroute",
+     "bool"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "COLLECTION_SENDING_ENTITY": {
+   "d": "config",
+   "col": 2,
+   "desc": "Provenance: where the sender’s funds originated. Reference only; never a payout destination (a refund goes to the sender_return receiver’s chosen account, not back to the source wallet).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "sender_id",
+     "int",
+     "FK"
+    ],
+    [
+     "label",
+     "string",
+     "",
+     "sender’s own account or a client’s account"
+    ],
+    [
+     "account_ref",
+     "string"
+    ]
+   ]
+  },
+  "SENDER_RECEIVER_ALLOW": {
+   "d": "config",
+   "col": 2,
+   "desc": "sendable_to: which receiver groups a sender may pay. Must pre-exist for collect-first attribution (Q1). v4.0 targets the group, the unit a sender’s flow is attributed to.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "sender_id",
+     "int",
+     "FK"
+    ],
+    [
+     "receiver_group_id",
+     "int",
+     "FK",
+     "sendable_to (was receiver_id)"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "receiver_id → receiver_group_id (D1)",
+    "rule: must exist before a collect-first deal (Q1)"
+   ]
+  },
+  "RECEIVING_ENTITY": {
+   "d": "config",
+   "col": 2,
+   "desc": "A member of a receiver (NewXP Entity, ReferScout Entity). Bank or wallet details and currency move down to RECEIVING_ENTITY_ACCOUNT in v4.0 (Q4).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "receiver_id",
+     "int",
+     "FK"
+    ],
+    [
+     "name",
+     "string",
+     "",
+     "NewXP Entity, ReferScout Entity"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "− bank_details_ref, − currency (moved to RECEIVING_ENTITY_ACCOUNT, Q4)"
+   ]
+  },
+  "PAIR_RATE_SOURCE": {
+   "d": "config",
+   "col": 2,
+   "desc": "The prioritised source chain for a currency pair.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "currency_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "rate_source_id",
+     "int",
+     "FK"
+    ],
+    [
+     "priority",
+     "int"
+    ]
+   ]
+  },
+  "PARTNER_PAIR": {
+   "d": "config",
+   "col": 2,
+   "desc": "A pair handled by a partner in this project. Fees are per partner × pair, so choosing the partner is part of pricing.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "currency_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_pricing",
+     "string",
+     "",
+     "market_plus_pct / disclosed_rate"
+    ],
+    [
+     "partner_markup_pct",
+     "decimal",
+     "",
+     "known only for market_plus"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "FACILITATING_ENTITY": {
+   "d": "config",
+   "col": 2,
+   "desc": "A partner vehicle or channel (PT-tour, PT Global Inc, PT Sukses). Fixed on a deal leg at quote; only a REROUTE changes it. Owns the crypto-in WALLET registry.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "name",
+     "string",
+     "",
+     "PT-tour, PT Global Inc"
+    ],
+    [
+     "bank_details_ref",
+     "string",
+     "",
+     "optional"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "COLLECTION_RECEIVING_ENTITY": {
+   "d": "config",
+   "col": 2,
+   "desc": "Bank-in collection endpoint at the partner.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "name",
+     "string"
+    ],
+    [
+     "bank_details_ref",
+     "string"
+    ],
+    [
+     "currency",
+     "string"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "SETTLEMENT_SENDING_ENTITY": {
+   "d": "config",
+   "col": 2,
+   "desc": "The narrative on an outgoing transfer: what the receiver sees. Holds no money.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "narrative_name",
+     "string",
+     "",
+     "what the receiver sees"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "SETTLEMENT_RAIL": {
+   "d": "config",
+   "col": 2,
+   "desc": "The bank or EMI that executes an outgoing transfer. Holds no money. Carries the expected bank fee.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "name",
+     "string",
+     "",
+     "bank or EMI executing the transfer"
+    ],
+    [
+     "bank_details_ref",
+     "string"
+    ],
+    [
+     "expected_bank_fee",
+     "decimal"
+    ],
+    [
+     "currency",
+     "string"
+    ]
+   ]
+  },
+  "FEE_OVERRIDE": {
+   "d": "config",
+   "col": 3,
+   "desc": "A standing sender-specific override of the fee on a partner × pair. One-off decisions on a single transaction are FEE_DECISION.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "sender_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "pct",
+     "decimal"
+    ],
+    [
+     "effective_from",
+     "datetime"
+    ],
+    [
+     "approved_by",
+     "int",
+     "FK"
+    ]
+   ]
+  },
+  "RECEIVING_ENTITY_ACCOUNT": {
+   "d": "config",
+   "col": 3,
+   "desc": "One account of a receiving entity, with its own currency and rail (Q4: EUR via SWIFT and EUR via SEPA are two accounts). Registrations and payout lines point at the account. A sender_return receiver’s USDT wallet is an account like any other.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "receiving_entity_id",
+     "int",
+     "FK"
+    ],
+    [
+     "currency",
+     "string"
+    ],
+    [
+     "rail",
+     "string",
+     "",
+     "SWIFT / SEPA / TRC-20 / ERC-20 / …"
+    ],
+    [
+     "details_ref",
+     "string",
+     "",
+     "bank or wallet details"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ],
+   "v": "new"
+  },
+  "SETTLEMENT_REGISTRATION": {
+   "d": "config",
+   "col": 3,
+   "desc": "Destination approval per partner: a receiving-entity account as registered with this partner, with the partner’s approval status and payout details. Invariant 8 is restated per group: a quote-first deal leaves Inquiry only if at least one account in the entitled group is approved with the chosen partner.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "receiving_entity_account_id",
+     "int",
+     "FK",
+     "was receiving_entity_id"
+    ],
+    [
+     "approval_status",
+     "string",
+     "",
+     "pending_partner / approved / suspended"
+    ],
+    [
+     "bank_details_ref",
+     "string",
+     "",
+     "as paid by this partner"
+    ],
+    [
+     "approved_at",
+     "datetime"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "receiving_entity_id → receiving_entity_account_id (Q4)"
+   ]
+  },
+  "FEE_STRUCTURE": {
+   "d": "config",
+   "col": 3,
+   "desc": "The versioned NPL client-side fee for a partner × pair. Stamped on the deal group at pricing.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "rate_basis",
+     "string",
+     "",
+     "market / partner"
+    ],
+    [
+     "mode",
+     "string",
+     "",
+     "fixed / variable"
+    ],
+    [
+     "pct",
+     "decimal"
+    ],
+    [
+     "sender_share_pct",
+     "decimal"
+    ],
+    [
+     "receiver_share_pct",
+     "decimal"
+    ],
+    [
+     "floor_pct",
+     "decimal"
+    ],
+    [
+     "cap_pct",
+     "decimal"
+    ],
+    [
+     "min_margin_pct",
+     "decimal"
+    ],
+    [
+     "variance_threshold_rel",
+     "decimal"
+    ],
+    [
+     "quoting_rate_policy",
+     "string",
+     "",
+     "worst_applicable / designated / best_applicable"
+    ],
+    [
+     "effective_from",
+     "datetime"
+    ]
+   ]
+  },
+  "WALLET": {
+   "d": "config",
+   "col": 3,
+   "desc": "Crypto-in collection endpoint under a facilitating entity.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "facilitating_entity_id",
+     "int",
+     "FK"
+    ],
+    [
+     "network",
+     "string",
+     "",
+     "TRC-20 / ERC-20"
+    ],
+    [
+     "address",
+     "string"
+    ],
+    [
+     "currency",
+     "string"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "REFERRAL_RULE": {
+   "d": "config",
+   "col": 3,
+   "desc": "How an introducer is paid on a project (and optionally only on one partner × pair): a share of NPL’s earnings in a ratio, or a fixed % applied inside the sender-facing markup (§4.2a).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "introducer_id",
+     "int",
+     "FK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_pair_id",
+     "int",
+     "FK",
+     "optional"
+    ],
+    [
+     "basis",
+     "string",
+     "",
+     "share_of_earnings / fixed_pct"
+    ],
+    [
+     "pct",
+     "decimal"
+    ],
+    [
+     "effective_from",
+     "datetime"
+    ]
+   ],
+   "v": "new"
+  },
+  "PARTNER_REBATE_RULE": {
+   "d": "config",
+   "col": 3,
+   "desc": "A partner rebating part of its fee to NPL (§4.2b: Jeton charges 1.25% and gives back 0.4%). Reconciled monthly through PARTNER_REBATE_ACCRUAL.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "pct_of_partner_fee",
+     "decimal"
+    ],
+    [
+     "effective_from",
+     "datetime"
+    ]
+   ],
+   "v": "new"
+  },
+  "MARKET_RATE": {
+   "d": "rates",
+   "col": 4,
+   "desc": "A captured market rate for a pair from one source. Every leg, partner rate version and balance conversion snapshots the exact market rate it was priced against.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "rate_source_id",
+     "int",
+     "FK"
+    ],
+    [
+     "currency_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "rate",
+     "decimal"
+    ],
+    [
+     "captured_at",
+     "datetime"
+    ]
+   ]
+  },
+  "RATE_COMPARISON": {
+   "d": "rates",
+   "col": 4,
+   "desc": "The rate comparison for the day: one per partner × pair × date, created lazily by the first deal of the day. A partner may give a new rate during the day, so one date can hold several versions.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "rate_date",
+     "date"
+    ],
+    [
+     "avg_spread_2w",
+     "decimal"
+    ],
+    [
+     "avg_spread_4w",
+     "decimal"
+    ],
+    [
+     "status",
+     "string",
+     "",
+     "open / closed"
+    ],
+    [
+     "created_at",
+     "datetime",
+     "",
+     "created lazily by the first deal of the day"
+    ]
+   ]
+  },
+  "PARTNER_RATE_VERSION": {
+   "d": "rates",
+   "col": 4,
+   "desc": "A partner rate version. Breached when spread > avg_2w × (1 + variance_threshold_rel); the pair freezes until Finance approves with reason, rejects, or asks for a better rate. Versions are never overwritten; used by deal legs and balance conversions alike.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "rate_comparison_id",
+     "int",
+     "FK"
+    ],
+    [
+     "version_no",
+     "int"
+    ],
+    [
+     "rate",
+     "decimal"
+    ],
+    [
+     "market_rate_id",
+     "int",
+     "FK"
+    ],
+    [
+     "spread_pct",
+     "decimal"
+    ],
+    [
+     "status",
+     "string",
+     "",
+     "active / usable / breached / approved / rejected"
+    ],
+    [
+     "confirmed_by",
+     "int",
+     "FK"
+    ],
+    [
+     "approval_reason",
+     "string"
+    ],
+    [
+     "expires_at",
+     "datetime"
+    ]
+   ]
+  },
+  "DEAL_GROUP": {
+   "d": "deal",
+   "col": 5,
+   "desc": "The client-facing instruction the legs fulfil: the pair as the sender sees it (INR → EUR), the sender rate, fee and reference. Every deal belongs to a group; a plain single-partner deal is a group of one leg. Margin across a two-leg route is the group quote minus the partner conversions.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "sender_id",
+     "int",
+     "FK"
+    ],
+    [
+     "receiver_group_id",
+     "int",
+     "FK",
+     "entitled group"
+    ],
+    [
+     "client_ref",
+     "string",
+     "",
+     "D-YYMMDD-seq, what the sender sees"
+    ],
+    [
+     "from_currency",
+     "string"
+    ],
+    [
+     "to_currency",
+     "string"
+    ],
+    [
+     "sender_rate",
+     "decimal"
+    ],
+    [
+     "fee_structure_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount_in",
+     "decimal"
+    ],
+    [
+     "target_out",
+     "decimal"
+    ],
+    [
+     "entry_mode",
+     "string",
+     "",
+     "quote_first / collect_first / estimate_first"
+    ],
+    [
+     "state",
+     "string"
+    ],
+    [
+     "quoted_at",
+     "datetime"
+    ]
+   ],
+   "v": "new"
+  },
+  "DEAL": {
+   "d": "deal",
+   "col": 5,
+   "desc": "One leg of a deal group: one partner × pair, one conversion. leg_type forward or return; funding_source collection, returned_disbursement (a return leg unwinding a rejected payout) or prior_leg (leg 2 of a two-leg route). Priced once and partner fixed hold per leg. Attribution is to the receiver group; the receiver is optional until settlement.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "deal_group_id",
+     "int",
+     "FK",
+     "every deal belongs to a group"
+    ],
+    [
+     "leg_no",
+     "int"
+    ],
+    [
+     "leg_type",
+     "string",
+     "",
+     "forward / return"
+    ],
+    [
+     "funding_source",
+     "string",
+     "",
+     "collection / returned_disbursement / prior_leg"
+    ],
+    [
+     "funding_ref_id",
+     "int",
+     "",
+     "DISBURSEMENT_RETURN id or prior DEAL id"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "sender_id",
+     "int",
+     "FK"
+    ],
+    [
+     "receiver_group_id",
+     "int",
+     "FK",
+     "attribution (D1)"
+    ],
+    [
+     "receiver_id",
+     "int",
+     "FK",
+     "optional until settlement"
+    ],
+    [
+     "partner_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "facilitating_entity_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount_mode",
+     "string",
+     "",
+     "target_out / fixed_in"
+    ],
+    [
+     "collection_method",
+     "string",
+     "",
+     "crypto / bank / cash"
+    ],
+    [
+     "cash_instructions",
+     "string"
+    ],
+    [
+     "fee_structure_id",
+     "int",
+     "FK"
+    ],
+    [
+     "market_rate_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_rate_version_id",
+     "int",
+     "FK"
+    ],
+    [
+     "sender_rate",
+     "decimal"
+    ],
+    [
+     "amount_in",
+     "decimal"
+    ],
+    [
+     "gross_out",
+     "decimal"
+    ],
+    [
+     "client_net",
+     "decimal"
+    ],
+    [
+     "fee_sender_part",
+     "decimal"
+    ],
+    [
+     "fee_receiver_part",
+     "decimal"
+    ],
+    [
+     "priced_at",
+     "datetime",
+     "",
+     "quote or conversion"
+    ],
+    [
+     "sent_at",
+     "datetime",
+     "",
+     "null on conversion-priced legs"
+    ],
+    [
+     "valid_until",
+     "datetime"
+    ],
+    [
+     "grace_until",
+     "datetime"
+    ],
+    [
+     "late_decision",
+     "string",
+     "",
+     "none / honored / requoted"
+    ],
+    [
+     "state",
+     "string"
+    ],
+    [
+     "quote_hash",
+     "string"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ deal_group_id, leg_no, leg_type, funding_source, funding_ref_id (D2)",
+    "+ receiver_group_id; receiver_id optional (D1)",
+    "deal_ref and entry_mode move to DEAL_GROUP",
+    "quote clocks nullable on conversion-priced legs"
+   ]
+  },
+  "COLLECTION": {
+   "d": "deal",
+   "col": 5,
+   "desc": "Funds arriving for a forward leg, in 1..n parts. Endpoint is polymorphic by endpoint_type. Return legs and leg 2 of a route have no collection; they are funded from balance.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "deal_id",
+     "int",
+     "FK"
+    ],
+    [
+     "endpoint_type",
+     "string",
+     "",
+     "wallet / collection_receiving_entity / cash"
+    ],
+    [
+     "endpoint_id",
+     "int"
+    ],
+    [
+     "collection_sending_entity_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount",
+     "decimal"
+    ],
+    [
+     "evidence_ref",
+     "string",
+     "",
+     "hash / slip / receipt"
+    ],
+    [
+     "state",
+     "string"
+    ],
+    [
+     "verified_by",
+     "int",
+     "FK"
+    ],
+    [
+     "verified_at",
+     "datetime"
+    ]
+   ]
+  },
+  "CONVERSION": {
+   "d": "deal",
+   "col": 5,
+   "desc": "A partner converts. Owned by exactly one of a deal leg or a balance conversion. actual_out is booked; variance vs expected_out is an exception beyond tolerance. v4.0 adds the receiver fee taken here (Q6) and the rounding residual dropped to reach whole units (Q8).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "deal_id",
+     "int",
+     "FK",
+     "null when owned by a balance conversion"
+    ],
+    [
+     "balance_conversion_id",
+     "int",
+     "FK",
+     "null when owned by a deal leg"
+    ],
+    [
+     "partner_rate_version_id",
+     "int",
+     "FK"
+    ],
+    [
+     "calc_mode",
+     "string",
+     "",
+     "npl_calculates / partner_calculates"
+    ],
+    [
+     "amount_in",
+     "decimal"
+    ],
+    [
+     "expected_out",
+     "decimal"
+    ],
+    [
+     "actual_out",
+     "decimal",
+     "",
+     "booked figure, whole units"
+    ],
+    [
+     "rounding_residual",
+     "decimal",
+     "",
+     "fraction dropped; stays client money (Q8)"
+    ],
+    [
+     "fee_receiver_part",
+     "decimal",
+     "",
+     "taken at conversion (Q6)"
+    ],
+    [
+     "variance",
+     "decimal"
+    ],
+    [
+     "residual_in",
+     "decimal",
+     "",
+     "margin pool"
+    ],
+    [
+     "basis_variance",
+     "decimal"
+    ],
+    [
+     "state",
+     "string"
+    ],
+    [
+     "approved_by",
+     "int",
+     "FK"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "owner is a deal leg or a balance conversion (D4)",
+    "+ rounding_residual (Q8)",
+    "+ fee_receiver_part (Q6)"
+   ]
+  },
+  "REROUTE": {
+   "d": "deal",
+   "col": 5,
+   "desc": "Contingency on a leg: the only way the partner or facilitating entity changes after quote. Forwarding is forward_full or forward_and_recover_dues: NPL nets what the alternate partner owes it (EARNINGS_RECEIVABLE) against the funds forwarded. Withholding earnings is gone: NPL’s cut is always captured at conversion (Q2).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "deal_id",
+     "int",
+     "FK"
+    ],
+    [
+     "trigger",
+     "string",
+     "",
+     "partner_unavailable / limit_reached / holiday / compliance_hold / other"
+    ],
+    [
+     "phase",
+     "string",
+     "",
+     "pre_collection / post_collection"
+    ],
+    [
+     "outcome",
+     "string",
+     "",
+     "via_own_wallet / refund_sender (Q3, post-collection)"
+    ],
+    [
+     "own_wallet_id",
+     "int",
+     "FK"
+    ],
+    [
+     "alternate_partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "forwarding_policy",
+     "string",
+     "",
+     "forward_full / forward_and_recover_dues"
+    ],
+    [
+     "recovered_amount",
+     "decimal",
+     "",
+     "≤ outstanding receivable at the alternate partner"
+    ],
+    [
+     "partner_agreement_ref",
+     "string",
+     "",
+     "the partner agreed the net amount"
+    ],
+    [
+     "reason",
+     "string"
+    ],
+    [
+     "requested_by",
+     "int",
+     "FK"
+    ],
+    [
+     "approved_by",
+     "int",
+     "FK"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "forwarding_policy: withhold_earnings removed (Q2)",
+    "+ recovered_amount, partner_agreement_ref (recover dues)",
+    "+ outcome for post-collection reroutes (Q3)"
+   ]
+  },
+  "SENDER_CREDIT": {
+   "d": "deal",
+   "col": 5,
+   "desc": "A credit owed to a sender arising from a deal, applied later.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "sender_id",
+     "int",
+     "FK"
+    ],
+    [
+     "deal_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount",
+     "decimal"
+    ],
+    [
+     "state",
+     "string",
+     "",
+     "open / applied"
+    ]
+   ]
+  },
+  "EARNINGS_RECEIVABLE": {
+   "d": "deal",
+   "col": 5,
+   "desc": "NPL’s margin captured at a partner’s conversion and still resting there (CO.<PARTNER>.<CCY>.POOL). Recovered either on the partner’s fee cycle or by netting against funds forwarded on a reroute; every recovery names the deal it recovers.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "deal_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount",
+     "decimal"
+    ],
+    [
+     "state",
+     "string",
+     "",
+     "outstanding / recovered"
+    ],
+    [
+     "recovered_by_deal_id",
+     "int",
+     "FK"
+    ],
+    [
+     "recovered_at",
+     "datetime"
+    ]
+   ]
+  },
+  "BALANCE_CONVERSION": {
+   "d": "deal",
+   "col": 5,
+   "desc": "NPL converting a client’s held balance at a partner (5K SGD → USDT to fund a 15K USDT payout). Not a deal leg: no sender, receiver or collection; Finance requests and approves. Uses the same rate machinery; markup is a FEE_DECISION. Names the receiver group it serves (chosen split).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "receiver_group_id",
+     "int",
+     "FK",
+     "group served; chosen split"
+    ],
+    [
+     "from_currency",
+     "string"
+    ],
+    [
+     "to_currency",
+     "string"
+    ],
+    [
+     "partner_pair_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_rate_version_id",
+     "int",
+     "FK"
+    ],
+    [
+     "market_rate_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount_in",
+     "decimal"
+    ],
+    [
+     "expected_out",
+     "decimal"
+    ],
+    [
+     "actual_out",
+     "decimal"
+    ],
+    [
+     "variance",
+     "decimal"
+    ],
+    [
+     "rounding_residual",
+     "decimal"
+    ],
+    [
+     "state",
+     "string"
+    ],
+    [
+     "requested_by",
+     "int",
+     "FK"
+    ],
+    [
+     "approved_by",
+     "int",
+     "FK"
+    ],
+    [
+     "converted_at",
+     "datetime"
+    ]
+   ],
+   "v": "new"
+  },
+  "ENTITLEMENT_REATTRIBUTION": {
+   "d": "deal",
+   "col": 5,
+   "desc": "Which group’s entitlement moved currency in a balance conversion, so entitlement per currency still equals balance per currency (invariant 7). The excess over the served group’s source-currency entitlement is another group’s flow and is booked as an approved offset.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "balance_conversion_id",
+     "int",
+     "FK"
+    ],
+    [
+     "receiver_group_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount_from",
+     "decimal"
+    ],
+    [
+     "amount_to",
+     "decimal"
+    ]
+   ],
+   "v": "new"
+  },
+  "DISBURSEMENT": {
+   "d": "settle",
+   "col": 6,
+   "desc": "Drains one partner’s holding through a settlement rail into one or many lines, in whole units. Under disburse_policy = to_zero the balance after release is less than one unit (rounding dust carried); under hold_allowed the balance may rest within the exposure cap (Q5).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "project_id",
+     "int",
+     "FK"
+    ],
+    [
+     "partner_config_id",
+     "int",
+     "FK"
+    ],
+    [
+     "settlement_sending_entity_id",
+     "int",
+     "FK"
+    ],
+    [
+     "settlement_rail_id",
+     "int",
+     "FK"
+    ],
+    [
+     "currency",
+     "string"
+    ],
+    [
+     "total",
+     "decimal",
+     "",
+     "whole units"
+    ],
+    [
+     "bank_fee_treatment",
+     "string"
+    ],
+    [
+     "state",
+     "string"
+    ],
+    [
+     "prepared_by",
+     "int",
+     "FK"
+    ],
+    [
+     "approved_by",
+     "int",
+     "FK"
+    ],
+    [
+     "escalated_to",
+     "int",
+     "FK"
+    ],
+    [
+     "released_at",
+     "datetime"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "invariant 4 restated: to less than one unit, or held within the exposure cap (Q5, Q8)"
+   ]
+  },
+  "DISBURSEMENT_LINE": {
+   "d": "settle",
+   "col": 6,
+   "desc": "One destination of a disbursement: a registered receiving-entity account. paid_receiver_id may be in another group: that is the offset, created by the same action. Outcome gains returned (D6).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "disbursement_id",
+     "int",
+     "FK"
+    ],
+    [
+     "settlement_registration_id",
+     "int",
+     "FK"
+    ],
+    [
+     "paid_receiver_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount",
+     "decimal"
+    ],
+    [
+     "receiver_fee_applied",
+     "decimal",
+     "",
+     "exceptional; fee is normally taken at conversion"
+    ],
+    [
+     "reference",
+     "string",
+     "",
+     "entity invoice format"
+    ],
+    [
+     "outcome",
+     "string",
+     "",
+     "sent / confirmed / returned"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ outcome incl. returned (D6)",
+    "registration now points at an account (Q4)"
+   ]
+  },
+  "DISBURSEMENT_RETURN": {
+   "d": "settle",
+   "col": 6,
+   "desc": "A payout line the receiving or intermediary bank rejected; the money came back to the partner minus bank fees. Re-enters the balance by a reversing ledger transaction; the fee is booked through BANK_FEE_EVENT. May fund a return leg (funding_source = returned_disbursement) or simply stay in balance for later payouts.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "disbursement_line_id",
+     "int",
+     "FK"
+    ],
+    [
+     "returned_amount",
+     "decimal"
+    ],
+    [
+     "bank_fee",
+     "decimal"
+    ],
+    [
+     "reason",
+     "string"
+    ],
+    [
+     "returned_at",
+     "datetime"
+    ]
+   ],
+   "v": "new"
+  },
+  "CONFIRMATION": {
+   "d": "settle",
+   "col": 6,
+   "desc": "The receiver’s confirmation of a line: full or short.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "disbursement_line_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount_received",
+     "decimal"
+    ],
+    [
+     "slip_ref",
+     "string"
+    ],
+    [
+     "result",
+     "string",
+     "",
+     "full / short"
+    ],
+    [
+     "confirmed_by",
+     "int",
+     "FK"
+    ],
+    [
+     "confirmed_at",
+     "datetime"
+    ]
+   ]
+  },
+  "SHORTFALL": {
+   "d": "settle",
+   "col": 6,
+   "desc": "Opened when a confirmation is short; topped up by a later disbursement. Sub-unit rounding no longer lands here (Q8).",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "receiver_id",
+     "int",
+     "FK"
+    ],
+    [
+     "confirmation_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount",
+     "decimal"
+    ],
+    [
+     "state",
+     "string",
+     "",
+     "open / topped_up"
+    ],
+    [
+     "topped_up_disbursement_id",
+     "int",
+     "FK"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "no longer receives rounding differences (Q8)"
+   ]
+  },
+  "BANK_FEE_EVENT": {
+   "d": "settle",
+   "col": 6,
+   "desc": "Post-confirmation true-up of the bank fee, and the bounce fee on a returned line: expected vs actual, waived / carried forward / absorbed.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "disbursement_id",
+     "int",
+     "FK"
+    ],
+    [
+     "expected_amount",
+     "decimal"
+    ],
+    [
+     "actual_amount",
+     "decimal"
+    ],
+    [
+     "treatment",
+     "string",
+     "",
+     "waived / carry_forward / absorbed"
+    ],
+    [
+     "state",
+     "string",
+     "",
+     "open / applied"
+    ],
+    [
+     "applied_disbursement_id",
+     "int",
+     "FK"
+    ]
+   ]
+  },
+  "FEE_DECISION": {
+   "d": "settle",
+   "col": 6,
+   "desc": "A one-off, approved fee decision on a single subject: markup applied or waived on a return leg or balance conversion, a network-fee override on a refund (Q7), a bank-fee treatment override on one settlement. Standing rules stay in FEE_STRUCTURE and FEE_OVERRIDE.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "subject_type",
+     "string",
+     "",
+     "Deal / Disbursement / BalanceConversion"
+    ],
+    [
+     "subject_id",
+     "int"
+    ],
+    [
+     "fee_kind",
+     "string",
+     "",
+     "markup / network / bank"
+    ],
+    [
+     "decision",
+     "string",
+     "",
+     "apply / waive / override"
+    ],
+    [
+     "pct",
+     "decimal"
+    ],
+    [
+     "approved_by",
+     "int",
+     "FK"
+    ],
+    [
+     "reason",
+     "string"
+    ]
+   ],
+   "v": "new"
+  },
+  "REFERRAL_ACCRUAL": {
+   "d": "settle",
+   "col": 6,
+   "desc": "Referral commission accrued to an introducer on one deal under a REFERRAL_RULE; paid out of NPL’s earnings.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "referral_rule_id",
+     "int",
+     "FK"
+    ],
+    [
+     "deal_id",
+     "int",
+     "FK"
+    ],
+    [
+     "amount",
+     "decimal"
+    ],
+    [
+     "state",
+     "string",
+     "",
+     "accrued / paid"
+    ],
+    [
+     "paid_at",
+     "datetime"
+    ]
+   ],
+   "v": "new"
+  },
+  "PARTNER_REBATE_ACCRUAL": {
+   "d": "settle",
+   "col": 6,
+   "desc": "Rebate expected from a partner on one deal, reconciled monthly against the partner’s statement and received (usually in crypto). Feeds the Partner Commissions report.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "partner_rebate_rule_id",
+     "int",
+     "FK"
+    ],
+    [
+     "deal_id",
+     "int",
+     "FK"
+    ],
+    [
+     "expected_amount",
+     "decimal"
+    ],
+    [
+     "received_amount",
+     "decimal"
+    ],
+    [
+     "period",
+     "string",
+     "",
+     "YYYY-MM"
+    ],
+    [
+     "state",
+     "string",
+     "",
+     "expected / reconciled / received"
+    ]
+   ],
+   "v": "new"
+  },
+  "LEDGER_TRANSACTION": {
+   "d": "ledger",
+   "col": 7,
+   "desc": "One balanced transaction per source event (polymorphic). Append-only; corrections are reversing transactions. v4.0 adds the sources BalanceConversion, DisbursementReturn, Referral and Rebate.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "source_type",
+     "string",
+     "",
+     "Collection / Conversion / BalanceConversion / Disbursement / DisbursementReturn / Confirmation / BankFeeEvent / Reroute / Referral / Rebate / Adjustment"
+    ],
+    [
+     "source_id",
+     "int"
+    ],
+    [
+     "description",
+     "string"
+    ],
+    [
+     "posted_at",
+     "datetime"
+    ],
+    [
+     "posted_by",
+     "int",
+     "FK"
+    ],
+    [
+     "reversal_of_id",
+     "int",
+     "FK"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ source types BalanceConversion, DisbursementReturn, Referral, Rebate"
+   ]
+  },
+  "LEDGER_POSTING": {
+   "d": "ledger",
+   "col": 7,
+   "desc": "A debit or credit line; postings in one transaction sum to zero per currency. Ownership flips client → company at one event only: margin recognition at conversion. Cost components gain referral and rounding.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "ledger_transaction_id",
+     "int",
+     "FK"
+    ],
+    [
+     "ledger_account_id",
+     "int",
+     "FK"
+    ],
+    [
+     "side",
+     "string",
+     "",
+     "debit / credit"
+    ],
+    [
+     "amount",
+     "decimal"
+    ],
+    [
+     "currency",
+     "string"
+    ],
+    [
+     "ownership_tag",
+     "string",
+     "",
+     "client / company"
+    ],
+    [
+     "cost_component",
+     "string",
+     "",
+     "principal / earnings / partner_cost / bank_fee / network_fee / variance / referral / rounding"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "+ cost components referral, rounding",
+    "ownership flips at one event only (Q2, Q13)"
+   ]
+  },
+  "LEDGER_ACCOUNT": {
+   "d": "ledger",
+   "col": 7,
+   "desc": "Chart of accounts: OWN.HOLDER.CCY.PURPOSE. Client due balances are one account per project × partner × currency. ADVANCE is removed (Q13); REFERRAL_PAYABLE and REBATE_RECEIVABLE added.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "code",
+     "string",
+     "",
+     "OWN.HOLDER.CCY.PURPOSE"
+    ],
+    [
+     "ownership",
+     "string",
+     "",
+     "client / company"
+    ],
+    [
+     "holder_type",
+     "string",
+     "",
+     "PartnerConfig / OwnWallet / Receiver / Sender / Introducer / None"
+    ],
+    [
+     "holder_id",
+     "int"
+    ],
+    [
+     "currency",
+     "string"
+    ],
+    [
+     "purpose",
+     "string",
+     "",
+     "COLLECTED / HELD / DUE / INTRANSIT / SHORTFALL / CREDIT / POOL / WALLET / EARN_GROSS / EXP_PARTNER / EXP_BANKFEE / EXP_NETWORK / VARIANCE / REFERRAL_PAYABLE / REBATE_RECEIVABLE"
+    ],
+    [
+     "kind",
+     "string",
+     "",
+     "asset / liability / income / expense"
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "− purpose ADVANCE (Q13)",
+    "+ purposes REFERRAL_PAYABLE, REBATE_RECEIVABLE",
+    "+ holder_type Introducer"
+   ]
+  },
+  "USER": {
+   "d": "ledger",
+   "col": 8,
+   "desc": "A Google Workspace user with role ops, finance or management. Approver ≠ initiator on every approval; Operations never sees derived economics. Management approves cross-group payouts and third-party refunds; advances no longer exist.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "email",
+     "string",
+     "",
+     "Google Workspace"
+    ],
+    [
+     "role",
+     "string",
+     "",
+     "ops / finance / management"
+    ],
+    [
+     "status",
+     "string"
+    ]
+   ]
+  },
+  "APPROVAL": {
+   "d": "ledger",
+   "col": 8,
+   "desc": "Modelled once for all master data: a polymorphic subject, requested, approved or escalated, approver never equal to requester. New actions: refund_to_third_party, cross_group_payout, balance_conversion, recover_dues.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "subject_type",
+     "string"
+    ],
+    [
+     "subject_id",
+     "int"
+    ],
+    [
+     "action",
+     "string"
+    ],
+    [
+     "requested_by",
+     "int",
+     "FK"
+    ],
+    [
+     "approved_by",
+     "int",
+     "FK",
+     "never equal to requested_by"
+    ],
+    [
+     "escalated_to",
+     "int",
+     "FK"
+    ],
+    [
+     "state",
+     "string"
+    ],
+    [
+     "reason",
+     "string"
+    ]
+   ]
+  },
+  "AUDIT_LOG": {
+   "d": "ledger",
+   "col": 8,
+   "desc": "Field-level change history on any record, with the acting user.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "record_type",
+     "string"
+    ],
+    [
+     "record_id",
+     "int"
+    ],
+    [
+     "field",
+     "string"
+    ],
+    [
+     "old_value",
+     "string"
+    ],
+    [
+     "new_value",
+     "string"
+    ],
+    [
+     "actor_id",
+     "int",
+     "FK"
+    ],
+    [
+     "at",
+     "datetime"
+    ]
+   ]
+  },
+  "RECORD_LOCK": {
+   "d": "ledger",
+   "col": 8,
+   "desc": "An edit lock on any record.",
+   "f": [
+    [
+     "id",
+     "int",
+     "PK"
+    ],
+    [
+     "record_type",
+     "string"
+    ],
+    [
+     "record_id",
+     "int"
+    ],
+    [
+     "locked_by",
+     "int",
+     "FK"
+    ],
+    [
+     "locked_at",
+     "datetime"
+    ]
+   ]
+  },
+  "CLIENT_BALANCE": {
+   "d": "view",
+   "col": 8,
+   "desc": "CLIENT_BALANCE(project, partner, currency) = Σ conversions’ actual_out booked at that partner (deal legs and balance conversions, target side) − Σ balance conversions’ amount_in (source side) + Σ returned amounts − Σ released disbursement totals. Carries rounding dust below one unit.",
+   "f": [
+    [
+     "project",
+     "",
+     ""
+    ],
+    [
+     "partner",
+     "",
+     ""
+    ],
+    [
+     "currency",
+     "",
+     ""
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "includes balance conversions and returns; carries dust"
+   ]
+  },
+  "GROUP_ENTITLEMENT": {
+   "d": "view",
+   "col": 8,
+   "desc": "GROUP_ENTITLEMENT(group, currency) = Σ client_net of converted forward legs attributed to the group ± entitlement re-attributions − Σ DISBURSEMENT_LINE.amount paid to receivers in the group + Σ returned amounts. Replaces RECEIVER_ENTITLEMENT. Σ over a project’s groups = Σ CLIENT_BALANCE over partners, per currency.",
+   "f": [
+    [
+     "group",
+     "",
+     ""
+    ],
+    [
+     "currency",
+     "",
+     ""
+    ]
+   ],
+   "v": "new",
+   "ch": [
+    "replaces RECEIVER_ENTITLEMENT (D1)"
+   ]
+  },
+  "OFFSET": {
+   "d": "view",
+   "col": 8,
+   "desc": "OFFSET(group, currency) = GROUP_ENTITLEMENT; positive = owed, negative = holding another group’s flow. Can only be non-zero in a project with more than one group. Carries Management approval and tighter aging.",
+   "f": [
+    [
+     "group",
+     "",
+     ""
+    ],
+    [
+     "currency",
+     "",
+     ""
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "per group, not per receiver; no tiers (D1)"
+   ]
+  },
+  "CUSTODY": {
+   "d": "view",
+   "col": 8,
+   "desc": "CUSTODY(own_wallet) = Σ collections into the own wallet under open reroutes + Σ recovered dues resting there − Σ forwarded; each row with deal, reason, age. The standing control on contingency holding.",
+   "f": [
+    [
+     "own_wallet",
+     "",
+     ""
+    ]
+   ],
+   "v": "changed",
+   "ch": [
+    "includes recovered dues"
+   ]
+  }
+ },
+ "ORDER": {
+  "0": [
+   "PROJECT",
+   "PARTNER",
+   "RATE_SOURCE",
+   "INTRODUCER"
+  ],
+  "1": [
+   "SENDER",
+   "RECEIVER_GROUP",
+   "RECEIVER",
+   "OWN_WALLET",
+   "THRESHOLD",
+   "CURRENCY_PAIR",
+   "PARTNER_CONFIG"
+  ],
+  "2": [
+   "COLLECTION_SENDING_ENTITY",
+   "SENDER_RECEIVER_ALLOW",
+   "RECEIVING_ENTITY",
+   "PAIR_RATE_SOURCE",
+   "PARTNER_PAIR",
+   "FACILITATING_ENTITY",
+   "COLLECTION_RECEIVING_ENTITY",
+   "SETTLEMENT_SENDING_ENTITY",
+   "SETTLEMENT_RAIL"
+  ],
+  "3": [
+   "FEE_OVERRIDE",
+   "RECEIVING_ENTITY_ACCOUNT",
+   "SETTLEMENT_REGISTRATION",
+   "FEE_STRUCTURE",
+   "WALLET",
+   "REFERRAL_RULE",
+   "PARTNER_REBATE_RULE"
+  ],
+  "4": [
+   "MARKET_RATE",
+   "RATE_COMPARISON",
+   "PARTNER_RATE_VERSION"
+  ],
+  "5": [
+   "DEAL_GROUP",
+   "DEAL",
+   "COLLECTION",
+   "CONVERSION",
+   "REROUTE",
+   "SENDER_CREDIT",
+   "EARNINGS_RECEIVABLE",
+   "BALANCE_CONVERSION",
+   "ENTITLEMENT_REATTRIBUTION"
+  ],
+  "6": [
+   "DISBURSEMENT",
+   "DISBURSEMENT_LINE",
+   "DISBURSEMENT_RETURN",
+   "CONFIRMATION",
+   "SHORTFALL",
+   "BANK_FEE_EVENT",
+   "FEE_DECISION",
+   "REFERRAL_ACCRUAL",
+   "PARTNER_REBATE_ACCRUAL"
+  ],
+  "7": [
+   "LEDGER_TRANSACTION",
+   "LEDGER_POSTING",
+   "LEDGER_ACCOUNT"
+  ],
+  "8": [
+   "USER",
+   "APPROVAL",
+   "AUDIT_LOG",
+   "RECORD_LOCK",
+   "CLIENT_BALANCE",
+   "GROUP_ENTITLEMENT",
+   "OFFSET",
+   "CUSTODY"
+  ]
+ },
+ "R": [
+  [
+   "PROJECT",
+   "SENDER",
+   "owns",
+   "project_id",
+   "senders",
+   "1 : n"
+  ],
+  [
+   "PROJECT",
+   "RECEIVER_GROUP",
+   "owns",
+   "project_id",
+   "receiver groups (one default)",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RECEIVER_GROUP",
+   "RECEIVER",
+   "owns",
+   "group_id",
+   "members",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PROJECT",
+   "RECEIVER",
+   "owns",
+   "project_id",
+   "receivers",
+   "1 : n"
+  ],
+  [
+   "SENDER",
+   "RECEIVER",
+   "refs",
+   "sender_id",
+   "stands for sender (kind = sender_return)",
+   "1 : 0..1",
+   "new"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "RECEIVER",
+   "refs",
+   "partner_config_id",
+   "stands for partner endpoint (kind = partner_transit)",
+   "1 : 0..1",
+   "new"
+  ],
+  [
+   "PROJECT",
+   "OWN_WALLET",
+   "owns",
+   "project_id",
+   "contingency wallet",
+   "1 : 0..1"
+  ],
+  [
+   "PROJECT",
+   "THRESHOLD",
+   "owns",
+   "project_id",
+   "system settings",
+   "1 : n"
+  ],
+  [
+   "PROJECT",
+   "CURRENCY_PAIR",
+   "owns",
+   "project_id",
+   "trades",
+   "1 : n"
+  ],
+  [
+   "PROJECT",
+   "PARTNER_CONFIG",
+   "owns",
+   "project_id",
+   "partner configuration",
+   "1 : n"
+  ],
+  [
+   "PARTNER",
+   "PARTNER_CONFIG",
+   "refs",
+   "partner_id",
+   "used in projects",
+   "1 : n"
+  ],
+  [
+   "SENDER",
+   "COLLECTION_SENDING_ENTITY",
+   "owns",
+   "sender_id",
+   "provenance accounts",
+   "1 : n"
+  ],
+  [
+   "SENDER",
+   "FEE_OVERRIDE",
+   "owns",
+   "sender_id",
+   "sender-specific fee",
+   "1 : n"
+  ],
+  [
+   "PARTNER_PAIR",
+   "FEE_OVERRIDE",
+   "refs",
+   "partner_pair_id",
+   "override on this pair",
+   "1 : n"
+  ],
+  [
+   "SENDER",
+   "SENDER_RECEIVER_ALLOW",
+   "refs",
+   "sender_id",
+   "sendable_to",
+   "1 : n"
+  ],
+  [
+   "RECEIVER_GROUP",
+   "SENDER_RECEIVER_ALLOW",
+   "refs",
+   "receiver_group_id",
+   "allowed group",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RECEIVER",
+   "RECEIVING_ENTITY",
+   "owns",
+   "receiver_id",
+   "members",
+   "1 : n"
+  ],
+  [
+   "RECEIVING_ENTITY",
+   "RECEIVING_ENTITY_ACCOUNT",
+   "owns",
+   "receiving_entity_id",
+   "accounts (currency × rail)",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RECEIVING_ENTITY_ACCOUNT",
+   "SETTLEMENT_REGISTRATION",
+   "refs",
+   "receiving_entity_account_id",
+   "registered with partner",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "SETTLEMENT_REGISTRATION",
+   "owns",
+   "partner_config_id",
+   "accounts registered",
+   "1 : n"
+  ],
+  [
+   "CURRENCY_PAIR",
+   "PAIR_RATE_SOURCE",
+   "refs",
+   "currency_pair_id",
+   "source chain",
+   "1 : n"
+  ],
+  [
+   "RATE_SOURCE",
+   "PAIR_RATE_SOURCE",
+   "refs",
+   "rate_source_id",
+   "by priority",
+   "1 : n"
+  ],
+  [
+   "CURRENCY_PAIR",
+   "PARTNER_PAIR",
+   "refs",
+   "currency_pair_id",
+   "pair",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "PARTNER_PAIR",
+   "owns",
+   "partner_config_id",
+   "pairs handled",
+   "1 : n"
+  ],
+  [
+   "PARTNER_PAIR",
+   "FEE_STRUCTURE",
+   "owns",
+   "partner_pair_id",
+   "NPL client-side fee (versioned)",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "SETTLEMENT_RAIL",
+   "owns",
+   "partner_config_id",
+   "banks / EMIs",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "COLLECTION_RECEIVING_ENTITY",
+   "owns",
+   "partner_config_id",
+   "bank-in endpoints",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "SETTLEMENT_SENDING_ENTITY",
+   "owns",
+   "partner_config_id",
+   "narratives",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "FACILITATING_ENTITY",
+   "owns",
+   "partner_config_id",
+   "partner vehicles / channels",
+   "1 : n"
+  ],
+  [
+   "FACILITATING_ENTITY",
+   "WALLET",
+   "owns",
+   "facilitating_entity_id",
+   "crypto-in",
+   "1 : n"
+  ],
+  [
+   "INTRODUCER",
+   "REFERRAL_RULE",
+   "owns",
+   "introducer_id",
+   "commission terms",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PROJECT",
+   "REFERRAL_RULE",
+   "refs",
+   "project_id",
+   "on this project",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_PAIR",
+   "REFERRAL_RULE",
+   "refs",
+   "partner_pair_id",
+   "optionally per pair",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "PARTNER_REBATE_RULE",
+   "owns",
+   "partner_config_id",
+   "rebate terms",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RATE_SOURCE",
+   "MARKET_RATE",
+   "refs",
+   "rate_source_id",
+   "captured from",
+   "1 : n"
+  ],
+  [
+   "CURRENCY_PAIR",
+   "MARKET_RATE",
+   "refs",
+   "currency_pair_id",
+   "for pair",
+   "1 : n"
+  ],
+  [
+   "PARTNER_PAIR",
+   "RATE_COMPARISON",
+   "refs",
+   "partner_pair_id",
+   "one per partner × pair × date",
+   "1 : n"
+  ],
+  [
+   "RATE_COMPARISON",
+   "PARTNER_RATE_VERSION",
+   "owns",
+   "rate_comparison_id",
+   "versions that day",
+   "1 : n"
+  ],
+  [
+   "MARKET_RATE",
+   "PARTNER_RATE_VERSION",
+   "refs",
+   "market_rate_id",
+   "snapshot at capture",
+   "1 : n"
+  ],
+  [
+   "PROJECT",
+   "DEAL_GROUP",
+   "refs",
+   "project_id",
+   "client",
+   "1 : n",
+   "new"
+  ],
+  [
+   "SENDER",
+   "DEAL_GROUP",
+   "refs",
+   "sender_id",
+   "sender",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RECEIVER_GROUP",
+   "DEAL_GROUP",
+   "refs",
+   "receiver_group_id",
+   "entitled group",
+   "1 : n",
+   "new"
+  ],
+  [
+   "FEE_STRUCTURE",
+   "DEAL_GROUP",
+   "refs",
+   "fee_structure_id",
+   "quoted fee",
+   "1 : n",
+   "new"
+  ],
+  [
+   "DEAL_GROUP",
+   "DEAL",
+   "owns",
+   "deal_group_id",
+   "legs (leg_no)",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PROJECT",
+   "DEAL",
+   "refs",
+   "project_id",
+   "client",
+   "1 : n"
+  ],
+  [
+   "SENDER",
+   "DEAL",
+   "refs",
+   "sender_id",
+   "sender",
+   "1 : n"
+  ],
+  [
+   "RECEIVER_GROUP",
+   "DEAL",
+   "refs",
+   "receiver_group_id",
+   "attribution",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RECEIVER",
+   "DEAL",
+   "refs",
+   "receiver_id",
+   "receiver, when known",
+   "1 : 0..n"
+  ],
+  [
+   "PARTNER_PAIR",
+   "DEAL",
+   "refs",
+   "partner_pair_id",
+   "partner × pair fixed per leg",
+   "1 : n"
+  ],
+  [
+   "FACILITATING_ENTITY",
+   "DEAL",
+   "refs",
+   "facilitating_entity_id",
+   "chosen at quote",
+   "1 : n"
+  ],
+  [
+   "FEE_STRUCTURE",
+   "DEAL",
+   "refs",
+   "fee_structure_id",
+   "stamped",
+   "1 : n"
+  ],
+  [
+   "MARKET_RATE",
+   "DEAL",
+   "refs",
+   "market_rate_id",
+   "stamped",
+   "1 : n"
+  ],
+  [
+   "PARTNER_RATE_VERSION",
+   "DEAL",
+   "refs",
+   "partner_rate_version_id",
+   "stamped (quote-first)",
+   "1 : n"
+  ],
+  [
+   "DEAL",
+   "DEAL",
+   "self",
+   "funding_ref_id",
+   "prior leg funds the next (funding_source = prior_leg)",
+   "1 : 0..1",
+   "new"
+  ],
+  [
+   "DISBURSEMENT_RETURN",
+   "DEAL",
+   "refs",
+   "funding_ref_id",
+   "funds a return leg (funding_source = returned_disbursement)",
+   "1 : 0..1",
+   "new"
+  ],
+  [
+   "DEAL",
+   "COLLECTION",
+   "owns",
+   "deal_id",
+   "1..n parts (forward legs only)",
+   "1 : n"
+  ],
+  [
+   "COLLECTION_SENDING_ENTITY",
+   "COLLECTION",
+   "refs",
+   "collection_sending_entity_id",
+   "provenance",
+   "1 : n"
+  ],
+  [
+   "WALLET",
+   "COLLECTION",
+   "poly",
+   "endpoint_type",
+   "endpoint when crypto-in",
+   "1 : n"
+  ],
+  [
+   "COLLECTION_RECEIVING_ENTITY",
+   "COLLECTION",
+   "poly",
+   "endpoint_type",
+   "endpoint when bank-in",
+   "1 : n"
+  ],
+  [
+   "DEAL",
+   "CONVERSION",
+   "owns",
+   "deal_id",
+   "converts (one owner)",
+   "1 : 0..1"
+  ],
+  [
+   "BALANCE_CONVERSION",
+   "CONVERSION",
+   "owns",
+   "balance_conversion_id",
+   "converts (one owner)",
+   "1 : 1",
+   "new"
+  ],
+  [
+   "PARTNER_RATE_VERSION",
+   "CONVERSION",
+   "refs",
+   "partner_rate_version_id",
+   "exact version used",
+   "1 : n"
+  ],
+  [
+   "DEAL",
+   "REROUTE",
+   "owns",
+   "deal_id",
+   "contingency",
+   "1 : 0..1"
+  ],
+  [
+   "OWN_WALLET",
+   "REROUTE",
+   "refs",
+   "own_wallet_id",
+   "custody",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "REROUTE",
+   "refs",
+   "alternate_partner_config_id",
+   "alternate partner",
+   "1 : n"
+  ],
+  [
+   "SENDER",
+   "SENDER_CREDIT",
+   "refs",
+   "sender_id",
+   "credit owed to",
+   "1 : n"
+  ],
+  [
+   "DEAL",
+   "SENDER_CREDIT",
+   "refs",
+   "deal_id",
+   "arising from",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "EARNINGS_RECEIVABLE",
+   "refs",
+   "partner_config_id",
+   "margin resting at partner",
+   "1 : n"
+  ],
+  [
+   "DEAL",
+   "EARNINGS_RECEIVABLE",
+   "refs",
+   "deal_id",
+   "originates",
+   "1 : n"
+  ],
+  [
+   "DEAL",
+   "EARNINGS_RECEIVABLE",
+   "refs",
+   "recovered_by_deal_id",
+   "recovers (recover dues)",
+   "1 : n"
+  ],
+  [
+   "PROJECT",
+   "BALANCE_CONVERSION",
+   "refs",
+   "project_id",
+   "client",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "BALANCE_CONVERSION",
+   "refs",
+   "partner_config_id",
+   "at partner",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RECEIVER_GROUP",
+   "BALANCE_CONVERSION",
+   "refs",
+   "receiver_group_id",
+   "group served (chosen split)",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_PAIR",
+   "BALANCE_CONVERSION",
+   "refs",
+   "partner_pair_id",
+   "pair used",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_RATE_VERSION",
+   "BALANCE_CONVERSION",
+   "refs",
+   "partner_rate_version_id",
+   "rate version",
+   "1 : n",
+   "new"
+  ],
+  [
+   "MARKET_RATE",
+   "BALANCE_CONVERSION",
+   "refs",
+   "market_rate_id",
+   "market snapshot",
+   "1 : n",
+   "new"
+  ],
+  [
+   "BALANCE_CONVERSION",
+   "ENTITLEMENT_REATTRIBUTION",
+   "owns",
+   "balance_conversion_id",
+   "entitlement moved by group",
+   "1 : n",
+   "new"
+  ],
+  [
+   "RECEIVER_GROUP",
+   "ENTITLEMENT_REATTRIBUTION",
+   "refs",
+   "receiver_group_id",
+   "group",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PROJECT",
+   "DISBURSEMENT",
+   "refs",
+   "project_id",
+   "client",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "DISBURSEMENT",
+   "refs",
+   "partner_config_id",
+   "draws from this partner’s holding",
+   "1 : n"
+  ],
+  [
+   "SETTLEMENT_SENDING_ENTITY",
+   "DISBURSEMENT",
+   "refs",
+   "settlement_sending_entity_id",
+   "narrative",
+   "1 : n"
+  ],
+  [
+   "SETTLEMENT_RAIL",
+   "DISBURSEMENT",
+   "refs",
+   "settlement_rail_id",
+   "rail",
+   "1 : n"
+  ],
+  [
+   "DISBURSEMENT",
+   "DISBURSEMENT_LINE",
+   "owns",
+   "disbursement_id",
+   "one or many destinations",
+   "1 : n"
+  ],
+  [
+   "SETTLEMENT_REGISTRATION",
+   "DISBURSEMENT_LINE",
+   "refs",
+   "settlement_registration_id",
+   "destination account",
+   "1 : n"
+  ],
+  [
+   "RECEIVER",
+   "DISBURSEMENT_LINE",
+   "refs",
+   "paid_receiver_id",
+   "paid receiver (offset if in another group)",
+   "1 : n"
+  ],
+  [
+   "DISBURSEMENT_LINE",
+   "DISBURSEMENT_RETURN",
+   "owns",
+   "disbursement_line_id",
+   "rejected and returned",
+   "1 : 0..1",
+   "new"
+  ],
+  [
+   "DISBURSEMENT_LINE",
+   "CONFIRMATION",
+   "owns",
+   "disbursement_line_id",
+   "confirmed",
+   "1 : 0..1"
+  ],
+  [
+   "CONFIRMATION",
+   "SHORTFALL",
+   "owns",
+   "confirmation_id",
+   "when short",
+   "1 : 0..1"
+  ],
+  [
+   "RECEIVER",
+   "SHORTFALL",
+   "refs",
+   "receiver_id",
+   "short receiver",
+   "1 : n"
+  ],
+  [
+   "DISBURSEMENT",
+   "SHORTFALL",
+   "refs",
+   "topped_up_disbursement_id",
+   "topped up by",
+   "1 : n"
+  ],
+  [
+   "DISBURSEMENT",
+   "BANK_FEE_EVENT",
+   "owns",
+   "disbursement_id",
+   "post-confirmation true-up / bounce fee",
+   "1 : n"
+  ],
+  [
+   "DISBURSEMENT",
+   "BANK_FEE_EVENT",
+   "refs",
+   "applied_disbursement_id",
+   "applied to",
+   "1 : n"
+  ],
+  [
+   "DEAL",
+   "FEE_DECISION",
+   "poly",
+   "subject_type",
+   "markup on a return leg (subject = Deal)",
+   "1 : n",
+   "new"
+  ],
+  [
+   "DISBURSEMENT",
+   "FEE_DECISION",
+   "poly",
+   "subject_type",
+   "network / bank fee override (subject = Disbursement)",
+   "1 : n",
+   "new"
+  ],
+  [
+   "BALANCE_CONVERSION",
+   "FEE_DECISION",
+   "poly",
+   "subject_type",
+   "markup on a balance conversion",
+   "1 : n",
+   "new"
+  ],
+  [
+   "REFERRAL_RULE",
+   "REFERRAL_ACCRUAL",
+   "owns",
+   "referral_rule_id",
+   "accrues per deal",
+   "1 : n",
+   "new"
+  ],
+  [
+   "DEAL",
+   "REFERRAL_ACCRUAL",
+   "refs",
+   "deal_id",
+   "on this deal",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_REBATE_RULE",
+   "PARTNER_REBATE_ACCRUAL",
+   "owns",
+   "partner_rebate_rule_id",
+   "accrues per deal",
+   "1 : n",
+   "new"
+  ],
+  [
+   "DEAL",
+   "PARTNER_REBATE_ACCRUAL",
+   "refs",
+   "deal_id",
+   "on this deal",
+   "1 : n",
+   "new"
+  ],
+  [
+   "COLLECTION",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = Collection",
+   "1 : n"
+  ],
+  [
+   "CONVERSION",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = Conversion",
+   "1 : n"
+  ],
+  [
+   "BALANCE_CONVERSION",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = BalanceConversion",
+   "1 : n",
+   "new"
+  ],
+  [
+   "DISBURSEMENT",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = Disbursement",
+   "1 : n"
+  ],
+  [
+   "DISBURSEMENT_RETURN",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = DisbursementReturn (reversing)",
+   "1 : n",
+   "new"
+  ],
+  [
+   "CONFIRMATION",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = Confirmation",
+   "1 : n"
+  ],
+  [
+   "BANK_FEE_EVENT",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = BankFeeEvent",
+   "1 : n"
+  ],
+  [
+   "REROUTE",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = Reroute (incl. recover dues)",
+   "1 : n"
+  ],
+  [
+   "REFERRAL_ACCRUAL",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = Referral",
+   "1 : n",
+   "new"
+  ],
+  [
+   "PARTNER_REBATE_ACCRUAL",
+   "LEDGER_TRANSACTION",
+   "poly",
+   "source_type",
+   "source = Rebate",
+   "1 : n",
+   "new"
+  ],
+  [
+   "LEDGER_TRANSACTION",
+   "LEDGER_TRANSACTION",
+   "self",
+   "reversal_of_id",
+   "reversal_of",
+   "1 : 0..1"
+  ],
+  [
+   "LEDGER_TRANSACTION",
+   "LEDGER_POSTING",
+   "owns",
+   "ledger_transaction_id",
+   "balanced per currency",
+   "1 : n"
+  ],
+  [
+   "LEDGER_ACCOUNT",
+   "LEDGER_POSTING",
+   "refs",
+   "ledger_account_id",
+   "account",
+   "1 : n"
+  ],
+  [
+   "PARTNER_CONFIG",
+   "LEDGER_ACCOUNT",
+   "poly",
+   "holder_type",
+   "holder = PartnerConfig",
+   "1 : n"
+  ],
+  [
+   "OWN_WALLET",
+   "LEDGER_ACCOUNT",
+   "poly",
+   "holder_type",
+   "holder = OwnWallet",
+   "1 : n"
+  ],
+  [
+   "RECEIVER",
+   "LEDGER_ACCOUNT",
+   "poly",
+   "holder_type",
+   "holder = Receiver",
+   "1 : n"
+  ],
+  [
+   "SENDER",
+   "LEDGER_ACCOUNT",
+   "poly",
+   "holder_type",
+   "holder = Sender",
+   "1 : n"
+  ],
+  [
+   "INTRODUCER",
+   "LEDGER_ACCOUNT",
+   "poly",
+   "holder_type",
+   "holder = Introducer",
+   "1 : n",
+   "new"
+  ],
+  [
+   "USER",
+   "APPROVAL",
+   "refs",
+   "requested_by",
+   "requests / approves / escalates",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "AUDIT_LOG",
+   "refs",
+   "actor_id",
+   "actor",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "RECORD_LOCK",
+   "refs",
+   "locked_by",
+   "locked by",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "FEE_OVERRIDE",
+   "actor",
+   "approved_by",
+   "approved_by",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "FEE_DECISION",
+   "actor",
+   "approved_by",
+   "approved_by",
+   "1 : n",
+   "new"
+  ],
+  [
+   "USER",
+   "PARTNER_RATE_VERSION",
+   "actor",
+   "confirmed_by",
+   "confirmed_by",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "COLLECTION",
+   "actor",
+   "verified_by",
+   "verified_by",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "CONVERSION",
+   "actor",
+   "approved_by",
+   "approved_by",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "BALANCE_CONVERSION",
+   "actor",
+   "approved_by",
+   "requested_by / approved_by",
+   "1 : n",
+   "new"
+  ],
+  [
+   "USER",
+   "REROUTE",
+   "actor",
+   "approved_by",
+   "requested_by / approved_by",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "DISBURSEMENT",
+   "actor",
+   "approved_by",
+   "prepared_by / approved_by / escalated_to",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "CONFIRMATION",
+   "actor",
+   "confirmed_by",
+   "confirmed_by",
+   "1 : n"
+  ],
+  [
+   "USER",
+   "LEDGER_TRANSACTION",
+   "actor",
+   "posted_by",
+   "posted_by",
+   "1 : n"
+  ],
+  [
+   "CONVERSION",
+   "CLIENT_BALANCE",
+   "view",
+   "",
+   "Σ actual_out booked at partner",
+   "Σ"
+  ],
+  [
+   "BALANCE_CONVERSION",
+   "CLIENT_BALANCE",
+   "view",
+   "",
+   "− source currency, + target currency",
+   "Σ",
+   "new"
+  ],
+  [
+   "DISBURSEMENT_RETURN",
+   "CLIENT_BALANCE",
+   "view",
+   "",
+   "+ returned amounts",
+   "Σ",
+   "new"
+  ],
+  [
+   "DISBURSEMENT",
+   "CLIENT_BALANCE",
+   "view",
+   "",
+   "− Σ released totals",
+   "Σ"
+  ],
+  [
+   "DEAL",
+   "GROUP_ENTITLEMENT",
+   "view",
+   "",
+   "Σ client_net of converted forward legs, by group",
+   "Σ",
+   "new"
+  ],
+  [
+   "ENTITLEMENT_REATTRIBUTION",
+   "GROUP_ENTITLEMENT",
+   "view",
+   "",
+   "± re-attributed on balance conversion",
+   "Σ",
+   "new"
+  ],
+  [
+   "DISBURSEMENT_LINE",
+   "GROUP_ENTITLEMENT",
+   "view",
+   "",
+   "− Σ paid to receivers in the group",
+   "Σ",
+   "new"
+  ],
+  [
+   "DISBURSEMENT_RETURN",
+   "GROUP_ENTITLEMENT",
+   "view",
+   "",
+   "+ returned amounts",
+   "Σ",
+   "new"
+  ],
+  [
+   "RECEIVER_GROUP",
+   "GROUP_ENTITLEMENT",
+   "view",
+   "",
+   "per group",
+   "Σ",
+   "new"
+  ],
+  [
+   "GROUP_ENTITLEMENT",
+   "OFFSET",
+   "view",
+   "",
+   "= entitlement; sign = owed / holding",
+   "="
+  ],
+  [
+   "COLLECTION",
+   "CUSTODY",
+   "view",
+   "",
+   "Σ into own wallet under open reroutes",
+   "Σ"
+  ],
+  [
+   "REROUTE",
+   "CUSTODY",
+   "view",
+   "",
+   "open reroutes; recovered dues",
+   "Σ"
+  ],
+  [
+   "OWN_WALLET",
+   "CUSTODY",
+   "view",
+   "",
+   "per wallet",
+   "Σ"
+  ]
+ ],
+ "INV": [
+  [
+   [
+    "LEDGER_POSTING",
+    "LEDGER_TRANSACTION"
+   ],
+   "Postings in one transaction sum to zero per currency."
+  ],
+  [
+   [
+    "LEDGER_TRANSACTION",
+    "LEDGER_POSTING",
+    "LEDGER_ACCOUNT"
+   ],
+   "Ledger tables are append-only; corrections are reversing transactions."
+  ],
+  [
+   [
+    "OWN_WALLET",
+    "REROUTE",
+    "COLLECTION",
+    "CUSTODY"
+   ],
+   "No custody in the normal path: CL.OWN.*.HELD may only be debited by a collection on a deal with an approved REROUTE; the custody aging view is the standing control."
+  ],
+  [
+   [
+    "DISBURSEMENT",
+    "PROJECT",
+    "THRESHOLD",
+    "CLIENT_BALANCE"
+   ],
+   "Disburse to less than one unit: under disburse_policy = to_zero a DISBURSEMENT pays whole units and leaves only rounding dust; under hold_allowed the balance may rest at the partner within the project’s exposure cap (Q5, Q8)."
+  ],
+  [
+   [
+    "DEAL",
+    "DEAL_GROUP"
+   ],
+   "Priced once, per leg: a leg’s pricing fields are write-once after priced_at; a re-quote is a new leg or a new deal group."
+  ],
+  [
+   [
+    "DEAL",
+    "REROUTE",
+    "PARTNER_PAIR",
+    "FACILITATING_ENTITY"
+   ],
+   "Partner fixed at quote, per leg: partner_pair_id / facilitating_entity_id change only through an approved REROUTE."
+  ],
+  [
+   [
+    "GROUP_ENTITLEMENT",
+    "CLIENT_BALANCE",
+    "ENTITLEMENT_REATTRIBUTION",
+    "RECEIVER_GROUP"
+   ],
+   "Entitlement conservation: Σ GROUP_ENTITLEMENT over a project’s groups = Σ CLIENT_BALANCE over partners, per currency, including balance-conversion re-attributions."
+  ],
+  [
+   [
+    "SETTLEMENT_REGISTRATION",
+    "DEAL_GROUP",
+    "RECEIVING_ENTITY_ACCOUNT",
+    "RECEIVER_GROUP"
+   ],
+   "Destination approval precedes collection: a quote-first deal cannot leave Inquiry unless at least one account in the entitled group has an approved SETTLEMENT_REGISTRATION with the chosen partner."
+  ],
+  [
+   [
+    "APPROVAL",
+    "USER"
+   ],
+   "Approver ≠ initiator on every APPROVAL; Operations never receives derived-economics fields."
+  ],
+  [
+   [
+    "CLIENT_BALANCE",
+    "GROUP_ENTITLEMENT",
+    "OFFSET",
+    "CUSTODY",
+    "LEDGER_POSTING"
+   ],
+   "Every balance shown anywhere is a sum over postings or deals."
+  ],
+  [
+   [
+    "SENDER_RECEIVER_ALLOW",
+    "DEAL",
+    "COLLECTION"
+   ],
+   "A collect-first deal requires an existing SENDER_RECEIVER_ALLOW entry for its sender and group (Q1)."
+  ],
+  [
+   [
+    "DEAL",
+    "RECEIVER",
+    "APPROVAL"
+   ],
+   "A return leg pays the sender_return RECEIVER linked to the parent leg’s sender, unless a Management-approved exception with a reason names another approved receiver."
+  ],
+  [
+   [
+    "DISBURSEMENT_RETURN",
+    "DISBURSEMENT_LINE",
+    "DEAL"
+   ],
+   "The failed forward line is reversed before a return leg opens, so entitlement and balance are correct at the return conversion."
+  ],
+  [
+   [
+    "CONVERSION",
+    "DEAL",
+    "BALANCE_CONVERSION"
+   ],
+   "A CONVERSION belongs to exactly one owner: a deal leg or a balance conversion."
+  ],
+  [
+   [
+    "REROUTE",
+    "EARNINGS_RECEIVABLE"
+   ],
+   "A recovery on a reroute cannot exceed the outstanding EARNINGS_RECEIVABLE at that partner; the alternate partner’s expected conversion is computed on the net amount forwarded."
+  ],
+  [
+   [
+    "LEDGER_POSTING",
+    "CONVERSION"
+   ],
+   "Ownership flips client → company at one event only: margin recognition at conversion. NPL never advances money to a receiver (Q13)."
+  ],
+  [
+   [
+    "OFFSET",
+    "RECEIVER_GROUP",
+    "DISBURSEMENT_LINE"
+   ],
+   "Offsets exist only across receiver groups and carry Management approval and tighter aging; within a group nothing is tracked beyond an informational tally."
+  ]
+ ],
+ "WALKS": [
+  {
+   "name": "Quote-first deal, end to end",
+   "steps": [
+    [
+     "PROJECT",
+     "The client. Its policies (quote freshness and validity, grace, fee treatment, disburse policy and exposure cap) govern everything below."
+    ],
+    [
+     "SENDER",
+     "Operator picks the sender. The receiver groups this sender may pay are listed in SENDER_RECEIVER_ALLOW."
+    ],
+    [
+     "RECEIVER_GROUP",
+     "The entitled group. One of its receivers’ accounts must hold an approved registration with the chosen partner before the deal leaves Inquiry."
+    ],
+    [
+     "PARTNER_PAIR",
+     "Choosing partner × currency pair is part of pricing. Partner and facilitating entity are fixed per leg."
+    ],
+    [
+     "FEE_STRUCTURE",
+     "The versioned client-side fee for that partner × pair is stamped on the deal group."
+    ],
+    [
+     "RATE_COMPARISON",
+     "Created lazily for partner × pair × date by the first deal of the day."
+    ],
+    [
+     "MARKET_RATE",
+     "The market snapshot from the pair’s prioritised rate source."
+    ],
+    [
+     "PARTNER_RATE_VERSION",
+     "The partner’s rate version for the day; the breach check may freeze the pair until Finance decides."
+    ],
+    [
+     "DEAL_GROUP",
+     "The client-facing instruction: pair as the sender sees it, sender rate, fee, reference. Every deal belongs to one; this one has a single leg."
+    ],
+    [
+     "DEAL",
+     "Leg 1, forward, funded by a collection. Priced once; sent / valid / grace timestamps and quote_hash recorded."
+    ],
+    [
+     "SETTLEMENT_REGISTRATION",
+     "Destination approval precedes collection: an approved account of the entitled group with this partner."
+    ],
+    [
+     "COLLECTION",
+     "Funds arrive in 1..n parts: crypto-in to a WALLET, bank-in to a COLLECTION_RECEIVING_ENTITY, cash with instructions."
+    ],
+    [
+     "CONVERSION",
+     "The partner converts against the exact rate version. actual_out is booked in whole units; the dropped fraction stays as client dust; the receiver fee is taken here; NPL’s margin is captured now and never again at risk."
+    ],
+    [
+     "LEDGER_TRANSACTION",
+     "One balanced transaction; margin recognition is the only client → company ownership flip."
+    ],
+    [
+     "DISBURSEMENT",
+     "Pays whole units from the partner’s holding through a SETTLEMENT_RAIL with a SETTLEMENT_SENDING_ENTITY narrative."
+    ],
+    [
+     "DISBURSEMENT_LINE",
+     "One or many destination accounts. Paying a receiver in another group creates the offset in the same action."
+    ],
+    [
+     "CONFIRMATION",
+     "The receiver confirms the amount received: full or short."
+    ],
+    [
+     "SHORTFALL",
+     "If short, a shortfall opens against the receiver and is topped up by a later disbursement."
+    ],
+    [
+     "BANK_FEE_EVENT",
+     "Post-confirmation true-up of expected vs actual bank fee: waived, carried forward or absorbed."
+    ]
+   ]
+  },
+  {
+   "name": "Collect-first deal",
+   "steps": [
+    [
+     "COLLECTION",
+     "Funds arrive before any quote. Attribution needs an existing SENDER_RECEIVER_ALLOW entry (Q1); the sender is picked from the configured list."
+    ],
+    [
+     "DEAL_GROUP",
+     "Created with entry_mode collect_first; the sender is promised nothing."
+    ],
+    [
+     "DEAL",
+     "The single leg is born in state Collected with priced_at = conversion time; no quote clocks."
+    ],
+    [
+     "PARTNER_RATE_VERSION",
+     "The rate version is taken at conversion rather than stamped at quote."
+    ],
+    [
+     "CONVERSION",
+     "Converted against that version; actual_out booked; margin captured."
+    ],
+    [
+     "DISBURSEMENT",
+     "Then the same whole-unit settlement as any other deal."
+    ]
+   ]
+  },
+  {
+   "name": "Rejected payout and return leg",
+   "steps": [
+    [
+     "DISBURSEMENT",
+     "USDT was converted to GBP at PT and paid out to the receiver’s account."
+    ],
+    [
+     "DISBURSEMENT_RETURN",
+     "The receiving or intermediary bank rejects the transfer. The GBP returns to PT minus bank fees; the line’s outcome becomes returned and a reversing transaction puts the money back into the client’s balance."
+    ],
+    [
+     "BANK_FEE_EVENT",
+     "The bounce fee is booked as expected vs actual, waived (client) or absorbed (NPL) per the project’s treatment."
+    ],
+    [
+     "GROUP_ENTITLEMENT",
+     "With the line reversed, the group’s entitlement is restored. Option B stops here: the GBP stays in balance for later payouts to receivers in the same group; another group would be an approved offset."
+    ],
+    [
+     "DEAL",
+     "Option A: a return leg on the same deal group. leg_type return, funding_source returned_disbursement, GBP → USDT at PT, priced at conversion. NPL’s original margin is untouched; the FX loss falls on the client’s funds."
+    ],
+    [
+     "FEE_DECISION",
+     "Markup on the return leg is applied or waived case by case, with an approver."
+    ],
+    [
+     "CONVERSION",
+     "The reverse conversion, owned by the return leg, using PT’s rate version for GBP → USDT."
+    ],
+    [
+     "RECEIVER",
+     "The destination is the sender_return receiver linked to the parent leg’s sender. Any other receiver needs Management approval, a reason, and prior registration."
+    ],
+    [
+     "RECEIVING_ENTITY_ACCOUNT",
+     "The sender’s USDT wallet is one of that receiver’s accounts; it is chosen at payout and need not be the wallet the sender paid from."
+    ],
+    [
+     "DISBURSEMENT_LINE",
+     "The USDT goes out as an ordinary payout line to that account, clearing the return group’s entitlement."
+    ]
+   ]
+  },
+  {
+   "name": "Two-leg route via a deal group",
+   "steps": [
+    [
+     "DEAL_GROUP",
+     "The sender wants INR → EUR. Ali can collect INR but cannot reach EUR, so the group will have two legs. The group holds the one price the sender saw."
+    ],
+    [
+     "DEAL",
+     "Leg 1: INR → USDT at Ali, forward, funded by the collection. Partner fixed per leg."
+    ],
+    [
+     "CONVERSION",
+     "Ali converts to USDT; margin on leg 1 is captured here."
+    ],
+    [
+     "RECEIVER",
+     "Jeton’s collection wallet is registered as a RECEIVER of kind partner_transit, so the hop is an ordinary payout."
+    ],
+    [
+     "DISBURSEMENT",
+     "Ali pays the USDT to the transit receiver’s account. Entitlement passes through the transit group."
+    ],
+    [
+     "PARTNER_CONFIG",
+     "Leg 2 is a second DEAL on the same group at Jeton: USDT → EUR, funding_source prior_leg, no collection."
+    ],
+    [
+     "PARTNER_RATE_VERSION",
+     "Jeton’s rate version for USDT → EUR prices leg 2 at conversion."
+    ],
+    [
+     "DISBURSEMENT_LINE",
+     "Jeton pays the EUR to the real receiver’s account. Margin across the route = group quote − both partner conversions."
+    ],
+    [
+     "GROUP_ENTITLEMENT",
+     "The entitled group’s tally reconciles once leg 2 converts and pays out."
+    ]
+   ]
+  },
+  {
+   "name": "Ad-hoc balance conversion",
+   "steps": [
+    [
+     "CLIENT_BALANCE",
+     "The client holds 5K SGD and 10K USDT at PT and must pay 15K USDT."
+    ],
+    [
+     "BALANCE_CONVERSION",
+     "Finance converts SGD → USDT at PT. Not a deal: no sender, receiver or collection. It names the group it serves (chosen split)."
+    ],
+    [
+     "PARTNER_RATE_VERSION",
+     "The same rate procedure applies: partner rate version, market snapshot, breach check."
+    ],
+    [
+     "FEE_DECISION",
+     "Markup is optional, decided case by case with an approver."
+    ],
+    [
+     "CONVERSION",
+     "Owned by the balance conversion; actual_out in whole units, the fraction kept as dust."
+    ],
+    [
+     "ENTITLEMENT_REATTRIBUTION",
+     "The served group’s SGD entitlement becomes USDT entitlement. Any excess over its SGD entitlement is another group’s flow, booked as an approved offset."
+    ],
+    [
+     "LEDGER_TRANSACTION",
+     "Source BalanceConversion: debit client due USDT, credit client due SGD; an earnings posting only if markup was applied."
+    ],
+    [
+     "DISBURSEMENT",
+     "The 15K USDT goes out as an ordinary disbursement."
+    ]
+   ]
+  },
+  {
+   "name": "Reroute, custody and recover dues",
+   "steps": [
+    [
+     "DEAL",
+     "A priced leg hits a partner problem: unavailable, limit reached, holiday, compliance hold."
+    ],
+    [
+     "REROUTE",
+     "The only way partner_pair / facilitating_entity change after quote. Pre- or post-collection; post-collection outcome is via the own wallet or a refund to the sender (Q3). Approved by Finance."
+    ],
+    [
+     "OWN_WALLET",
+     "Contingency custody. CL.OWN.*.HELD may only be debited by a collection on a deal with an approved reroute; custody_max_hours bounds it."
+    ],
+    [
+     "PARTNER_CONFIG",
+     "The alternate partner must have applicable_for_reroute set. NPL’s cut is captured at whichever partner converts, so nothing is withheld."
+    ],
+    [
+     "EARNINGS_RECEIVABLE",
+     "With forward_and_recover_dues, NPL forwards less than the full amount and reduces its receivable at that partner by the same figure: own wallet cash up, receivable down, no income. The partner’s agreement is recorded."
+    ],
+    [
+     "CUSTODY",
+     "The custody aging view (collections under open reroutes plus recovered dues resting in the wallet, minus forwarded) is the standing control."
+    ]
+   ]
+  },
+  {
+   "name": "Rate day and breach approval",
+   "steps": [
+    [
+     "RATE_SOURCE",
+     "Kraken, CMC, OANDA or XE, each with a staleness threshold."
+    ],
+    [
+     "PAIR_RATE_SOURCE",
+     "The prioritised source chain for each currency pair."
+    ],
+    [
+     "MARKET_RATE",
+     "Captured rate per source and pair; cross-source slippage is a query over these."
+    ],
+    [
+     "RATE_COMPARISON",
+     "One per partner × pair × date, with 2w and 4w average spreads built from confirmed versions only. A partner may give a new rate later the same day."
+    ],
+    [
+     "PARTNER_RATE_VERSION",
+     "Breached when spread > avg_2w × (1 + variance_threshold_rel). Quoting and conversion on that partner × pair freeze; Finance may also ask for a better rate."
+    ],
+    [
+     "APPROVAL",
+     "Finance approves with a reason or rejects. Approver ≠ initiator."
+    ],
+    [
+     "USER",
+     "Roles: ops, finance, management. Operations never sees derived-economics fields."
+    ]
+   ]
+  },
+  {
+   "name": "Ledger and balances",
+   "steps": [
+    [
+     "CONVERSION",
+     "A source event (collection, conversion, balance conversion, disbursement, return, confirmation, bank fee event, reroute, referral, rebate, adjustment)."
+    ],
+    [
+     "LEDGER_TRANSACTION",
+     "One transaction per event, append-only; a correction is a reversing transaction."
+    ],
+    [
+     "LEDGER_POSTING",
+     "Debit and credit lines that sum to zero per currency, tagged client or company and by cost component."
+    ],
+    [
+     "LEDGER_ACCOUNT",
+     "Accounts coded OWN.HOLDER.CCY.PURPOSE; client due balances are one account per project × partner × currency. ADVANCE no longer exists."
+    ],
+    [
+     "CLIENT_BALANCE",
+     "Conversions in, balance conversions across currencies, returns back in, disbursements out. Never stored; carries dust below one unit."
+    ],
+    [
+     "GROUP_ENTITLEMENT",
+     "Per group and currency: forward legs’ client_net ± re-attributions − paid + returned. Σ groups = Σ client balance (invariant 7)."
+    ],
+    [
+     "OFFSET",
+     "Positive = owed, negative = holding another group’s flow. Zero by construction in a single-group project."
+    ]
+   ]
+  }
+ ],
+ "DOC_META": "NPLify · P0 Technical Baseline. Deliverable 1 — Entity-Relationship Diagram & Data Model, Draft v3.0. New XP Technologies Limited, 2 October 2026, Confidential. Rebuilt from \"NPLify — Project Understanding v1.0\" (2 Oct 2026); supersedes v2.1 in full. Draft v3.0 is for internal review before the NPL walkthrough; dependent documents (ledger design, calculation spec, state machines, roles matrix, configuration schema, cutover) are to be rebuilt against this version.",
+ "CONVENTIONS": [
+  "All monetary amounts are stored as exact decimals.",
+  "Every table carries created_at / created_by.",
+  "Audit, approvals and locking are modelled once (domain 4: APPROVAL, AUDIT_LOG, RECORD_LOCK) and apply to all master data.",
+  "Derived figures (client balance, entitlement, offsets, custody) are views over postings and deals — never stored.",
+  "Five diagrams across four domains, one schema: 1 Configuration, 2 Rates, 3 Deal/collection/conversion/reroute, 4 Disbursement/confirmation/fees/shortfalls, 5 Ledger & controls."
+ ],
+ "NOTES": {
+  "Configuration": [
+   "A Project (= client) owns its configuration. Partners are global counterparties; how a partner is used in this project is the partner configuration block — fees, vehicles, endpoints and registrations all hang off it.",
+   "Fees are per partner × pair (FEE_STRUCTURE under PARTNER_PAIR), so choosing the partner is part of pricing. PARTNER.disclosure_style records whether the partner’s markup is visible; PARTNER_PAIR.partner_markup_pct is known only for market_plus partners — otherwise partner cost is inferred through the rate comparison (domain 2).",
+   "Three collection-endpoint kinds by method: crypto-in → WALLET; bank-in → COLLECTION_RECEIVING_ENTITY; cash-in → no record (instructions captured on the deal).",
+   "Destination approval is per partner: SETTLEMENT_REGISTRATION is the project’s receiving entity as registered with this partner, carrying that partner’s approval status and payout details.",
+   "SETTLEMENT_SENDING_ENTITY is the narrative on an outgoing transfer; SETTLEMENT_RAIL is the bank/EMI that executes it — neither holds money, neither is a ledger holder.",
+   "COLLECTION_SENDING_ENTITY is provenance — where the sender’s funds originated; reference only.",
+   "OWN_WALLET exists only for rerouting; PARTNER_CONFIG.applicable_for_reroute defines the alternate-partner set."
+  ],
+  "Rates": [
+   "The rate comparison for the day is the object the operator flow creates “if not done already”: one per partner × pair × date, reused by every deal that day. Rolling averages are built from confirmed versions only.",
+   "A version is breached when spread > avg_2w × (1 + variance_threshold_rel); quoting and conversion on that partner × pair freeze until Finance approves with reason or rejects. Versions are never overwritten; every conversion references its exact version.",
+   "Cross-source slippage is a query over MARKET_RATE across sources for the same pair and window."
+  ],
+  "Deal lifecycle": [
+   "Two entry modes: entry_mode = collect_first deals are created in state Collected with priced_at = conversion time; quote-first deals carry sent/valid/grace timestamps and a late_decision.",
+   "Partner and facilitating entity are fixed at quote (partner_pair_id, facilitating_entity_id); only a REROUTE changes them.",
+   "Convert sub-modes: in partner_calculates, actual_out is what the partner did and is booked; expected_out is the engine’s figure; variance is the difference, exception if beyond tolerance.",
+   "One settlement model: DISBURSEMENT drains one partner’s holding to one or many DISBURSEMENT_LINEs; a line’s paid_receiver_id may differ from the entitled receiver — that is a tier-2 offset created by the same action. “Instant” is accumulate-one-then-disburse-now.",
+   "receiver_fee_applied on a line reflects PROJECT.receiver_fee_timing (before disbursement by default); BANK_FEE_EVENT is the post-confirmation true-up with expected vs actual."
+  ],
+  "Ledger & controls": [
+   "Client due balances are held as one account per (project × partner × currency) — CL.<PARTNER>.<CCY>.DUE — matching the per-partner balance rule; receiver entitlement is a view, not an account.",
+   "holder_type never includes a settlement rail or narrative entity: neither holds money.",
+   "Ownership flips client → company at exactly three events: margin recognition at conversion, withholding at source on a reroute, an advance to a receiver."
+  ]
+ },
+ "OPENQ": [
+  {
+   "q": "Collect-first: must SENDER_RECEIVER_ALLOW pre-exist for attribution; handling of inbound matching no sender",
+   "blocks": "Collect-first entry rules",
+   "status": "answered",
+   "a": "Sud: Yes, sender-receiver mapping should be done in configuration. When the transaction is created, the sender is picked from a list.",
+   "impl": "v4.0: write-time rule that a collect-first deal needs an existing allow entry; the allow list now targets receiver groups.",
+   "ents": [
+    "SENDER_RECEIVER_ALLOW",
+    "SENDER",
+    "RECEIVER_GROUP",
+    "DEAL",
+    "COLLECTION"
+   ]
+  },
+  {
+   "q": "Withholding-eligibility criteria on rerouted deals",
+   "blocks": "REROUTE.forwarding_policy rules",
+   "status": "answered",
+   "a": "Review (7 Oct): NPL’s cut is always captured at conversion, so it is never at risk from a return or a forward. If forwarding happens before conversion, whichever partner converts captures it.",
+   "impl": "v4.0: the eligibility question dissolves. forwarding_policy is forward_full or forward_and_recover_dues; withhold_earnings is removed. Ownership flips at one event only.",
+   "ents": [
+    "REROUTE",
+    "EARNINGS_RECEIVABLE",
+    "CONVERSION",
+    "LEDGER_POSTING"
+   ]
+  },
+  {
+   "q": "Post-collection reroute (funds stuck at a partner): transfer, offset, or refund-and-requote",
+   "blocks": "REROUTE.phase, inter-partner transfer pattern",
+   "status": "answered",
+   "a": "Sud: The partner can send the funds to NPL (and NPL decides where to send) or the partner can refund the sender.",
+   "impl": "v4.0: REROUTE.outcome via_own_wallet / refund_sender; a refund is a return leg paying the sender_return receiver.",
+   "ents": [
+    "REROUTE",
+    "OWN_WALLET",
+    "DEAL",
+    "RECEIVER"
+   ]
+  },
+  {
+   "q": "Receiving-entity constraints (currency, rail) narrowing settlement choice",
+   "blocks": "RECEIVING_ENTITY attributes",
+   "status": "answered",
+   "a": "Sud: Receiving entities have specific bank accounts with currency and rail restrictions, for example EUR via SWIFT and EUR via SEPA.",
+   "impl": "v4.0: RECEIVING_ENTITY_ACCOUNT; registrations and payout lines point at the account.",
+   "ents": [
+    "RECEIVING_ENTITY",
+    "RECEIVING_ENTITY_ACCOUNT",
+    "SETTLEMENT_REGISTRATION",
+    "DISBURSEMENT_LINE"
+   ]
+  },
+  {
+   "q": "Any deliberate partial-disbursement / reserve policy",
+   "blocks": "Invariant 4",
+   "status": "answered",
+   "a": "Sud: Yes, possible. In some projects the client’s funds sit until they are ready to receive them, within an exposure threshold NPL sets by appetite.",
+   "impl": "v4.0: PROJECT.disburse_policy to_zero / hold_allowed with exposure_ceiling as the cap; invariant 4 restated.",
+   "ents": [
+    "DISBURSEMENT",
+    "PROJECT",
+    "THRESHOLD",
+    "CLIENT_BALANCE"
+   ]
+  },
+  {
+   "q": "Receiver-side fee timing per project",
+   "blocks": "PROJECT.receiver_fee_timing default",
+   "status": "answered",
+   "a": "Sud: Receiver-side fee should be applied at the time of conversion, otherwise the balance will be incorrect.",
+   "impl": "v4.0: default at_conversion; CONVERSION.fee_receiver_part; DISBURSEMENT_LINE.receiver_fee_applied becomes exceptional.",
+   "ents": [
+    "PROJECT",
+    "CONVERSION",
+    "DEAL",
+    "DISBURSEMENT_LINE"
+   ]
+  },
+  {
+   "q": "Network-fee policy on refunds",
+   "blocks": "Void handling",
+   "status": "answered",
+   "a": "Sud: Set at project level with per-transaction override (one 100 USD fee was repaid in the next settlement).",
+   "impl": "v4.0: PROJECT.network_fee_policy plus FEE_DECISION for the override.",
+   "ents": [
+    "PROJECT",
+    "FEE_DECISION",
+    "DISBURSEMENT",
+    "BANK_FEE_EVENT"
+   ]
+  },
+  {
+   "q": "Whole-unit conversion rounding rule",
+   "blocks": "Calculation spec",
+   "status": "answered",
+   "a": "Review (7 Oct): fractions are dropped to whole units at conversion, per transaction (30.152 → 30). The dropped fraction stays client money, carried in the balance and paid out when it reaches a whole unit. Cash collections round to the nearest 100 / 500 / 1000 by currency.",
+   "impl": "v4.0: CONVERSION.rounding_residual; CURRENCY_PAIR.amount_rounding and cash_rounding_unit; disburse to less than one unit; SHORTFALL no longer takes rounding.",
+   "ents": [
+    "CONVERSION",
+    "CURRENCY_PAIR",
+    "DISBURSEMENT",
+    "SHORTFALL",
+    "CLIENT_BALANCE"
+   ]
+  },
+  {
+   "q": "FRS figure reconciliation (1,208 vs 1,225; Mode 1 example)",
+   "blocks": "Golden cases",
+   "status": "open",
+   "a": "Sud: Needs clarification. To be discussed.",
+   "impl": "Golden cases remain unresolved.",
+   "ents": [
+    "CONVERSION",
+    "DEAL"
+   ]
+  },
+  {
+   "q": "AQN-LT-Sub “settled by offset against transactions outside the system”",
+   "blocks": "Ledger pattern",
+   "status": "answered",
+   "a": "Sud: This is NPL’s wallet (pass-through at collection or on the settlement side). AQN is Aquanow, a crypto exchange; LT Sub is the account name.",
+   "impl": "v4.0: OWN_WALLET.provider and account_label; pass-through is a two-leg route or a reroute via the own wallet.",
+   "ents": [
+    "OWN_WALLET",
+    "LEDGER_ACCOUNT",
+    "REROUTE",
+    "DEAL_GROUP"
+   ]
+  },
+  {
+   "q": "Reference workbooks per project archetype",
+   "blocks": "Calculation acceptance",
+   "status": "pending",
+   "a": "Sud: Will be added soon.",
+   "impl": "No model change; acceptance material still to come.",
+   "ents": []
+  },
+  {
+   "q": "FRS P1 / P3 vs rerouting and multi-partner use — amend FRS or restrict scope",
+   "blocks": "Scope",
+   "status": "answered",
+   "a": "Sud: Check the added explanations (partner types and channels; pass-through and double conversions in §7.1.1). Ask again if still unclear.",
+   "impl": "v4.0: two-leg routes are deal groups with two legs and a partner_transit receiver for the hop; FRS principles generalised, scope kept.",
+   "ents": [
+    "DEAL_GROUP",
+    "DEAL",
+    "RECEIVER",
+    "PARTNER_CONFIG"
+   ]
+  },
+  {
+   "q": "Advance funding source",
+   "blocks": "Chart of accounts",
+   "status": "answered",
+   "a": "Review (7 Oct): never. NPL does not pay a receiver before the client’s money has arrived.",
+   "impl": "v4.0: LEDGER_ACCOUNT purpose ADVANCE removed; the advance approval and the “advance” ownership-flip event removed.",
+   "ents": [
+    "LEDGER_ACCOUNT",
+    "LEDGER_POSTING",
+    "USER"
+   ]
+  },
+  {
+   "q": "Review point: entitlement split on a balance conversion",
+   "blocks": "ENTITLEMENT_REATTRIBUTION",
+   "status": "answered",
+   "a": "Review (7 Oct): chosen group, not proportional. The conversion is triggered by a specific payout.",
+   "impl": "v4.0: BALANCE_CONVERSION.receiver_group_id; excess over the group’s source-currency entitlement is booked as an approved offset.",
+   "ents": [
+    "BALANCE_CONVERSION",
+    "ENTITLEMENT_REATTRIBUTION",
+    "RECEIVER_GROUP",
+    "OFFSET"
+   ]
+  },
+  {
+   "q": "Review point: refunds to a third party at the sender’s request",
+   "blocks": "Return-leg destination rule",
+   "status": "answered",
+   "a": "Review (7 Oct): allowed by exception only. Default is the sender’s own return receiver; any other destination needs Management approval with a reason and a pre-registered approved receiver.",
+   "impl": "v4.0: invariant on return legs; APPROVAL action refund_to_third_party.",
+   "ents": [
+    "DEAL",
+    "RECEIVER",
+    "APPROVAL"
+   ]
+  },
+  {
+   "q": "Review point: recover dues on a reroute",
+   "blocks": "REROUTE, EARNINGS_RECEIVABLE",
+   "status": "answered",
+   "a": "Review (7 Oct): yes, NPL nets what a partner owes it against funds about to be forwarded to that partner.",
+   "impl": "v4.0: forwarding_policy forward_and_recover_dues, recovered_amount, partner_agreement_ref; postings own wallet cash ← earnings receivable, no income.",
+   "ents": [
+    "REROUTE",
+    "EARNINGS_RECEIVABLE",
+    "OWN_WALLET",
+    "CUSTODY"
+   ]
+  },
+  {
+   "q": "Review point: legs of a route share one client-facing quote",
+   "blocks": "DEAL_GROUP",
+   "status": "answered",
+   "a": "Review (7 Oct): yes, a deal group. The sender saw one price and one reference; margin across legs is the group quote minus the partner conversions.",
+   "impl": "v4.0: DEAL_GROUP; every deal belongs to a group, a single-partner deal being a group of one leg.",
+   "ents": [
+    "DEAL_GROUP",
+    "DEAL"
+   ]
+  }
+ ],
+ "UND_NEW": [
+  "Partners are remittance companies, fintechs, EMIs, neobanks or crypto exchanges (or combinations). Ali has licensed remittance companies referred to as PT (PT Global, PT Sukses); Jeton is a fintech with EMI/neobank offerings. When NPL uses a partner for a project the facilitating entity/channel is usually fixed (Evo project via Ali uses PT Sukses). Client relationships are ring-fenced from partners; all communication flows through NPL.",
+  "Priced once has exceptions needing finance/management approval: the customer transfers after the rate duration expired, or asks for a better rate.",
+  "Disburse to zero: for some clients with a higher balance threshold the balance sits with the partner until settled.",
+  "Cash collections are rounded to the nearest 100, 500 or 1000 units depending on the currency (INR to nearest 1000; SGD and USD to nearest 100).",
+  "Funds may temporarily be sent to another receiver within the same project and reclaimed when new collections for the other receiver arrive (the tier-2 offset in §6.3).",
+  "Referral commissions paid by NPL (§4.2a): external introducers get either a share of NPL’s earnings in a predetermined ratio or a fixed % per transaction, possibly several parties on one deal; the introducer’s % is applied inside the sender-facing markup (e.g. markup = NPL fee + John’s 1%; or 0.5% NPL, 0.25% John, 0.25% James).",
+  "Commissions received by NPL (§4.2b): some partners rebate part of their fee (Jeton charges 1.25% and gives back 0.4%); tracked and reconciled monthly, paid back usually in crypto. A Partner Commissions report is required.",
+  "A partner may give a new rate during the day, so the same pair can have several PARTNER_RATE_VERSION rows on one date. On a breach Finance may also ask for a better rate; a better rate outside the threshold still needs finance/management approval.",
+  "Conversion direction: quote-first deals convert “conversion-needed currency >> collection currency” (sender asks for a target value); collect-first deals always convert “collection currency >> conversion currency”.",
+  "Besides a fixed upfront quote, NPL may give an estimate and convert after collection completes.",
+  "Receiver-side fee must be computed at conversion and balance attribution, otherwise the balance is incorrect.",
+  "Pass-through / double conversions (§7.1.1): when a partner can collect a currency but not convert to the target, NPL collects in an interim pair and sends the converted currency to a second partner (collect INR>USDT at Ali, USDT>AED at Jeton); ideally grouped as one transaction. A second scenario routes USDT via NPL’s own wallet when the partner lacks a banking channel (NPL acting as its own remittance client; probably out of scope).",
+  "Partner cost is deducted at transaction level; there is no cost accumulation paid later."
+ ],
+ "FRS_VOCAB": [
+  [
+   "Client",
+   "PROJECT"
+  ],
+  [
+   "Receiving Entity",
+   "RECEIVING_ENTITY (member of a RECEIVER group)"
+  ],
+  [
+   "Sender",
+   "SENDER with SENDER_RECEIVER_ALLOW"
+  ],
+  [
+   "Partner (PT, Jeton)",
+   "PARTNER + PARTNER_CONFIG"
+  ],
+  [
+   "Wallet registry",
+   "WALLET under FACILITATING_ENTITY"
+  ],
+  [
+   "Rate-day versions",
+   "RATE_COMPARISON + PARTNER_RATE_VERSION"
+  ],
+  [
+   "Settlement",
+   "DISBURSEMENT + DISBURSEMENT_LINE + CONFIRMATION"
+  ],
+  [
+   "Shortfall ledger",
+   "SHORTFALL + CL.<RECEIVER>.<CCY>.SHORTFALL"
+  ],
+  [
+   "PT Comms / H Comms",
+   "CO.<PARTNER>.<CCY>.POOL (earnings receivable)"
+  ],
+  [
+   "Inter-entity redirection",
+   "Tier-1 / tier-2 offset — DISBURSEMENT_LINE.paid_receiver_id ≠ entitled receiver"
+  ]
+ ],
+ "FRS_DEV": [
+  [
+   "P1 — no custody",
+   "No custody in the normal path; OWN_WALLET + REROUTE for contingency",
+   "Decision required (Q12)"
+  ],
+  [
+   "P3 — partner books never mix",
+   "Accounts per partner never net; alternate partner on reroute; post-collection transfer only if Q3 confirms",
+   "Decision required (Q12)"
+  ],
+  [
+   "Strict Client → Entity → Sender, one parent each",
+   "RECEIVER groups + SENDER.sendable_to; FRS project = one receiver per sender",
+   "Generalisation per NPL instruction"
+  ],
+  [
+   "Beyond grace → re-quote always",
+   "late_collection_policy per project; FRS project keeps requote",
+   "Per NPL instruction (Sept 2026)"
+  ],
+  [
+   "Sender always priced on Kraken",
+   "FEE_STRUCTURE.rate_basis; FRS project = market",
+   "Generalisation"
+  ],
+  [
+   "One settlement per deal, full amount",
+   "One accumulate → disburse-to-zero model; FRS project disburses immediately",
+   "Generalisation"
+  ],
+  [
+   "Partner fixed at quote",
+   "Same, except under REROUTE",
+   "Consistent"
+  ],
+  [
+   "Bank fee → shortfall → top-up",
+   "carry_forward is the FRS behaviour; waived / absorbed added",
+   "Per NPL instruction"
+  ],
+  [
+   "Registry-only destinations",
+   "SETTLEMENT_REGISTRATION.approval_status — FRS project has all approved",
+   "Generalisation"
+  ],
+  [
+   "AQN-LT-Sub offset-settled collections",
+   "Not modelled",
+   "Gap (Q10)"
+  ]
+ ],
+ "UNDERSTANDING": "NPLify — Project Understanding\nEverything we currently understand about NPL’s remittance operations and the platform to be built · v1.0\nNew XP Technologies Limited\n2 October 2026 · Working document · Confidential\nHow to read this. This is the consolidated understanding at the end of the first understanding block. It supersedes earlier drafts wherever they disagree (the ERD v2.1 and the P0 pack D2–D8 will be rebuilt from this document). §12 lists what changed along the way and why, so nothing that was corrected can quietly resurface. §11 lists what is still open. Nothing here is built; this is the thing we build from.\n1 · What NPL does\nNPL is a remittance coordinator. On behalf of its clients it arranges for money to be collected from payers, converted between currencies and rails (fiat and crypto — USDT most often), and settled to the right recipients. It does this through partners (Ali, Jeton, etc.) who do the actual conversion and hold or move the funds; NPL designs the deal, picks the partner, instructs, verifies and reconciles.\nIn terms of the partners, these are either remittance companies, Fintech, EMIs, Neobanks, Crypto Exchange (or a combination of these). For e.g. Ali has a few licensed remittance companies (referred to as PT – e.g. PT Global, PT Sukses, etc.). Jeton is a fintech which has a couple of different EMIs/Neobank offerings. When NPL uses a partner for a specific project, most often the facilitating entity/channel(s) are defined clearly (For e.g. Evo project via Ali will use PT Sukses).\nSometimes establishing the channel may require additional agreements between the partner/channel and the client (out of scope for NPL operations, managed at the NPL leadership level). In general, the client relationships are ring-fenced from the partners & vice-versa, so for the business to continue, NPL’s involvement is always required (meaning the partner doesn’t have any interaction with the client – all communication flows through NPL).\nNPL’s income is the margin engineered into the price it quotes. Everything else in the platform — rates, fees, ledgers, offsets, approvals — exists to compute that margin, protect it, and prove it.\nToday the whole operation runs on spreadsheets, messaging channels and people’s memories. The platform replaces that with a configuration-driven engine that reproduces today’s calculations exactly first, then takes over.\n2 · Principles that bind everything\nNo custody in the normal path. Client money flows sender → partner → recipient. NPL’s own wallet is used only under a recorded, approved reroute when the intended partner cannot handle the volume (§7.1).\nPriced once. A deal’s rate and fees are stamped at one moment and never recomputed (there are exceptions such as the customer makes a transfer after the rate duration expired, customer asked for a better rate, etc. – finance/management approval needed). In quote-first deals that moment is the quote; in collect-first deals it is the conversion.\nImmutable, double-entry ledger. Every movement is a balanced pair of postings; nothing is edited or deleted; corrections are reversing entries; every balance is a sum, never a stored field.\nWhose money is always known. Every amount carries an owner tag: client funds or company earnings. The partner’s share is a cost line, not a pot NPL holds.\nDisburse to zero. A client balance exists only because the next disbursement has not happened yet. NPL never sits on client funds by choice; deliberate partial disbursement or reserves are not normal behavior. For some clients with a higher balance threshold in which case the balances sit with the partner until settled.\nNobody approves their own work; Operations never sees margins. Three cumulative roles, maker-checker on every controlled action, derived economics visible only to Finance and Management.\nThe FRS flow is one configuration. The Client 1 USDT→EUR flow described in the FRS must be expressible as data in this model, and must reproduce Appendix A’s figures.\n3 · Configuration model\nA Project is the top-level container — from the system’s point of view the project is the client (the client name is a label). A project’s Configuration has four kinds of content.\n3.1 System settings (thresholds)\nMax amount; system validations; frequency (daily settlement slots); rate-variation tolerances between market and agent (partner); custom conditions as the project-specific catch-all. All versioned, Finance proposes, Management approves.\n3.2 Currency pairs\nThe project’s master list of what it trades, each with a quoting direction (units of OUT per IN, or IN per OUT), precision (5 dp standard; 8 dp for sub-unit pairs such as USDT→BTC), and the reference-rate source chain for that pair.\nNote – for cash collections, the cash currency is always rounded off to the nearest 100, 500 or 1000 units (depending on the currency value). For e.g. INR is rounded to nearest 1000, SGD, USD is rounded to nearest 100\n3.3 Receivers and senders (project level, partner-independent)\nA Receiver is a counterparty on the receiving side and is the group: a party with one or more receiving entities (Sud → NewXP Entity, ReferScout Entity; Raj → VoiceAIWrapper). Receiving entities carry name and bank details.\nA Sender is a single paying party (Ayush, Naveen) with a sendable_to allow-list naming which receiver(s) their money may go to (Ayush → Raj only; Naveen → Sud only). One receiver is the common case; the model allows a list.\nThere is an exception where the funds could be “temporarily” sent to another receiver (within the same project/client) and then reclaimed when new collections for the other receiver/group are done – referenced in 6.3\nSenders and receivers are not tied to a partner: the same Ayush → Raj flow may run through Ali today and Jeton tomorrow.\n3.4 Partner configuration (one block per partner, within the project)\nHow a given partner is used in this project:\n---\nElement | Meaning\nCurrency pair(s) | Which of the project’s pairs this partner handles\nFees | NPL’s client-side fee for this partner × pair (see §4)\nFacilitating entities/Channel | The partner’s legal vehicles (Ali → PT-tour, PT Global Inc, …); name, optional bank details\nCollection - Wallet configuration | Crypto-in endpoints (wallets per facilitating entity / network)\nCollection — receiving entities | Bank-in endpoints on the partner side (name, bank details)\nCollection — sending entities | Provenance reference: the actual account the sender’s funds originate from (their own bank account or one of their clients’). Reference only — says where the money came from, does not change the sender or the destination\nSettlement — receiving entities | The project’s receiving entities registered with this partner (NewXP under Ali, NewXP under Jeton …) carrying that partner’s approval status and the bank details it pays to. Destination approval is therefore per partner\nSettlement — sending entities | Narrative reference: the name the transfer goes out under — what the receiver sees on their statement\nSettlement — facilitating entities | The rail: the bank or EMI used to execute the transfer. Not a hop; the money never rests there\n---\nCollection endpoints are three kinds by method: crypto-in → wallet, bank-in → collection receiving entity, cash-in → nothing pre-configured (instructions are issued at transaction time).\n4 · Pricing model\n4.1 How partners disclose their price\nA partner either (a) gives NPL a rate with its markup already inside it, or (b) states market + x%. In case (b) the partner’s cost is explicit; in case (a) it is invisible and must be inferred by comparing the partner’s rate with market references.\n4.2 How NPL prices the client\nNPL’s markup sits on either the partner rate + x% or market + x%, where NPL’s x% is larger than the partner’s so the margin survives. The fee is set per partner × currency pair — the same USDT→EUR flow is priced differently to the client depending on whether Ali or Jeton handles it. Choosing the partner is therefore part of pricing.\nFee parameters per partner × pair: basis (market | partner), total percentage, split between sender and receiver (sender’s share is embedded in the sender rate; receiver’s share is deducted from the client-net), mode fixed | variable, and per-sender overrides (may be zero).\nVariable mode sets the fee to protect a margin floor against the partner’s current spread, within a floor and a cap; a quote that cannot reach the floor proceeds only with Finance approval (“below-margin”).\nThe one unknown in the model: when NPL prices on market + x% but the partner priced style (a), NPL’s realised margin = NPL’s x% minus the partner’s hidden markup. The variance history exists for this, and the minimum-margin check must be live at conversion, not only assumed at quote.\n4.2a NPL paying Referral Commissions:\nSometimes NPL has to pay referral commissions to external introducers who brought in the client. This can involve a) sharing the NPL’s earnings in a predetermined ratio OR b) a fixed % for each party involved. There could also be multiple people involved in the same deal. E.g.\nScenario 1 - John brought a new client and expects to get 1% fixed on each transaction. NPL can keep its fee fixed or variable but has to apply john’s 1% into the sender-facing rate.  So, if the fee structure is of partner rate + markup, then markup will include NPL’s fee + john’s 1%\nScenario 2 – John and James are 2 parties that want a share of the earnings. NPL decides to markup 0.5% for itself, 0.25% for john and 0.25% for james.\n4.2b NPL getting commissions:\nIn some cases (e.g. Evo project via Jeton), they give back a % of the fee they charge on the transaction. So if Jeton charges 1.25%, they give back 0.4% back from that fee. This needs to be tracked and reconciled (summary of all transactions, fees generated, expected commissions) every month. After the reconciliation, Jeton would pay this commission back to NPL (via crypto usually).\n4.3 Rates, comparison and variance\nReference rate per pair from a source chain (Kraken → CoinMarketCap for crypto pairs; Oanda/XE as adapters for fiat), snapshotted at the pricing moment with source and time. Multiple sources per pair make cross-source slippage (XE vs Oanda vs Kraken) a tracked quantity, not a surprise.\nA rate comparison for the day (partner × pair) is created lazily by the first deal that needs it and reused by every deal that day. It records the partner’s rate version, the market snapshot, the spread, and the rolling 2-week / 4-week average of confirmed spreads. Occasionally the partner may give a new rate for the day, so same pair may have different versions on the same day.\nA partner rate whose spread exceeds the rolling average by more than the configured relative tolerance is breached: quoting and conversion on that partner × pair freeze until Finance approves with a recorded reason or rejects (or asks for a better rate). Better rate doesn’t guarantee that the new rate will be under the threshold, and if it’s outside the threshold, then finance/management approval is needed. No skip path.\nPartner rate versions are never overwritten; a conversion always references the exact version it used.\n5 · The deal\n5.1 Two entry modes\n---\n| Quote → Collect → Convert | Collect → Convert\nWhat happens | Sender wants a target outcome (1,000 USD); the quote works backwards (≈ 1,004 USDT at 0.4 %); sender pays the quoted amount | Sender simply sends (1,000 USDT); NPL converts at the then-current rate and fee (996 USD)\nPricing moment | Quote | Conversion\nWhat’s promised | Exact in and exact out | Nothing — amount out follows the rate at conversion\nWho bears rate movement | NPL (hence validity, grace and drift clocks) | The sender\nLifecycle entry | Inquiry → Quoted → Accepted → Collecting | Born at Collected\nMode | Target-out (or fixed-in) | Always fixed-in\nDirection of conversion pair | Sender would ask for specific value conversion. So if the pair is USDT-EUR, the conversion direction will be EUR>>USDT (i.e. “conversion needed currency” >> “collection currency”) | Conversion direction is always “collection currency” >> “conversion currency”\n---\nThere is another scenario where instead of a fixed “upfront quote”, NPL gives an estimate. And then the conversion is done after the collection is completed.\n5.2 Building the deal (operator flow)\nSender selected → the receiver from sendable_to is shown (display only; the entity within it is chosen at settlement).\nCurrency pair selected → partners configured for that pair → partner chosen → fee structure for partner × pair applies automatically → mode chosen (quote-first / collect-first) → the rate the fee basis needs is entered (partner rate or market rate) → the day’s rate comparison is created if it does not exist.\nFacilitating entity of the chosen partner selected → its wallet / bank details / cash instructions become the “address” in the message.\nDraft message for the customer: calculation (quote-first), address, references. Partner and facilitating entity are therefore fixed at quote time; only a reroute changes them.\nCollection: hash / slip / receipt verified → status changes. Parts are allowed (80K today, 20K tomorrow). Overpayment → sender credit; underpayment → wait, or void with disposition.\nConvert, in one of two sub-modes: NPL calculates and instructs the partner, or the partner calculates and NPL verifies. In the second, the partner’s actual figure is what is booked; the engine’s expectation is the comparison; the difference is variance, and an exception opens if beyond tolerance. The deal does not wait — the money already moved.\nSettlement (§6).\n5.3 Quote clocks and the late decision\nFreshness (package must be marked sent within minutes of the snapshot) → validity (per client, e.g. 60 min) → grace (e.g. 15 min, only if market drift ≤ 0.10 %) → late decision: either re-quote at today’s rate with a fresh deal reference, or — if the project’s policy allows — honour the old rate as a relationship call with recorded Finance approval. The original quote stamp never changes; only the decision to accept against it does.\n5.4 Destination approval\nFor destinations that need the partner’s approval, approval happens before collection: the route is approved, NPL confirms money can reach the destination, and only then collects. Never hold what you cannot deliver.\n6 · Settlement, balances and offsets\n6.1 The client balance is per partner\nAfter conversion, funds sit with the partner that converted them. The ledger keeps one due balance per (client × partner × currency); the client-level balance is the sum across partners and is never stored\n6.2 One settlement model\nAccumulate (a balance exists) → disburse (the balance goes to zero; one disbursement may split across one or several destinations) → receiver confirms → fee adjustments per project. “Instant” settlement is simply accumulate-one-deal-then-disburse-now; there is one path with a timing policy, not two modes.\nA disbursement draws from one partner’s holding and goes out through that partner’s settlement sending entity (narrative) via its facilitating entity (rail) to receiving entities registered with that partner. Emptying the client balance may take one disbursement per partner that holds something; a residual at Jeton while Ali is at zero is still a non-zero balance.\n6.3 Entitlement and offsets\nsendable_to says whose flow a collection belongs to; the converted money nonetheless lands in the shared client balance. So receiver entitlement is a tracking layer on the balance: “of this balance, Sud’s flow accounts for X, Raj’s for Y.”\nOffsets are arithmetic on that layer, not movements of money:\nTier 1 — within a receiver: Sud’s money cannot reach NewXP, so it is paid to ReferScout (also Sud’s). Entitlement unchanged; the tally records which of Sud’s entities holds which share.\nTier 2 — across receivers: only when every entity of a receiver is blocked is its flow paid to another receiver (Sud → Raj). The tally shows a receiver holding more than its entitlement.\nBoth are the same number — entitlement − paid per receiver — and clear as later disbursements favour whoever is behind. Tier 2 is the heavier event (money with a party it does not belong to) and carries higher approval and tighter aging.\nA disbursement that crosses receivers creates the tier-2 figure in the same action; nobody has to remember to record it.\n6.4 Fee adjustments at settlement\nReceiver-side fee (the 0.60 %-style share): computed before disbursement because it determines the amount sent. This should be computed at the time of conversion and balance attribution. Otherwise, the balance will be incorrect, if the receiver side fee is only deducted at the time of settlement.\nBank / payout fees: a true-up after confirmation, per the project’s treatment:\n---\nTreatment | Example (we send €8,500; bank takes €50)\nWaived | Client receives €8,450 and does not ask for it back — fee on the client; memo only\nCarry-forward | Client receives €8,450 and asks for it next time — NPL owes €50, added to the next disbursement\nAbsorbed (gross-up) | NPL expects the €50 and sends €8,550 so the client nets €8,500 — NPL’s cost. Expected vs actual difference is tracked, never lost\n---\nDefault per client, overridable per settlement with approval.\n7 · Exceptions\n7.1 Rerouting (the only time NPL holds funds)\nWhen the partner intended to handle the volume is unavailable (outage, limit reached, holiday, compliance hold), a deal is moved onto a pre-approved contingency route: collection into NPL’s own wallet, onward to an alternate partner from the project’s applicable set. Rerouting is a controlled action (Ops requests, Finance approves, reason recorded).\nOn a rerouted deal NPL chooses what to forward: the full amount (partner converts everything; earnings settle back later), withhold its own earnings at source, or withhold and recover dues — earnings from earlier direct deals still parked at that partner, recovered by short-paying the partner now. Eligibility for withholding depends on route, partner, sender risk and other criteria Finance will define. Recovery is an asset moving from the partner’s wallet to NPL’s, never new income, and every deduction names the deal it recovers.\nWhen the alternate partner is chosen at conversion time and NPL’s fee rides on the partner rate, the quote was priced on a quoting-basis rate (default: the worst applicable partner rate) and the gap to the actual partner rate posts as basis variance on earnings, with the margin floor re-checked.\nCustody position for NPL sign-off: NPL’s wallet holds client funds only under a recorded reroute; every resting balance has a deal, a reason and an age; outbound transfers from NPL’s wallet are dual-approved (Finance + Management) and executed by NPL signers outside the platform (hardware or multisig). The regulatory posture of contingency holding is for NPL’s counsel.\n7.1.1 Pass-through / Double Conversions:\nThere are occasions where the route is not a direct one – meaning the partner can collect a currency but can’t convert to the expected currency. In such cases, NPL requests the collection to be done in an interim currency pair and then sends the resulting/converted currency to a different route/partner. E.g. the client wants NPL to collect INR and settle in AED. Ali can collect INR>USDT, but not AED, so the converted USDT is sent to Jeton who is able to send USDT>AED - (this is not a real example just an illustration). While this can be handled as 2 different transactions, it would be good to see if we can group it into a single transaction.\nAnother scenario is that the sender wants NPL to collect INR and pay EUR to vendors (receivers). However, Ali doesn’t have an available banking channel for these transfers. The vendor/receiver can however receive USDT. NPL can either a) ask Ali to settle the USDT direct to the client OR b) ask Ali to pay into NPL’s wallet and NPL then sends the outgoing transfer from its own wallet. This scenario is real and applicable in cases where NPL is reselling certain gaming solutions (in essence NPL is acting as its own remittance client). – probably out of scope from remittance platform standpoint/to be reviewed.\n7.2 Other exception paths\n---\nSituation | Handling\nQuote expires | §5.3 late decision\nDeal voided before money | State change with reason; no ledger postings\nDeal voided after collection | Refund (network-fee policy to decide), or funds kept as sender credit, or hold — Management approves the disposition\nPartner rate breach | §4.3 — freeze until Finance approves or rejects\nReference feed outage | Fallback source; both down → manual rate with Finance approval and evidence\nDestination blocked (holiday, in-transit) | §6.3 offsets — same receiver’s other entities first, another receiver only if all are blocked\nPartner holiday | Partner-specific calendars: e.g. no rate but collections open, or conversions open but settlements paused\nErroneous posting | Reversing transaction plus correct transaction; nothing edited\n---\n8 · Money ownership and the ledger\nClient funds: everything from collection to confirmed delivery. NPL coordinates, never owns.\nCompany earnings: the only money in NPL’s own accounts. Recognised at conversion: the sender’s stamped price fixes the client-net; whatever remains after converting exactly the client-net is NPL’s gross margin, which physically rests at the partner as a pool (the FRS’s “PT Comms” residual). That pool is NPL’s earnings receivable at that partner.\nPartner cost: deducted from the pool on the partner’s fee cycle. Total cost to the client = partner cost + NPL’s earnings, and both are sums over postings carrying a cost component (earnings, partner_cost, bank_fee, network_fee, variance). The partner cost is deducted at transaction level (there is no cost accumulation or total cost paid later, etc.\nOwnership flips from client to company at exactly three events: margin recognition at conversion; withholding at source on a rerouted deal; an advance to a receiver (company money paid ahead, repaid as entitlement accrues).\nShortfalls (confirmed-short deliveries) are tracked and topped up on the next settlement, funded from the pool.\nStanding identities checked daily: client due per partner = Σ receiver entitlements; pool per partner = partner-stated comms balance ± logged difference; exposure (due + in-transit) ≤ policy; own-wallet holdings = 0 unless an open reroute; offsets = Σ (entitlement − paid); each confirmation = its in-transit amount exactly.\n9 · Roles and controls\nOperations quotes, verifies, prepares, instructs. Sees operational fields, sender-facing prices and partner rates as entered. Never sees reference rate at capture, spread, margin, comms, cost breakdown, ledgers or earnings — on any screen, export, message or report.\nFinance sees all of that, approves what Ops initiates (quotes, rates, conversions, settlements, exceptions), owns reconciliation and the Finance Log.\nManagement sees everything, approves escalations: settlements above limit, third same-day slot, advances, offset redirections, shortfall top-ups, contingency routes, own-wallet outbound (mandatory), configuration changes, user changes, post-money voids. Countersigns releases when only one Finance user is on shift.\nVisibility is cumulative (Ops ⊂ Finance ⊂ Management); gating is server-side; approver ≠ initiator is enforced at the endpoint; every controlled action is audited with actor, time, reason and record version.\nIdentity: Google Workspace SSO only.\n10 · Reporting and reconciliation\nFinance Log is the reporting spine: every posting, every approval, time-travel to any past moment because nothing was edited.\nDaily reconciliation: platform vs partner statements vs bank slips; breaks become logged exceptions; small persistent gaps (rounding, partner charges) accumulate as shortfalls topped up monthly.\nCalculation-comparison reports during test runs: system-computed figures beside the spreadsheet’s, per deal and per identity.\nCustody aging report: every balance in NPL’s wallet by deal, reason and hours since collection.\nPartner Commissions report for reconciliation (referenced in 4.2b)\n11 · Open questions (current)\n---\n# | Question | Decides\n1 | Collect-first deals: must the sender → receiver mapping be pre-approved so an unannounced inbound is attributable? How is an inbound matching no sender handled? / Answer – Yes, sender-receiver mapping should be done in configuration. So, when the transaction is created, sender is picked from a list. | Collect-first entry rules\n2 | Full withholding-eligibility criteria on rerouted deals beyond route/partner/sender risk / Answer – needs clarification. To be discussed | Forwarding rules\n3 | Does rerouting ever occur after the sender has paid the original partner (funds stuck)? If so: partner-to-partner transfer, offset, or refund-and-requote? / Answer - Partner can send the funds to NPL (and NPL decides where to send) OR partner can refund to sender. | Reroute phases, ledger transfer pattern\n4 | Can receiving entities carry constraints (currency, rail) that narrow the choice at settlement and the offset substitution? / Answer - The receiving entities would have specific bank accounts that would have currency & rail restriction – for e.g. receiving entity X has 2 bank accounts – one for EUR (via SWIFT) and one for EUR (via SEPA) | Settlement eligibility\n5 | Any project needing deliberate partial disbursement or reserves (exception to disburse-to-zero)? / Answer – Yes possible. In some project the client’s funds are going to sit until they are ready to receive it. There should still be a threshold of how much risk exposure NPL wants to take (the balance sitting with the partner is a risk NPL carries, so the threshold will be based on the appetite and needs to be customized/revised as needed). | Settlement policy\n6 | Receiver-side fee applied before disbursement in every project, or post-confirmation in some? / Answer – Receiver side fee should be applied at the time of conversion (the balance will otherwise be incorrect). | Fee timing switch\n7 | Network-fee policy on refunds: absorbed or deducted with sender consent? / Answer – This will be set at a project level and may need revision/override (for specific transactions – e.g. 99% transactions had minimal fee which the client absorbed and didn’t ask it to be paid but on one transaction the fee was 100 USD so the client asked for it to be paid back in the next settlement). | Void handling\n8 | Rounding rule on whole-unit conversion: accept sub-unit shortfalls to the shortfall ledger (FRS behaviour) or never under-deliver? / Answer – needs clarification. To be discussed. | Calculation spec\n9 | FRS figure reconciliation: collection comms 1,208 vs 1,225; Mode 1 example 258,875 vs 300,000 / Answer – needs clarification. To be discussed. | Golden cases\n10 | AQN-LT-Sub: “settled by offset against transactions outside the system” — booking treatment still undefined / Answer – This is NPL’s wallet (pass-through scenarios either at collection or on settlement side), explained in the document. For reference AQN is Aquanow which is a crypto exchange. LT Sub is just the name of the account used for NPL’s remittance operations. | Ledger pattern\n11 | Reference workbooks for each project archetype beyond the FRS project. / Answer – will be added soon. | Calculation acceptance\n12 | FRS principles P1 (no custody) and P3 (partner books never mix) vs rerouting and multi-partner routes — amend the FRS or restrict Phase 1 scope / Answer – Please check the additional explanations added in the document. Ask again if there is still any confusion. | Scope\n13 | Advance funding source (own wallet vs company funds at the partner) / Answer – need clarification. To be discussed. | Chart of accounts\n---\n12 · What changed during the understanding journey\nSo corrected assumptions cannot resurface:\n---\nEarlier assumption | Corrected to\nPass-through wallet is a routine, strategic route (keep earnings at home, pick partner later) | NPL’s wallet is contingency infrastructure; used only when the intended partner is unavailable\nPass-through always withholds earnings | Forwarding is a per-deal choice: full / withhold / withhold-and-recover\nPartner’s share tracked as “partner money” | Partner’s share is a cost line; NPL tracks only client funds and its own earnings\nGroups as abstract containers; offsets as safety fences within a group | Group = receiver (a party with receiving entities); offsets are two-tier (same receiver’s entities first, another receiver only if all blocked)\nOffsets as movements of money between groups | Offsets are entitlement − paid on a shared client balance\nBalance per receiver | Balance per client, per partner holding it\nTwo settlement modes (instant / accumulated) | One model: accumulate → disburse to zero, with a timing policy\nFee structure keyed on currency pair | Fee keyed on partner × currency pair (NPL’s client-side fee varies by partner)\nFacilitating entity as the partner | Partner → facilitating entities (vehicles/channels) → assets\nChannels only on the partner side | Assets on all sides: wallets/bank-in on partner, bank details on receiving entities, optional on senders; cash has none\nSettlement facilitating entity as an intermediate hop | The rail (bank/EMI) — no hop; settlement sending entity is the narrative; collection sending entity is provenance\nQuote expiry → always re-quote | Late decision: re-quote or honour the old rate as a relationship call with approval; validity window per client\nDestination approval at settlement | Before collection\nSingle bank-fee carryover record | Three treatments: waived / carry-forward / absorbed, with expected-vs-actual tracking\nPricing only at quote | Two entry modes; collect-first prices at conversion\nPartner always calculates per NPL’s instruction | Two convert sub-modes; when the partner calculates, its figure is booked and the difference is variance\nClient → Project two levels | Client = project\nOne entity per group; many-to-many memberships | Senders are single parties with an allow-list; receivers own their entities\n---\n13 · Vocabulary\n---\nFRS / NPL term | Meaning in this model\nClient | Project (top-level container)\nReceiver / Receiving Entity | Group / member entity with bank details\nSender | Single paying party with sendable_to\nPartner | Commercial counterparty (Ali, Jeton, PT) with rates and fees\nFacilitating entity (partner side) | Partner’s legal vehicle holding wallets/accounts\nFacilitating entity (settlement) | The rail used to execute a transfer\nSending entity (settlement) | Narrative on the outgoing transfer\nSending entity (collection) | Provenance of the collected funds\nAgent rate | Partner rate\nComms / pool | NPL’s gross margin resting at a partner — the earnings receivable\nShortfall | Confirmed-short delivery, topped up next settlement\nOffset | Entitlement − paid per receiver\nReroute | Approved move of a deal onto a contingency route via NPL’s wallet\n---\n14 · Delivery context (unchanged)\nPre-Start Stage P0 delivers the technical baseline (ERD, ledger design, calculation spec, state machines, roles matrix, architecture note, configuration schema, cutover approach) with two revision iterations and re-baselining of affected milestones; then three phases — core engine and lifecycle, operational hardening and validation, completion and go-live — proven by structured test runs on staging, with one production cutover at the end. This document is the input to P0’s next iteration.",
+ "DECISIONS": "ERD REVIEW DECISION RECORD (6–7 October 2026). Full record: \"NPLify ERD Review — Decision Record\" (Claude Doc). Summary:\nSCENARIOS REVIEWED AGAINST v3.0. (1) Rejected payout: USDT → GBP at PT, bank rejects, GBP returns minus fees. Option A convert back to USDT and pay the client with case-by-case markup; option B hold the GBP for later payouts to receivers of the same client. v3.0: no returned outcome, no reverse conversion, no destination for a sender, no case-by-case fee. (2) Two-leg route: INR → USDT at Ali, USDT → EUR at Jeton; deals must link. v3.0: no deal link, no partner-to-partner move, leg 2 has no sender, no single client price. (3) Ad-hoc balance conversion: 5K SGD + 10K USDT at PT → convert SGD to pay 15K USDT. v3.0: a conversion must belong to a deal; no fee decision without a sender; entitlement breaks across currencies. Root cause: v3.0 models only the single-partner deal.\nDECISIONS. D1 receiver groups (design F): project → receiver group → receiver → receiving entity → account; one default group per project; entitlement per group; offsets only across groups; a single group has no offset; reason: payouts within a pot are ordinary settlement, new receiving entities weekly need no re-attribution; alternatives rejected: project flag, separate projects per pot, receiver pooling by self-reference, attribution to sender, per-deal buckets. D2 deal legs: DEAL gains deal_group_id, leg_no, leg_type forward/return, funding_source collection/returned_disbursement/prior_leg; priced once and partner fixed per leg; DEAL_GROUP holds the client-facing quote; every deal is a group of one or more legs; rejected: generic balance-operation table. D3 receiver kinds: counterparty / sender_return (stands for a sender) / partner_transit (stands for a partner endpoint); keeps one payout path and partner destination approval; refund destination account chosen at payout, not tied to provenance wallet; third-party refund only with Management approval, reason and pre-registered receiver; sender_return receivers live in a return group, never on forward deals or allow lists; rejected: SENDER_ACCOUNT and a widened destination. D4 balance conversion as its own action (BALANCE_CONVERSION), not a leg: no sender/receiver/collection, Finance-initiated, may serve several payouts; chosen-group split with ENTITLEMENT_REATTRIBUTION; a CONVERSION has exactly one owner. D5 FEE_DECISION: one-off apply/waive/override with approver for markup on return legs and balance conversions, network-fee override (Q7), bank-fee override. D6 DISBURSEMENT_RETURN and a returned outcome on the line; reversing posting; bounce fee via BANK_FEE_EVENT. D7 RECEIVING_ENTITY_ACCOUNT (Q4).\nREVIEW ANSWERS. Advances: never (ADVANCE removed). Rounding: truncate to whole units at conversion; dust stays client money, carried and paid when whole; disburse to less than one unit. Withholding: dissolved, margin always captured at conversion; ownership flips at one event only. Recover dues: yes, netted against forwarded funds, recorded with partner agreement. Entitlement split on balance conversion: chosen group. Third-party refunds: exception only. FX loss on a return leg: on the client’s funds; waiving markup only means no second cut. Legs share a DEAL_GROUP.\nSTILL OUTSTANDING. Q9 FRS figure reconciliation; Q11 reference workbooks.\nDOCUMENT UPDATES. Understanding document → v1.1: §3.3 receiver groups, §6.3 entitlement per group, §7.1 forwarding reduced to forward full / recover dues, §8 single ownership flip and dust carried, §9 approvals (no advances; third-party refund; cross-group payout), §11 answers, §12 corrections table rewritten (groups reinstated as a recorded reversal), §13 vocabulary (receiver group / receiver / receiving entity).\nPERFORMANCE. No throughput concern at NPL volume; weight moves to the entitlement view and write-time checks; recommendation: a running-balance row per ledger account as a verified cache so the exposure cap is a single row read; indexes on postings (account, currency), deals (group, currency, deal_group), receivers (group), accounts (entity), polymorphic refs (type, id), accruals (partner, period), posted_at.",
+ "SCENARIOS": [
+  {
+   "id": "S1",
+   "name": "Payout rejected by the receiver’s bank after conversion",
+   "status": "gap",
+   "story": "The sender sends USDT; the partner (PT) converts it to GBP. PT initiates the bank transfer to the receiver, but the receiving or intermediary bank rejects it and the money comes back to PT as GBP minus bank fees. No retry is made. NPL then has two options: (1) convert the GBP back to USDT at the partner’s rate, applying an NPL markup case by case, and send it to the client; or (2) hold the GBP in the client’s balance at PT for future outgoing transfers to other receivers.",
+   "trace": [
+    [
+     "USDT in, converted to GBP",
+     "Handled. A normal DEAL with a crypto-in COLLECTION to the partner’s WALLET and a CONVERSION booking actual_out in GBP. NPL’s margin is recognised at this point and the client’s GBP balance at PT (CL.PT.GBP.DUE) rises.",
+     [
+      "DEAL",
+      "COLLECTION",
+      "WALLET",
+      "CONVERSION",
+      "CLIENT_BALANCE"
+     ]
+    ],
+    [
+     "PT pays out, the bank rejects",
+     "Not handled cleanly. The payout is a DISBURSEMENT_LINE and the only outcomes modelled are a CONFIRMATION with result full or short. There is no “returned” / “rejected” outcome, so nothing records that the line failed and the money came back.",
+     [
+      "DISBURSEMENT",
+      "DISBURSEMENT_LINE",
+      "CONFIRMATION"
+     ]
+    ],
+    [
+     "Money returns minus bank fees",
+     "Ledger side works: invariant 2 allows a reversing LEDGER_TRANSACTION that moves the GBP from INTRANSIT back into the client’s DUE balance at PT. The bank’s deduction fits BANK_FEE_EVENT (expected vs actual; waived / carry_forward / absorbed decides whether the client or NPL eats it), though that entity was meant for post-confirmation true-ups.",
+     [
+      "LEDGER_TRANSACTION",
+      "LEDGER_POSTING",
+      "LEDGER_ACCOUNT",
+      "BANK_FEE_EVENT"
+     ]
+    ],
+    [
+     "Option 2: hold the GBP for other receivers",
+     "Mostly handled. The balance is already per project × partner × currency, so once the reversal is posted the GBP is simply balance again and the next DISBURSEMENT from PT can pay any receiver registered with PT. Paying a different receiver creates a tier-2 offset tracked by the OFFSET view, which Sud’s comments explicitly allow; letting it sit at PT is covered by Sud’s answer to open question 5 subject to the exposure threshold. One fix needed: the failed line must be voided or reversed, otherwise RECEIVER_ENTITLEMENT treats the original receiver as already paid.",
+     [
+      "DISBURSEMENT",
+      "OFFSET",
+      "RECEIVER_ENTITLEMENT",
+      "SETTLEMENT_REGISTRATION",
+      "PROJECT"
+     ]
+    ],
+    [
+     "Option 1: convert GBP back to USDT and send to the client",
+     "Not handled. (a) No reverse conversion: a deal’s partner × pair is fixed at quote (invariant 6) and pricing is write-once (invariant 5), so GBP→USDT cannot be a second CONVERSION on the same deal, and a new DEAL needs a COLLECTION with an endpoint and evidence — there is no way to fund a deal from an existing balance. (b) No destination: DISBURSEMENT_LINE must point at a SETTLEMENT_REGISTRATION of a RECEIVING_ENTITY; the client’s or sender’s USDT wallet is not one, and SENDER carries no payout details. (c) No case-by-case markup: FEE_STRUCTURE and FEE_OVERRIDE are standing rules, so a one-off decision to add or waive markup on this transaction has no record (the same gap as open question 7). (d) NPL’s margin from the first conversion is already booked; whether it is kept, re-earned or given back, and who bears the partner’s spread on the second conversion, is specified nowhere.",
+     [
+      "DEAL",
+      "CONVERSION",
+      "PARTNER_PAIR",
+      "FEE_STRUCTURE",
+      "FEE_OVERRIDE",
+      "SENDER",
+      "RECEIVING_ENTITY"
+     ]
+    ]
+   ],
+   "verdict": "Option 2 (hold the GBP in balance) is supported once a “returned” outcome exists for a disbursement line; option 1 (re-convert to USDT and send to the client) is not supported by ERD v3.0.",
+   "fix": "A return record on the disbursement line (returned amount, bank fee, reason, date); a reverse-conversion deal that can be funded from the client balance and is linked to the original deal; a payout destination for the client / sender (a USDT wallet account, which fits Sud’s answer to open question 4 on accounts with currency and rail); and a per-transaction fee decision (markup added or waived) with an approver, plus a rule for who bears the FX round-trip loss.",
+   "ents": [
+    "DISBURSEMENT_LINE",
+    "CONFIRMATION",
+    "BANK_FEE_EVENT",
+    "CONVERSION",
+    "DEAL",
+    "FEE_OVERRIDE",
+    "SENDER",
+    "OFFSET",
+    "CLIENT_BALANCE"
+   ]
+  },
+  {
+   "id": "S2",
+   "name": "Two-leg route across two partners (INR → USDT at Ali, USDT → EUR at Jeton)",
+   "status": "gap",
+   "story": "The sender expects INR → EUR via Ali, but Ali cannot reach EUR. In practice NPL collects INR at Ali and converts to USDT (deal 1), then sends the USDT to Jeton who converts to EUR and pays the receiver (deal 2). Deal 1 must be connected to deal 2.",
+   "trace": [
+    [
+     "Leg 1 on its own",
+     "Handled in v3.0 as a normal DEAL: INR collected at Ali, CONVERSION to USDT, client USDT balance at Ali rises.",
+     [
+      "DEAL",
+      "COLLECTION",
+      "CONVERSION"
+     ]
+    ],
+    [
+     "Moving the USDT from Ali to Jeton",
+     "Not handled in v3.0. A DISBURSEMENT can only reach a receiver’s registered account and Jeton’s collection wallet is not one; a REROUTE keeps the currency pair; the ledger has no transfer source.",
+     [
+      "DISBURSEMENT",
+      "REROUTE",
+      "LEDGER_TRANSACTION"
+     ]
+    ],
+    [
+     "Leg 2 has no sender",
+     "Not handled in v3.0. Every DEAL needs a configured SENDER and a COLLECTION; the USDT arriving at Jeton comes from Ali.",
+     [
+      "DEAL",
+      "SENDER"
+     ]
+    ],
+    [
+     "Linking the deals and pricing the client",
+     "Not handled in v3.0. No deal-to-deal link, and no partner handles INR → EUR so the sender’s single quote has no home.",
+     [
+      "DEAL",
+      "FEE_STRUCTURE",
+      "PARTNER_PAIR"
+     ]
+    ]
+   ],
+   "verdict": "Not supported by ERD v3.0.",
+   "fix": "A client-facing deal group above the legs; a leg funded from the prior leg instead of a collection; a payout destination for the partner hop.",
+   "ents": [
+    "DEAL_GROUP",
+    "DEAL",
+    "RECEIVER",
+    "PARTNER_CONFIG",
+    "CONVERSION"
+   ]
+  },
+  {
+   "id": "S3",
+   "name": "Ad-hoc conversion of a client balance (5K SGD → USDT to pay 15K USDT)",
+   "status": "gap",
+   "story": "A client holds 5K SGD and 10K USDT at PT and needs to pay 15K USDT to a receiving entity. NPL converts the SGD to USDT using the normal rate procedure (market and previous partner rate), with markup applied or waived case by case, then pays the 15K.",
+   "trace": [
+    [
+     "Balances exist",
+     "Handled in v3.0: one due account per project × partner × currency (CL.PT.SGD.DUE, CL.PT.USDT.DUE).",
+     [
+      "CLIENT_BALANCE",
+      "LEDGER_ACCOUNT"
+     ]
+    ],
+    [
+     "Rate machinery",
+     "Handled in v3.0: RATE_COMPARISON, PARTNER_RATE_VERSION and MARKET_RATE hang off PARTNER_PAIR, not the deal.",
+     [
+      "PARTNER_RATE_VERSION",
+      "MARKET_RATE",
+      "PARTNER_PAIR"
+     ]
+    ],
+    [
+     "A conversion without a deal",
+     "Not handled in v3.0. CONVERSION requires a DEAL, and a deal needs a sender, receiver and collection.",
+     [
+      "CONVERSION",
+      "DEAL"
+     ]
+    ],
+    [
+     "Fee without a sender",
+     "Not handled in v3.0. Fees are standing per partner × pair or per sender; no one-off decision exists.",
+     [
+      "FEE_STRUCTURE",
+      "FEE_OVERRIDE"
+     ]
+    ],
+    [
+     "Entitlement across currencies",
+     "Not handled in v3.0. Converting SGD balance leaves SGD entitlement standing while the SGD is gone, breaking invariant 7.",
+     [
+      "OFFSET",
+      "CLIENT_BALANCE"
+     ]
+    ]
+   ],
+   "verdict": "Not supported by ERD v3.0.",
+   "fix": "A balance-conversion action separate from deals, a per-transaction fee decision, and a re-attribution of entitlement across currencies.",
+   "ents": [
+    "BALANCE_CONVERSION",
+    "ENTITLEMENT_REATTRIBUTION",
+    "FEE_DECISION",
+    "CONVERSION",
+    "RECEIVER_GROUP"
+   ]
+  }
+ ],
+ "SCENARIO_V4": {
+  "S1": "Resolved. DISBURSEMENT_RETURN records the rejected line (outcome returned) and a reversing posting puts the GBP back; the bounce fee is a BANK_FEE_EVENT. Option B needs nothing more: the GBP is balance for any receiver in the same RECEIVER_GROUP (another group is an approved offset). Option A is a return leg on the same DEAL_GROUP (leg_type return, funding_source returned_disbursement, GBP → USDT priced at conversion), markup by FEE_DECISION, paid to the sender_return RECEIVER’s chosen RECEIVING_ENTITY_ACCOUNT. NPL’s margin stays captured; the FX loss is on the client’s funds.",
+  "S2": "Resolved. One DEAL_GROUP holds the INR → EUR quote with two legs. Leg 1 (INR → USDT at Ali) pays Jeton’s collection wallet, registered as a RECEIVER of kind partner_transit, through a normal DISBURSEMENT_LINE. Leg 2 (USDT → EUR at Jeton) has funding_source prior_leg and no collection. Partner is fixed per leg; margin across the route is the group quote minus both conversions.",
+  "S3": "Resolved. BALANCE_CONVERSION (SGD → USDT at PT) is its own Finance-approved action using the same PARTNER_RATE_VERSION and MARKET_RATE machinery; markup is a FEE_DECISION; the CONVERSION it owns truncates to whole units with the fraction kept as client dust; ENTITLEMENT_REATTRIBUTION moves the served group’s SGD entitlement to USDT (chosen split, excess booked as an approved offset); then an ordinary DISBURSEMENT pays the 15K USDT."
+ },
+ "version": "4.0",
+ "generatedAt": "2026-10-07"
+}
