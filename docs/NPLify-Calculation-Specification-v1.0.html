@@ -1,0 +1,151 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Calculation Specification v1.0</title><style>
+@page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
+@page land { size: A4 landscape; margin: 12mm 14mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
+.land{page:land;break-before:page;break-after:page}
+body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
+h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
+h2{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:18pt 0 6pt;break-after:avoid}
+h3{font:700 11pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:14pt 0 4pt;break-after:avoid}
+h4{font:700 10pt Helvetica,Arial,sans-serif;margin:12pt 0 3pt;break-after:avoid}
+p{margin:0 0 7pt} ul,ol{margin:0 0 8pt 16pt;padding:0} li{margin:0 0 4pt}
+code,.mono{font:8.8pt Menlo,Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:4pt 0 10pt;font-size:9.2pt}
+th{text-align:left;font-weight:600;border-bottom:1px solid #333;padding:3pt 5pt;vertical-align:bottom}
+td{padding:3pt 5pt;border-bottom:1px solid #ddd;vertical-align:top}
+th.n,td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr{break-inside:avoid}
+.title{text-align:center;margin-top:40mm}
+.title .sub{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:0 0 10pt}
+.title .org{margin:0 0 2pt} .title .date{margin:0 0 16pt}
+.rule{border-top:2px solid #222;border-bottom:1px solid #222;height:2px;margin:10pt 0 14pt}
+.pb{break-before:page}
+.tx{break-inside:avoid;margin:10pt 0 12pt}
+.txh{font-size:10pt;margin-bottom:2pt} .src{color:#666;font-size:9pt;margin-left:8pt}
+table.post td,table.post th{font-size:8.6pt;padding:2pt 4pt}
+table.bal caption{text-align:left;font:700 9.5pt Helvetica,Arial,sans-serif;margin:6pt 0 2pt}
+.txnote{font-size:9.3pt;color:#333;margin:3pt 0 0}
+.box{border:1px solid #2f5d9e;background:#f3f6fb;padding:6pt 9pt;margin:8pt 0;font-size:9.8pt}
+.formula{font:9.6pt Menlo,Consolas,monospace;background:#f6f6f6;border-left:3px solid #2f5d9e;padding:5pt 8pt;margin:4pt 0 8pt;white-space:pre-wrap}
+.small{font-size:9pt;color:#444}
+</style></head><body>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 3 — Calculation Specification · Draft v1.0</p><p class="org">New XP Technologies Limited</p><p class="date">7 October 2026 · Confidential</p></div>
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v4.0 and the Project Understanding v1.0 with NPL's review comments. This document states every calculation the engine performs as a precise formula, in the order it is performed, with the rounding rule that applies at each step, and gives reference vectors computed from those formulas. It is the acceptance yardstick: the engine passes when it reproduces every vector to the cent.<br>
+<b>What it does not yet contain:</b> NPL's reference workbooks per project archetype (open question 11) and the reconciliation of the FRS worked figures (open question 9). When they arrive, their cases are added to Section 9 as further vectors and the formulas are confirmed or corrected against them.</p>
+<div class="rule"></div>
+
+<h2>1 · Conventions</h2>
+<ul>
+<li><b>Rates</b> are written as <i>OUT units per 1 IN unit</i> (EUR per USDT for a USDT → EUR deal). A pair configured the other way round (<code>quote_direction = in_per_out</code>) is inverted once, at full precision, before any formula below is applied: <code>R = 1 / R_quoted</code>.</li>
+<li><b>Percentages</b> are decimals in formulas (0.40 % is 0.004).</li>
+<li><b>Arithmetic</b> is exact decimal arithmetic, never binary floating point. Intermediate results are not rounded. Rounding happens only where this document says so.</li>
+<li><b>Symbols:</b> <code>A_in</code> amount collected (IN currency); <code>R_m</code> market reference rate; <code>R_p</code> partner rate; <code>R_b</code> basis rate; <code>s</code> sender share; <code>r</code> receiver share; <code>f = s + r</code> total client-side fee; <code>m</code> partner markup where the partner states market + m.</li>
+</ul>
+
+<h2>2 · Fee basis</h2>
+<p>The fee structure for a partner × pair names a <b>basis</b>: the rate NPL's price is built on.</p>
+<div class="formula">R_b = R_m   if rate_basis = market
+R_b = R_p   if rate_basis = partner</div>
+<p>With <i>partner</i> basis NPL's margin is exactly the client-side fee, whatever the partner's spread. With <i>market</i> basis the partner's spread against market eats into the margin, which is why the minimum-margin check (Section 7) exists and why variable fee mode (Section 4) adjusts the fee to the spread.</p>
+
+<h2>3 · Sender and receiver split</h2>
+<p>The total fee <code>f</code> is split into a sender share <code>s</code>, embedded in the rate the sender sees, and a receiver share <code>r</code>, deducted from what the receiver is entitled to. The two are applied one after the other, so the client net is <code>A_in × R_b × (1 − s) × (1 − r)</code>, slightly more than <code>A_in × R_b × (1 − f)</code> by the cross term <code>s × r</code>.</p>
+<div class="formula">sender_rate       R_s          = R_b × (1 − s)                      stored to the pair's rate_precision
+gross_out                      = round2( A_in × R_s )                 what the sender's price promises
+fee_receiver_part              = round2( gross_out × r )
+client_net                     = gross_out − fee_receiver_part       the receiver group's entitlement
+fee_sender_part                = round2( A_in × R_b ) − gross_out    the sender share, in the OUT currency</div>
+<p><code>round2</code> rounds half up to the OUT currency's minor unit (2 decimals for fiat; 6 for USDT; 8 for BTC). Where the deal has a per-sender <code>FEE_OVERRIDE</code>, its <code>pct</code> replaces <code>f</code> and is split in the structure's <code>s : r</code> proportion. Where an introducer is paid a fixed percentage inside the sender-facing markup, that percentage is added to <code>s</code> before the sender rate is computed (Section 8).</p>
+
+<h2>4 · Fixed and variable fee modes</h2>
+<p><b>Fixed:</b> <code>f</code> is the structure's <code>pct</code>. <b>Variable:</b> <code>f</code> is set per deal to protect the margin floor against the partner's current spread, within the structure's floor and cap.</p>
+<div class="formula">partner_spread  σ = 1 − R_p / R_m                         what the partner keeps relative to market
+required        = min_margin_pct + σ      if rate_basis = market
+                = min_margin_pct          if rate_basis = partner
+f               = clamp( required, floor_pct, cap_pct )
+below_margin    = ( f &lt; required )        → the quote proceeds only with Finance approval
+split           s = f × sender_share_pct / pct ;  r = f − s       (same proportion as the structure)</div>
+<table><thead><tr><th>Case</th><th class="n">R_m</th><th class="n">R_p</th><th>Basis</th><th class="n">Spread σ</th><th class="n">Required</th><th class="n">f (floor 0.40 %, cap 1.50 %, min margin 0.50 %)</th><th>Below margin?</th></tr></thead><tbody>
+<tr><td>Normal day</td><td class="n">0.9</td><td class="n">0.895</td><td>market</td><td class="n">0.556 %</td><td class="n">1.056 %</td><td class="n">1.056 %</td><td>no</td></tr><tr><td>Partner spread widens to 2.22 %</td><td class="n">0.9</td><td class="n">0.88</td><td>market</td><td class="n">2.222 %</td><td class="n">2.722 %</td><td class="n">1.500 %</td><td>yes, Finance approval</td></tr><tr><td>Partner basis: spread does not matter</td><td class="n">0.9</td><td class="n">0.895</td><td>partner</td><td class="n">0.556 %</td><td class="n">0.500 %</td><td class="n">0.500 %</td><td>no</td></tr>
+</tbody></table>
+
+<h2>5 · What the partner delivers, and NPL's earnings</h2>
+<div class="formula">disclosed-rate partner (margin inside its rate):
+  gross_converted = round2( A_in × R_p )
+  partner_cost    = 0 in the books; inferred_cost = round2( A_in × (R_m − R_p) ) kept as information
+market + m partner (fee stated separately):
+  gross_converted = round2( A_in × R_m )
+  partner_cost    = round2( gross_converted × m )
+in both cases:
+  actual_out      = gross_converted − partner_cost          what the partner books for the client
+  gross_margin    = gross_converted − client_net            = partner_cost + NPL earnings
+  earnings        = actual_out − client_net                 NPL's margin, recognised at conversion
+  margin_pct      = earnings / actual_out</div>
+<p>When the partner calculates (<code>calc_mode = partner_calculates</code>), <code>actual_out</code> is whatever the partner booked; <code>expected_out</code> is the formula above; <code>variance = expected_out − actual_out</code> and an exception opens if <code>|variance| / expected_out</code> exceeds the project's rate-variation tolerance. The client net never changes: the sender's price is fixed, so a variance is NPL's cost or gain.</p>
+
+<h2>6 · Target-out (quote-first) and collect-first</h2>
+<p>A quote-first sender asks for an outcome; the quote works backwards to the amount to collect. A collect-first sender simply pays and the formulas of Sections 3 and 5 run forwards at conversion time.</p>
+<div class="formula">target_out mode:   A_in = ceil_in( target_out / ( R_b × (1 − s) × (1 − r) ) )
+fixed_in  mode:    client_net as in Section 3</div>
+<p><code>ceil_in</code> rounds <i>up</i> to the IN currency's minor unit so the sender never under-delivers the target. Example from the FRS: target 1,000 USD, 1 : 1 rate, 0.40 % fee all on the sender side → A_in = 1004.016064 → <b>1004.02 USDT</b>; the same deal collect-first with 1,000 USDT yields 996.00 USD. Example at PT: to deliver a client net of 8,860.71 EUR, collect 9999.994583 → <b>9999.994583 USDT</b>.</p>
+<p><b>Quote clocks.</b> Freshness: the quote package must be marked sent within <code>quote_freshness_min</code> of the rate snapshot. Validity: <code>quote_validity_min</code> from sending. Grace: a further <code>grace_min</code>, honoured only if the market has drifted no more than <code>grace_drift_pct</code>: <code>|R_m(now) − R_m(quote)| / R_m(quote) ≤ grace_drift_pct</code>. Beyond grace, the late decision is a re-quote (new deal reference) or, where the project allows, honouring the old rate with Finance approval. The original quote figures never change.</p>
+
+<h2 class="pb">7 · Variance thresholds</h2>
+<table><thead><tr><th style="width:24%">Check</th><th>Formula</th><th>When</th><th>Consequence</th></tr></thead><tbody>
+<tr><td>Partner rate breach</td><td><code>σ = 1 − R_p / R_m</code>; breached if <code>σ &gt; avg_2w × (1 + variance_threshold_rel)</code>, where <code>avg_2w</code> is the rolling two-week average of confirmed spreads for that partner × pair</td><td>Each new PARTNER_RATE_VERSION</td><td>Quoting and conversion on that partner × pair freeze until Finance approves with a reason, rejects, or a better rate is obtained (a better rate still outside the limit needs approval)</td></tr>
+<tr><td>Minimum margin</td><td><code>margin_pct ≥ min_margin_pct</code></td><td>At quote, and again at conversion</td><td>Below-margin quote proceeds only with Finance approval; at conversion a shortfall against the floor is logged</td></tr>
+<tr><td>Conversion variance</td><td><code>|expected_out − actual_out| / expected_out ≤ rate_variation_rel</code> (THRESHOLD kind rate_variation_rel)</td><td>partner_calculates conversions</td><td>Exception opens; the deal does not wait</td></tr>
+<tr><td>Grace drift</td><td><code>|ΔR_m| / R_m ≤ grace_drift_pct</code></td><td>Payment arrives after validity, within grace</td><td>Grace applies only within drift; otherwise late decision</td></tr>
+<tr><td>Basis variance on reroute</td><td><code>A_in × (R_quote_basis − R_p,actual)</code></td><td>Alternate partner chosen at conversion, fee on partner basis</td><td>Posted to VARIANCE on earnings; margin floor re-checked</td></tr>
+<tr><td>Exposure</td><td><code>Σ due + Σ in-transit at a partner ≤ exposure_ceiling</code></td><td>Each release, each day</td><td>Release blocked; under disburse_policy to_zero, balance after release must be &lt; 1 unit</td></tr>
+</tbody></table>
+<p>Breach examples with <code>avg_2w = 0.50 %</code> and <code>variance_threshold_rel = 20 %</code> (limit 0.600 %): PT at 0.8950 against market 0.9000 gives σ = 0.556 % → not breached; PT at 0.8930 gives σ = 0.778 % → <b>breached</b>.</p>
+
+<h2>8 · Referral commissions, rebates, markup decisions</h2>
+<div class="formula">fixed-percentage introducer:   s_total = s + ref_pct         (added to the sender share before R_s)
+                               referral_payable = round2( A_in × R_b × ref_pct )
+share-of-earnings introducers: referral_payable_i = round2( earnings × share_i ),  Σ share_i ≤ 1
+partner rebate:                rebate = round2( partner_cost × pct_of_partner_fee )   accrued per deal, reconciled monthly
+return leg / balance conversion markup (FEE_DECISION):
+  converted = round2( A_in × R_p )
+  earnings  = round2( converted × pct )   if decision = apply or override, else 0
+  to client = converted − earnings</div>
+<p>Example: on deal 3 (Section 9, V3) an introducer with a 25 % share of earnings is owed 11.20 EUR; Jeton's 32 % rebate on its 45.00 EUR fee is 14.40 EUR.</p>
+
+<h2>9 · Rounding and precision rules</h2>
+<table><thead><tr><th style="width:28%">Quantity</th><th>Rule</th></tr></thead><tbody>
+<tr><td>Rates</td><td>Stored and used at the pair's <code>rate_precision</code>: 5 decimals standard, 8 for sub-unit pairs such as USDT → BTC. Inversion for <code>in_per_out</code> pairs happens at full precision before storing.</td></tr>
+<tr><td>Intermediate values</td><td>Exact decimals, no rounding.</td></tr>
+<tr><td>Money amounts</td><td>Rounded half up to the currency's minor unit when stored: fiat 2 decimals, USDT 6, BTC 8.</td></tr>
+<tr><td>Amount to collect (target-out)</td><td>Rounded <i>up</i> to the IN currency's minor unit.</td></tr>
+<tr><td>Converted amounts and payouts</td><td>Truncated to <b>whole units</b> at conversion (30.152 → 30). The dropped fraction is <code>rounding_residual</code>, stays client money in the balance, and is paid when accumulated dust reaches a whole unit. Disbursements pay whole units. Sub-unit differences never go to the shortfall ledger.</td></tr>
+<tr><td>Cash collections</td><td>Rounded to the nearest <code>cash_rounding_unit</code> of the currency: 1000 for INR, 100 for SGD and USD, as configured per currency.</td></tr>
+<tr><td>Percentages shown</td><td>Display only; the stored decimal is what the engine uses.</td></tr>
+<tr><td>Comparisons</td><td>Thresholds are compared on exact decimals; "greater than" is strict.</td></tr>
+</tbody></table>
+
+<section class="land"><h2>10 · Reference vectors</h2>
+<p>Computed from the formulas above with <code>round2</code> at 2 decimals for fiat and 8 for BTC. The engine must reproduce every cell. Vectors V1 and V3 are the deals used in the Ledger Posting Design.</p>
+<table><thead><tr><th style="width:8%">Vector</th><th>Case</th></tr></thead><tbody><tr><td>V1</td><td>Collect-first, disclosed-rate partner (deal 1 in the ledger document)</td></tr><tr><td>V2</td><td>Same deal priced on market basis</td></tr><tr><td>V3</td><td>market + 0.50 % partner, market basis (deal 3 in the ledger document)</td></tr><tr><td>V4</td><td>All fee on the sender side (FRS style), 1 : 1 rate</td></tr><tr><td>V5</td><td>Receiver share only</td></tr><tr><td>V6</td><td>Sub-unit pair, 8 dp rate (USDT → BTC)</td></tr></tbody></table>
+<table style="font-size:8.6pt"><thead><tr><th>Vector</th><th class="n">A_in</th><th class="n">R_m</th><th class="n">R_p</th><th>Basis</th><th class="n">s / r</th><th class="n">R_s</th><th class="n">gross_out</th><th class="n">fee_receiver</th><th class="n">client_net</th><th class="n">actual_out</th><th class="n">partner_cost</th><th class="n">earnings</th><th class="n">margin</th></tr></thead><tbody>
+<tr><td>V1</td><td class="n">10,000.00</td><td class="n">0.9</td><td class="n">0.895</td><td>partner</td><td class="n">0.40 % / 0.60 %</td>
+<td class="n">0.89142</td><td class="n">8,914.20</td><td class="n">53.49</td><td class="n">8,860.71</td><td class="n">8,950.00</td><td class="n">0.00</td><td class="n">89.29</td><td class="n">0.998 %</td></tr><tr><td>V2</td><td class="n">10,000.00</td><td class="n">0.9</td><td class="n">0.895</td><td>market</td><td class="n">0.40 % / 0.60 %</td>
+<td class="n">0.89640</td><td class="n">8,964.00</td><td class="n">53.78</td><td class="n">8,910.22</td><td class="n">8,950.00</td><td class="n">0.00</td><td class="n">39.78</td><td class="n">0.444 %</td></tr><tr><td>V3</td><td class="n">10,000.00</td><td class="n">0.9</td><td class="n">0.9</td><td>market</td><td class="n">0.40 % / 0.60 %<br>partner +0.50 %</td>
+<td class="n">0.89640</td><td class="n">8,964.00</td><td class="n">53.78</td><td class="n">8,910.22</td><td class="n">8,955.00</td><td class="n">45.00</td><td class="n">44.78</td><td class="n">0.500 %</td></tr><tr><td>V4</td><td class="n">1,004.02</td><td class="n">1</td><td class="n">1</td><td>market</td><td class="n">0.40 % / 0.00 %</td>
+<td class="n">0.99600</td><td class="n">1,000.00</td><td class="n">0.00</td><td class="n">1,000.00</td><td class="n">1,004.02</td><td class="n">0.00</td><td class="n">4.02</td><td class="n">0.400 %</td></tr><tr><td>V5</td><td class="n">10,000.00</td><td class="n">0.9</td><td class="n">0.895</td><td>partner</td><td class="n">0.00 % / 0.60 %</td>
+<td class="n">0.89500</td><td class="n">8,950.00</td><td class="n">53.70</td><td class="n">8,896.30</td><td class="n">8,950.00</td><td class="n">0.00</td><td class="n">53.70</td><td class="n">0.600 %</td></tr><tr><td>V6</td><td class="n">10,000.00</td><td class="n">0.00001532</td><td class="n">0.00001525</td><td>partner</td><td class="n">0.40 % / 0.60 %</td>
+<td class="n">0.0000151890</td><td class="n">0.15189000</td><td class="n">0.00</td><td class="n">0.15097866</td><td class="n">0.15250000</td><td class="n">0.00</td><td class="n">0.00</td><td class="n">0.998 %</td></tr>
+</tbody></table>
+<table><thead><tr><th>Vector</th><th class="n">Whole units paid</th><th class="n">Rounding residual</th><th class="n">fee_sender_part</th><th class="n">gross_margin</th><th>Check</th></tr></thead><tbody>
+<tr><td>V1</td><td class="n">8,860.00</td><td class="n">0.71</td><td class="n">35.80</td><td class="n">89.29</td><td>gross_margin = partner_cost + earnings: ✓</td></tr><tr><td>V2</td><td class="n">8,910.00</td><td class="n">0.22</td><td class="n">36.00</td><td class="n">39.78</td><td>gross_margin = partner_cost + earnings: ✓</td></tr><tr><td>V3</td><td class="n">8,910.00</td><td class="n">0.22</td><td class="n">36.00</td><td class="n">89.78</td><td>gross_margin = partner_cost + earnings: ✓</td></tr><tr><td>V4</td><td class="n">1,000.00</td><td class="n">0.00</td><td class="n">4.02</td><td class="n">4.02</td><td>gross_margin = partner_cost + earnings: ✓</td></tr><tr><td>V5</td><td class="n">8,896.00</td><td class="n">0.30</td><td class="n">0.00</td><td class="n">53.70</td><td>gross_margin = partner_cost + earnings: ✓</td></tr><tr><td>V6</td><td class="n">0.00</td><td class="n">0.15097866</td><td class="n">0.00</td><td class="n">0.00</td><td>gross_margin = partner_cost + earnings: ✓</td></tr>
+</tbody></table>
+<p class="small">V6 is shown to 8 decimals; its whole-unit column is zero because a 0.15 BTC result has no whole unit, which is exactly the case the rounding rule must handle: the residual stays in balance until it can be paid.</p></section>
+
+<h2>11 · Acceptance</h2>
+<ol>
+<li>The engine reproduces every reference vector in Section 10 exactly, and every posting amount in the Ledger Posting Design.</li>
+<li>For each project archetype, NPL's reference workbook (open question 11) is converted into vectors of the same shape and reproduced exactly; any difference is resolved by correcting either the workbook or this specification, never by tolerance.</li>
+<li>The FRS worked figures (open question 9: 1,208 vs 1,225; 258,875 vs 300,000) are reconciled and added as golden cases.</li>
+<li>Property checks on random inputs: debits equal credits per currency on every generated transaction; client_net + earnings + partner_cost = gross_converted; whole units + residual = client_net; entitlement conservation after any sequence of conversions, payouts, returns and balance conversions.</li>
+</ol>
+<p class="small"><i>Draft v1.0 — for review with NPL. Figures are worked examples derived from the formulas, not NPL data, until the reference workbooks are supplied.</i></p>
+</body></html>

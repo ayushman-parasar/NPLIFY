@@ -1,0 +1,311 @@
+{
+ "vectors": [
+  {
+   "name": "V1 · Collect-first, disclosed-rate partner (deal 1 in the ledger document)",
+   "in": {
+    "amountIn": 10000,
+    "Rm": 0.9,
+    "Rp": 0.895,
+    "basis": "partner",
+    "s": 0.004,
+    "r": 0.006
+   },
+   "out": {
+    "Rb": 0.895,
+    "Rs": 0.89142,
+    "grossOut": 8914.2,
+    "feeReceiver": 53.49,
+    "clientNet": 8860.71,
+    "feeSender": 35.8,
+    "grossConverted": 8950,
+    "partnerCost": 0,
+    "actualOut": 8950,
+    "grossMargin": 89.29,
+    "earnings": 89.29,
+    "payable": 8860,
+    "residual": 0.71,
+    "inferredPartnerCost": 50,
+    "marginPct": 0.009976536312849163
+   }
+  },
+  {
+   "name": "V2 · Same deal priced on market basis",
+   "in": {
+    "amountIn": 10000,
+    "Rm": 0.9,
+    "Rp": 0.895,
+    "basis": "market",
+    "s": 0.004,
+    "r": 0.006
+   },
+   "out": {
+    "Rb": 0.9,
+    "Rs": 0.8964,
+    "grossOut": 8964,
+    "feeReceiver": 53.78,
+    "clientNet": 8910.22,
+    "feeSender": 36,
+    "grossConverted": 8950,
+    "partnerCost": 0,
+    "actualOut": 8950,
+    "grossMargin": 39.78,
+    "earnings": 39.78,
+    "payable": 8910,
+    "residual": 0.22,
+    "inferredPartnerCost": 50,
+    "marginPct": 0.004444692737430167
+   }
+  },
+  {
+   "name": "V3 · market + 0.50 % partner, market basis (deal 3 in the ledger document)",
+   "in": {
+    "amountIn": 10000,
+    "Rm": 0.9,
+    "Rp": 0.9,
+    "basis": "market",
+    "s": 0.004,
+    "r": 0.006,
+    "partnerMarkup": 0.005
+   },
+   "out": {
+    "Rb": 0.9,
+    "Rs": 0.8964,
+    "grossOut": 8964,
+    "feeReceiver": 53.78,
+    "clientNet": 8910.22,
+    "feeSender": 36,
+    "grossConverted": 9000,
+    "partnerCost": 45,
+    "actualOut": 8955,
+    "grossMargin": 89.78,
+    "earnings": 44.78,
+    "payable": 8910,
+    "residual": 0.22,
+    "inferredPartnerCost": 45,
+    "marginPct": 0.005000558347292016
+   }
+  },
+  {
+   "name": "V4 · All fee on the sender side (FRS style), 1 : 1 rate",
+   "in": {
+    "amountIn": 1004.02,
+    "Rm": 1,
+    "Rp": 1,
+    "basis": "market",
+    "s": 0.004,
+    "r": 0
+   },
+   "out": {
+    "Rb": 1,
+    "Rs": 0.996,
+    "grossOut": 1000,
+    "feeReceiver": 0,
+    "clientNet": 1000,
+    "feeSender": 4.02,
+    "grossConverted": 1004.02,
+    "partnerCost": 0,
+    "actualOut": 1004.02,
+    "grossMargin": 4.02,
+    "earnings": 4.02,
+    "payable": 1000,
+    "residual": 0,
+    "inferredPartnerCost": 0,
+    "marginPct": 0.004003904304695125
+   }
+  },
+  {
+   "name": "V5 · Receiver share only",
+   "in": {
+    "amountIn": 10000,
+    "Rm": 0.9,
+    "Rp": 0.895,
+    "basis": "partner",
+    "s": 0,
+    "r": 0.006
+   },
+   "out": {
+    "Rb": 0.895,
+    "Rs": 0.895,
+    "grossOut": 8950,
+    "feeReceiver": 53.7,
+    "clientNet": 8896.3,
+    "feeSender": 0,
+    "grossConverted": 8950,
+    "partnerCost": 0,
+    "actualOut": 8950,
+    "grossMargin": 53.7,
+    "earnings": 53.7,
+    "payable": 8896,
+    "residual": 0.3,
+    "inferredPartnerCost": 50,
+    "marginPct": 0.006
+   }
+  },
+  {
+   "name": "V6 · Sub-unit pair, 8 dp rate (USDT → BTC)",
+   "in": {
+    "amountIn": 10000,
+    "Rm": 0.00001532,
+    "Rp": 0.00001525,
+    "basis": "partner",
+    "s": 0.004,
+    "r": 0.006,
+    "dp": 8
+   },
+   "out": {
+    "Rb": 0.00001525,
+    "Rs": 0.000015189,
+    "grossOut": 0.15189,
+    "feeReceiver": 0.00091134,
+    "clientNet": 0.15097866,
+    "feeSender": 0.00061,
+    "grossConverted": 0.1525,
+    "partnerCost": 0,
+    "actualOut": 0.1525,
+    "grossMargin": 0.00152134,
+    "earnings": 0.00152134,
+    "payable": 0,
+    "residual": 0.15097866,
+    "inferredPartnerCost": 0.0007,
+    "marginPct": 0.009976
+   }
+  }
+ ],
+ "deals": {
+  "D1": {
+   "Rb": 0.895,
+   "Rs": 0.89142,
+   "grossOut": 8914.2,
+   "feeReceiver": 53.49,
+   "clientNet": 8860.71,
+   "feeSender": 35.8,
+   "grossConverted": 8950,
+   "partnerCost": 0,
+   "actualOut": 8950,
+   "grossMargin": 89.29,
+   "earnings": 89.29,
+   "payable": 8860,
+   "residual": 0.71,
+   "inferredPartnerCost": 50,
+   "marginPct": 0.009976536312849163
+  },
+  "D2": {
+   "Rb": 0.895,
+   "Rs": 0.89142,
+   "grossOut": 4457.1,
+   "feeReceiver": 26.74,
+   "clientNet": 4430.36,
+   "feeSender": 17.9,
+   "grossConverted": 4475,
+   "partnerCost": 0,
+   "actualOut": 4475,
+   "grossMargin": 44.64,
+   "earnings": 44.64,
+   "payable": 4430,
+   "residual": 0.36,
+   "inferredPartnerCost": 25,
+   "marginPct": 0.009975418994413407
+  },
+  "DJ": {
+   "Rb": 0.9,
+   "Rs": 0.8964,
+   "grossOut": 8964,
+   "feeReceiver": 53.78,
+   "clientNet": 8910.22,
+   "feeSender": 36,
+   "grossConverted": 9000,
+   "partnerCost": 45,
+   "actualOut": 8955,
+   "grossMargin": 89.78,
+   "earnings": 44.78,
+   "payable": 8910,
+   "residual": 0.22,
+   "inferredPartnerCost": 45,
+   "marginPct": 0.005000558347292016
+  },
+  "D4": {
+   "Rb": 0.775,
+   "Rs": 0.7719,
+   "grossOut": 1543.8,
+   "feeReceiver": 9.26,
+   "clientNet": 1534.54,
+   "feeSender": 6.2,
+   "grossConverted": 1550,
+   "partnerCost": 0,
+   "actualOut": 1550,
+   "grossMargin": 15.46,
+   "earnings": 15.46,
+   "payable": 1534,
+   "residual": 0.54,
+   "inferredPartnerCost": 10,
+   "marginPct": 0.009974193548387097
+  }
+ },
+ "target": {
+  "tgt": 1004.0160642570281,
+  "tgt2": 9999.994582829817
+ },
+ "variableFee": {
+  "vf1": {
+   "spread": 0.005555555555555536,
+   "required": 0.010555555555555537,
+   "f": 0.010555555555555537,
+   "belowMargin": false
+  },
+  "vf2": {
+   "spread": 0.022222222222222254,
+   "required": 0.027222222222222255,
+   "f": 0.015,
+   "belowMargin": true
+  },
+  "vf3": {
+   "spread": 0.005555555555555536,
+   "required": 0.005,
+   "f": 0.005,
+   "belowMargin": false
+  }
+ },
+ "breach": {
+  "br1": {
+   "spread": 0.005555555555555536,
+   "limit": 0.006,
+   "breached": false
+  },
+  "br2": {
+   "spread": 0.007777777777777772,
+   "limit": 0.006,
+   "breached": true
+  }
+ },
+ "ledgerBalances": {
+  "CL.PT.USDT.COLLECTED|USDT": 7050,
+  "CL.PROJECT.USDT.PAYABLE|USDT": 12671.19,
+  "CL.PT.EUR.DUE|EUR": 2708.28,
+  "CO.PT.EUR.POOL|EUR": 109.22,
+  "CL.PROJECT.EUR.PAYABLE|EUR": 11618.5,
+  "CO.NONE.EUR.EARN_GROSS|EUR": 239.3,
+  "CL.PT.EUR.INTRANSIT|EUR": 0,
+  "CL.SUD.EUR.SHORTFALL|EUR": 0,
+  "CO.NONE.EUR.EXP_BANKFEE|EUR": 50,
+  "CL.OWN.USDT.HELD|USDT": 0,
+  "CL.JETON.USDT.COLLECTED|USDT": 0,
+  "CO.OWN.USDT.WALLET|USDT": 30,
+  "CO.JETON.USDT.POOL|USDT": -30,
+  "CL.JETON.EUR.DUE|EUR": 8910.22,
+  "CO.JETON.EUR.POOL|EUR": 44.78,
+  "CO.NONE.EUR.EXP_PARTNER|EUR": 30.6,
+  "CL.PT.GBP.DUE|GBP": 0.54,
+  "CO.PT.GBP.POOL|GBP": 0.46,
+  "CL.PROJECT.GBP.PAYABLE|GBP": 0.54,
+  "CO.NONE.GBP.EARN_GROSS|GBP": 15.46,
+  "CL.PT.GBP.INTRANSIT|GBP": 0,
+  "CO.NONE.GBP.EXP_BANKFEE|GBP": 15,
+  "CL.PT.USDT.DUE|USDT": 5671.19,
+  "CL.PT.SGD.DUE|SGD": 0,
+  "CL.PROJECT.SGD.PAYABLE|SGD": 0,
+  "CO.JOHN.EUR.REFERRAL_PAYABLE|EUR": 11.2,
+  "CO.JETON.EUR.REBATE_RECEIVABLE|EUR": 14.4,
+  "CL.AYUSH.USDT.CREDIT|USDT": 50,
+  "CO.NONE.EUR.VARIANCE|EUR": 1.5
+ }
+}
