@@ -160,5 +160,7 @@ module = (
     "\nreturn {destroy(){root.innerHTML='';}, select, fit};\n}\n"
 )
 (root / "src/lib/map/engine.js").write_text(module)
+import re as _re
+css = _re.sub(r"(^|\n  |\n)main(\.collapsed|\{)", lambda m: m.group(1) + ".erd-root main" + m.group(2), css)  # keep the map layout off other pages
 (root / "src/app/globals.css").write_text(css)
 print("engine.js", len(module), "globals.css", len(css))
