@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v4.json"), "utf8"));
+const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
 const outDir = path.join(root, "docs");
 fs.mkdirSync(outDir, { recursive: true });
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));

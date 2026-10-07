@@ -1,4 +1,4 @@
-// Build the client-facing ERD document (HTML + PDF) from data/erd.v4.json.
+// Build the client-facing ERD document (HTML + PDF) from data/erd.v5.json.
 //   node scripts/build-erd-doc.mjs            -> docs/NPLify-P0-ERD-v4.0.html and .pdf
 // The PDF is printed with headless Chrome; each diagram is scaled to fit one landscape page.
 import fs from "node:fs";
@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v4.json"), "utf8"));
+const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
 const outDir = path.join(root, "docs");
 fs.mkdirSync(outDir, { recursive: true });
 

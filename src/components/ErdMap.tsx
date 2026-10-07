@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import erd from "@data/erd.v4.json";
+import erd from "@data/erd.v5.json";
 
 export type ErdMapConfig = { flaggingEnabled: boolean };
 
