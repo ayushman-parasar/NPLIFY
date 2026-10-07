@@ -143,11 +143,17 @@ function setPanel(open){mainEl.classList.toggle('collapsed',!open);try{localStor
 document.getElementById('pClose').addEventListener('click',()=>setPanel(false));
 document.getElementById('pOpen').addEventListener('click',()=>setPanel(true));
 try{if(localStorage.getItem('erd-panel')==='0')setPanel(false)}catch(e){}
-function hover(name){state.hover=name;if(!state.sel&&state.walk===null&&!state.trace)applyHighlight()}
+let previewed=null;
+function hover(name){
+  state.hover=name;
+  if(state.sel||state.walk!==null||state.trace)return;           // locked, walking or tracing: hover does nothing
+  applyHighlight();
+  if(name&&name!==previewed){previewed=name;renderPanel(name,null)} // the panel keeps the last preview so it can be read
+}
 function select(name,viaEdge,opts){
-  if(state.sel===name&&!viaEdge&&!(opts&&opts.force)){state.sel=null;state.trace=null;state.hover=null;applyHighlight();pBody.innerHTML=emptyPanel;cfg.onEvent&&cfg.onEvent('entity_unpinned',{entity:name});return}
-  state.trace=null;state.sel=name;applyHighlight();renderPanel(name,viaEdge);if(!(opts&&opts.stayTab))setTab('details');if(state.walk===null)fitTo([name,...neighbours(name)]);cfg.onEvent&&cfg.onEvent('entity_pinned',{entity:name,via:viaEdge?'edge':'click'})}
-function clearAll(){state.sel=null;state.trace=null;state.hover=null;exitWalk();applyHighlight();pBody.innerHTML=emptyPanel}
+  if(state.sel===name&&!viaEdge&&!(opts&&opts.force)){state.sel=null;state.trace=null;state.hover=name;previewed=name;applyHighlight();renderPanel(name,null);cfg.onEvent&&cfg.onEvent('entity_unpinned',{entity:name});return}
+  state.trace=null;state.sel=name;previewed=name;applyHighlight();renderPanel(name,viaEdge);if(!(opts&&opts.stayTab))setTab('details');if(state.walk===null)fitTo([name,...neighbours(name)]);cfg.onEvent&&cfg.onEvent('entity_pinned',{entity:name,via:viaEdge?'edge':'click'})}
+function clearAll(){state.sel=null;state.trace=null;state.hover=null;previewed=null;exitWalk();applyHighlight();pBody.innerHTML=emptyPanel}
 const pHead=document.getElementById('pHead');
 const pBody=document.createElement('div');pBody.id='pBody';
 while(pHead.nextSibling&&pHead.nextSibling.id!=='chat')pBody.appendChild(pHead.nextSibling);
@@ -163,7 +169,9 @@ function renderPanel(name,viaEdge){
   const invs=INV.filter(i=>i[0].includes(name));
   const rel=(list,dir)=>list.length?`<ul class="rel">${list.map(ed=>{const other=dir==='in'?ed.s:ed.t;
     return `<li><button class="ent" data-go="${other}">${other}</button><div class="how">${esc(ed.label)}<span class="kindtag ${ed.k}">${kindName(ed.k)}</span><small>${esc(ed.card)}${ed.fk?' · '+esc(ed.fk):''}</small></div></li>`}).join('')}</ul>`:'<p class="empty">none</p>';
+  const lockbar=state.walk===null&&!state.trace?(state.sel===name?`<div class="lockbar locked">Locked · click the entity again to unlock</div>`:`<div class="lockbar">Preview · click the entity to lock</div>`):'';
   pBody.innerHTML=`
+    ${lockbar}
     <h2>${name}</h2>
     <div class="dom"><i style="background:${DOMS[e.d].c}"></i>${DOMS[e.d].name}</div>
     <p>${esc(e.desc)}</p>
@@ -229,11 +237,10 @@ function centerOn(name){const n=nodes[name],r=stage.getBoundingClientRect();if(v
 function zoomAt(f,cx,cy){const nk=Math.min(3,Math.max(0.12,vt.k*f));vt.x=cx-(cx-vt.x)*(nk/vt.k);vt.y=cy-(cy-vt.y)*(nk/vt.k);vt.k=nk;applyVT()}
 stage.addEventListener('wheel',ev=>{ev.preventDefault();const r=stage.getBoundingClientRect();const f=Math.exp(-ev.deltaY*0.0015);zoomAt(f,ev.clientX-r.left,ev.clientY-r.top)},{passive:false});
 let drag=null,pinch=null;
-svg.addEventListener('pointerdown',ev=>{if(ev.button!==0&&ev.pointerType==='mouse')return;svg.setPointerCapture(ev.pointerId);drag={x:ev.clientX,y:ev.clientY,vx:vt.x,vy:vt.y,moved:false};svg.classList.add('panning')});
-svg.addEventListener('pointermove',ev=>{if(!drag)return;const dx=ev.clientX-drag.x,dy=ev.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;vt.x=drag.vx+dx;vt.y=drag.vy+dy;applyVT()});
-svg.addEventListener('pointerup',ev=>{if(drag&&!drag.moved&&ev.target===svg){/* background click */ if(state.walk===null){state.sel=null;state.trace=null;applyHighlight();pBody.innerHTML=emptyPanel}}drag=null;svg.classList.remove('panning')});
+svg.addEventListener('pointerdown',ev=>{if(ev.button!==0&&ev.pointerType==='mouse')return;drag={x:ev.clientX,y:ev.clientY,vx:vt.x,vy:vt.y,moved:false,onNode:!!(ev.target.closest&&ev.target.closest('.node,.edge-hit')),id:ev.pointerId}});
+svg.addEventListener('pointermove',ev=>{if(!drag)return;const dx=ev.clientX-drag.x,dy=ev.clientY-drag.y;if(!drag.moved&&Math.abs(dx)+Math.abs(dy)>4){drag.moved=true;try{svg.setPointerCapture(drag.id)}catch(e){}svg.classList.add('panning')}if(!drag.moved)return;vt.x=drag.vx+dx;vt.y=drag.vy+dy;applyVT()});
+svg.addEventListener('pointerup',ev=>{if(drag&&!drag.moved&&!drag.onNode){/* click on empty canvas: unlock */ if(state.walk===null){state.sel=null;state.trace=null;state.hover=null;previewed=null;applyHighlight();pBody.innerHTML=emptyPanel}}try{svg.releasePointerCapture(ev.pointerId)}catch(e){}drag=null;svg.classList.remove('panning')});
 svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('panning')});
-svg.addEventListener('click',ev=>{if(ev.target===svg&&state.walk===null&&!drag){state.sel=null;state.trace=null;applyHighlight();pBody.innerHTML=emptyPanel}});
 document.getElementById('zIn').addEventListener('click',()=>{const r=stage.getBoundingClientRect();zoomAt(1.25,r.width/2,r.height/2)});
 document.getElementById('zOut').addEventListener('click',()=>{const r=stage.getBoundingClientRect();zoomAt(0.8,r.width/2,r.height/2)});
 document.getElementById('bFit').addEventListener('click',fit);

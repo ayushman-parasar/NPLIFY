@@ -225,3 +225,7 @@ ul.inv li{margin-bottom:4px}
 .msg .fb{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
 .msg .fb button{font-size:11px;padding:1px 7px;border:1px solid var(--line);border-radius:999px;background:var(--chip);cursor:pointer}
 .msg .fb button.on{border-color:var(--accent);color:var(--accent)}
+
+/* lock status line in the details panel */
+.lockbar{font-size:11px;letter-spacing:.03em;color:var(--muted);border:1px dashed var(--line);border-radius:4px;padding:3px 8px;margin:0 0 10px;display:inline-block}
+.lockbar.locked{color:var(--hi);border:1px solid var(--hi);font-weight:600}
