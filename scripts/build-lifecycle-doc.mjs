@@ -1,4 +1,4 @@
-// Build docs/NPLify-Lifecycle-and-Approvals-v1.0.pdf: transaction state machines and the
+// Build docs/NPLify-Lifecycle-and-Approvals-v1.1.pdf: transaction state machines and the
 // approval (maker-checker) workflows, from the agreed model. node scripts/build-lifecycle-doc.mjs
 import fs from "node:fs";
 import path from "node:path";
@@ -88,7 +88,7 @@ const disbChart = chart({ w: 760, h: 350, title: "Figure 2 — Settlement: a dis
   { id: "prep", label: "Prepared\n(Ops)", x: 20, y: 30, kind: "start" }, { id: "appr", label: "Approved\n(Finance)", x: 168, y: 30 }, { id: "rel", label: "Released\nby partner", x: 316, y: 30 }, { id: "done", label: "Completed", x: 612, y: 30, kind: "end" },
   { id: "rej", label: "Rejected →\nback to Ops", x: 168, y: 140, kind: "exception" },
   { id: "lsent", label: "Line: Sent\n(in transit)", x: 316, y: 140 }, { id: "lconf", label: "Line: Confirmed\nfull", x: 464, y: 140, kind: "end" }, { id: "lshort", label: "Line: Confirmed\nshort", x: 464, y: 240, kind: "exception" }, { id: "sf", label: "Shortfall open →\ntopped up next\nsettlement", x: 612, y: 240, kind: "end", h: 44 }, { id: "lret", label: "Line: Returned\n(back to balance)", x: 316, y: 240, kind: "exception" },
-  { id: "n1", label: "Management approves when: above settlement limit · third same-day slot · payout to another receiver group · only one Finance user on shift (countersign)", x: 20, y: 340, kind: "note" },
+  { id: "n1", label: "Management approves when: above settlement limit · third same-day slot · counterparty paid from another group's leg (never a refund or hop line) · only one Finance user on shift (countersign)", x: 20, y: 340, kind: "note" },
 ], edges: [
   { from: "prep", to: "appr", label: "approve" }, { from: "appr", to: "rel", label: "partner executes" }, { from: "appr", to: "rej", label: "reject with reason", kind: "reject" }, { from: "rej", to: "prep", label: "re-prepare", kind: "reject", via: [[79, 157]] },
   { from: "rel", to: "lsent", label: "each line" }, { from: "lsent", to: "lconf", label: "receiver confirms" }, { from: "lsent", to: "lshort", label: "bank fee deducted", kind: "exception" }, { from: "lshort", to: "sf", label: "carry-forward\n(Management)", kind: "exception" },
@@ -118,48 +118,25 @@ const approvalChart = chart({ w: 760, h: 170, title: "Figure 5 — An APPROVAL r
 ] });
 
 // ------------------------------------------------------------------ controlled actions matrix
-const ACTIONS = [
-  ["Quote a deal (price, fee, partner × pair)", "Operations", "Finance", "Below-margin quote: Finance approval mandatory before sending", "Returns to Ops with reason; the quote package is not sent; Ops re-prices as a new quote"],
-  ["Honour an expired quote (late decision)", "Operations", "Finance", "Project policy must allow honouring; market drift within grace_drift_pct", "Re-quote at today's rate with a new deal reference; the original stamp is kept"],
-  ["Enter a manual rate (reference feed outage)", "Operations", "Finance", "Evidence attached (both feeds down)", "No rate; quoting waits for the feed or a new manual entry"],
-  ["Confirm a partner rate version", "Operations (enters)", "Finance (confirms)", "Breached version: Finance approval with recorded reason, or rejection; no skip path", "Pair stays frozen; Ops may request a better rate from the partner, which is a new version"],
-  ["Verify a collection (hash / slip / receipt)", "Operations", "— (audited; Finance reviews in reconciliation)", "Underpayment left open beyond policy: Finance decides wait or void", "Collection stays unverified; funds are not attributed"],
-  ["Instruct a conversion", "Operations", "Finance", "Variance beyond tolerance opens an exception that Finance resolves", "Conversion not instructed; deal stays Collected"],
-  ["Resolve a conversion variance exception", "Finance", "Finance (second user)", "Variance above the project's exception limit → Management", "Exception stays open; the deal is already converted and does not wait"],
-  ["Prepare and release a disbursement", "Operations", "Finance", "Above settlement limit; third same-day slot; payout to a receiver in another group (offset); only one Finance user on shift → Management countersigns", "Back to Prepared with reason; lines can be changed and re-submitted"],
-  ["Override the bank-fee treatment on one settlement", "Operations", "Finance", "—", "Project default applies"],
-  ["Top up a shortfall from the pool", "Finance", "Management", "Always Management (company money becomes client money)", "Shortfall stays open; receiver remains short"],
-  ["Pay a receiver in another receiver group (offset)", "Operations", "Finance", "Always Management, with tighter aging on the resulting offset", "Lines must stay within the entitled group"],
-  ["Request a reroute", "Operations", "Finance", "Contingency route set (applicable_for_reroute) is configuration: Management", "Deal stays on its route; if the partner is unavailable the deal waits or is voided"],
-  ["Outbound transfer from NPL's own wallet", "Finance", "Management (dual approval)", "Always; executed by NPL signers outside the platform (hardware or multisig)", "Funds stay in custody; aging continues to be reported"],
-  ["Recover dues on a reroute (net against forwarded funds)", "Finance", "Management", "Always; amount ≤ outstanding receivable at that partner; partner's agreement recorded", "Forward the full amount"],
-  ["Balance conversion (client balance to another currency)", "Finance", "Management", "Always; any excess over the served group's entitlement is an offset and needs the offset approval too", "Balance stays in its currency"],
-  ["Open a return leg after a rejected payout", "Operations", "Finance", "Destination other than the sender's own return receiver → Management with reason; markup apply / waive is a FEE_DECISION approved by Finance", "Returned funds stay in balance for later payouts"],
-  ["Override the network-fee policy on a refund", "Operations", "Finance", "—", "Project default applies"],
-  ["Void a deal before money moved", "Operations", "Finance", "—", "Deal continues"],
-  ["Void a deal after collection (refund / sender credit / hold)", "Operations", "Management", "Always", "Deal continues; funds stay attributed"],
-  ["Record a partner's destination approval (SETTLEMENT_REGISTRATION)", "Operations", "Finance", "—", "Registration stays pending_partner; quote-first deals for it cannot leave Inquiry"],
-  ["Change thresholds, fee structures, partner configuration, rates sources", "Finance", "Management", "Always; all versioned", "Current version stays in force"],
-  ["Create, change or remove a user or role", "Management", "Management (second user)", "Always", "No change"],
-  ["Ledger adjustment (reversal and re-posting)", "Finance", "Management", "Always; the reversal names the transaction it reverses", "Books unchanged; the discrepancy stays on the exception list"],
-];
+import { ACTIONS } from "./controlled-actions.mjs";
 
 const STATES = [
   ["DEAL_GROUP", "Inquiry → Quoted → Sent → Accepted → Collecting → Collected → Converting → Converted → Settled; Expired / in grace; Requoted; Voided; Voided after collection → Refunded / Credited / Held", "The group's state follows its legs: Settled when every forward leg is settled and no return leg is open."],
-  ["DEAL (leg)", "As Figure 1. A collect-first or return leg is born at Collected; an estimate-first leg enters Collecting; a leg 2 of a route is born at Collected when leg 1 pays the transit receiver", "leg_type and funding_source decide the entry point. Pricing fields are write-once after priced_at."],
+  ["DEAL (leg)", "As Figure 1. A collect-first or return leg is born at Collected; an estimate-first leg enters Collecting; a leg 2 of a route is born at Collected when leg 1 pays the transit receiver", "leg_type and funding_source decide the entry point. Pricing fields are write-once after priced_at. A return or hop leg inherits the parent leg's receiver group; cross_group_payout never fires on it (D13)."],
   ["COLLECTION", "Pending → Received → Verified; Rejected", "Parts post as verified. Overpayment creates SENDER_CREDIT; underpayment waits or is voided."],
   ["CONVERSION", "Expected → Booked → Approved; Variance exception (Booked, beyond tolerance) → Resolved", "The booked figure is what the partner did; the exception is resolved by Finance; the deal does not wait."],
   ["BALANCE_CONVERSION", "Requested (Finance) → Approved (Management) → Booked; Rejected", "Owns exactly one CONVERSION; entitlement re-attributed to the served group on booking."],
   ["REROUTE", "Requested → Approved → In custody → Forwarded → Completed; Rejected", "Phase pre_collection or post_collection; outcome via_own_wallet or refund_sender."],
   ["DISBURSEMENT", "Prepared → Approved → Released → Completed; Rejected (back to Prepared)", "Completed when every line is confirmed or returned."],
-  ["DISBURSEMENT_LINE (outcome)", "sent → confirmed; sent → returned", "A returned line is reversed into the balance before anything else happens."],
+  ["DISBURSEMENT_LINE (outcome)", "sent → confirmed; sent → returned", "A returned line is reversed into the balance before anything else happens. A line paying a group-less receiver carries deal_id (D17) and is never an offset."],
+  ["COLLECTION_RECEIVING_ENDPOINT (status)", "inactive → active; active → suspended", "A bank endpoint becomes active only with rail set; a wallet may stay without rail, and its rail, when set, equals its network (D18)."],
   ["CONFIRMATION (result)", "full | short", "Short opens a SHORTFALL unless the treatment is waived."],
   ["SHORTFALL", "open → topped_up", "Top-up funded from the pool, Management approval, paid with the next disbursement."],
   ["BANK_FEE_EVENT", "open → applied", "Applied to the disbursement that carried the true-up."],
   ["DISBURSEMENT_RETURN", "recorded (terminal)", "Fund a return leg or stay in balance."],
   ["RATE_COMPARISON", "open → closed", "One per partner × pair × date; closed at end of day."],
   ["PARTNER_RATE_VERSION", "active → usable → expired; active → breached → approved → usable, or rejected", "Never overwritten; each conversion names its version."],
-  ["SETTLEMENT_REGISTRATION (approval_status)", "pending_partner → approved → suspended → approved", "A quote-first deal leaves Inquiry only if the entitled group has an approved registration with the chosen partner."],
+  ["SETTLEMENT_REGISTRATION (approval_status)", "pending_partner → approved → suspended → approved", "A quote-first deal leaves Inquiry only if the entitled group has an approved registration with the chosen partner. Payout details follow the account's kind (D16)."],
   ["FEE_DECISION", "proposed → approved → applied; rejected", "One subject (deal leg, disbursement or balance conversion); standing rules are unaffected."],
   ["SENDER_CREDIT", "open → applied", "Applied to a later deal or refunded (a void disposition)."],
   ["EARNINGS_RECEIVABLE", "outstanding → recovered", "Recovered on the partner's fee cycle or by netting on a reroute."],
@@ -193,10 +170,11 @@ figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
 .small{font-size:9pt;color:#444}
 `;
 
-const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Transaction Lifecycle &amp; Approval State Machines v1.0</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 4 — Transaction Lifecycle &amp; Approval State Machines · Draft v1.0</p><p class="org">New XP Technologies Limited</p><p class="date">7 October 2026 · Confidential</p></div>
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v4.0, the Ledger Posting Design v1.0 and the Project Understanding v1.0 with NPL's review comments. It defines the states a transaction passes through from quote to settlement, the events that move it between states, and for every controlled action who initiates it, who approves it, when it escalates to Management and what happens on rejection.<br>
+const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Transaction Lifecycle &amp; Approval State Machines v1.1</title><style>${CSS}</style></head><body>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 4 — Transaction Lifecycle &amp; Approval State Machines · Draft v1.1</p><p class="org">New XP Technologies Limited</p><p class="date">8 October 2026 · Confidential</p></div>
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v5.2, the Ledger Posting Design v1.1 and the Project Understanding v1.1. The Roles &amp; Visibility Matrix v1.0 is the companion document for view and approval rights. It defines the states a transaction passes through from quote to settlement, the events that move it between states, and for every controlled action who initiates it, who approves it, when it escalates to Management and what happens on rejection.<br>
 <b>Audience:</b> NPL Operations, Finance and Management, and the New XP engineering team. Figures show the normal path in blue, exceptions in orange, rejections dashed in red, and end states as rounded boxes.</p>
+<div class="box"><b>What changed in v1.1 (ERD v5.2, 8 October 2026).</b> The offset approval (<code>cross_group_payout</code>) fires only when a counterparty receiver is paid from a leg attributed to another group; it never fires on a refund (sender_return) or hop (partner_transit) line, which debits the group of the leg named in its <code>deal_id</code> (D13, D17). A collection endpoint must be active before any part may land in it, and a bank endpoint cannot be activated without its rail (D18); collection verification also checks that the endpoint belongs to the leg's partner entity and that its kind matches the leg's collection method (D19). A destination registration's payout details follow the account's kind (D16). State names and the maker-checker rules are otherwise unchanged.</div>
 <div class="rule"></div>
 
 <h2>1 · Three roles, one principle</h2>
@@ -209,7 +187,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="box"><b>Where the Understanding document says two things.</b> Section 7.1 says a reroute is "Ops requests, Finance approves"; Section 9 lists "contingency routes" among Management's approvals. Both are kept: Finance approves the individual reroute; Management approves the <i>set</i> of alternate partners a project may reroute to (<code>PARTNER_CONFIG.applicable_for_reroute</code>, which is configuration) and, together with Finance, every outbound transfer from NPL's own wallet.</div>
 
 <h2>2 · The deal: Quote → Collect → Convert → Settle</h2>
-<p>A deal is a group of one or more legs. A quote-first leg walks the whole top row of Figure 1; a collect-first leg is born at Collected because the money arrived before any quote; an estimate-first leg enters Collecting with an indicative figure and is priced at conversion; a return leg is born at Collected, funded by the returned payout. Pricing fields are stamped once and never recomputed.</p>
+<p>A deal is a group of one or more legs. A quote-first leg walks the whole top row of Figure 1; a collect-first leg is born at Collected because the money arrived before any quote; an estimate-first leg enters Collecting with an indicative figure and is priced at conversion; a return leg is born at Collected, funded by the returned payout and attributed to its parent leg's group. Pricing fields are stamped once and never recomputed.</p>
 ${dealChart}
 <h3>Transitions</h3>
 <table><thead><tr><th style="width:14%">From</th><th style="width:14%">To</th><th>Event</th><th>Guard</th><th style="width:16%">Who</th></tr></thead><tbody>
@@ -219,8 +197,8 @@ ${dealChart}
 <tr><td>Sent / Accepted</td><td>Expired / in grace</td><td>Validity lapses</td><td>Grace applies for grace_min only if market drift ≤ grace_drift_pct</td><td>System</td></tr>
 <tr><td>Expired / in grace</td><td>Requoted</td><td>Late decision: re-quote</td><td>New deal group reference; the original stamp is kept</td><td>Ops</td></tr>
 <tr><td>Expired / in grace</td><td>Collected</td><td>Late decision: honour the old rate</td><td>Project late_collection_policy allows it; recorded Finance approval</td><td>Finance</td></tr>
-<tr><td>Accepted</td><td>Collecting</td><td>Instructions issued (wallet, bank-in details or cash instructions)</td><td>—</td><td>Ops</td></tr>
-<tr><td>Collecting</td><td>Collected</td><td>All parts verified (hash / slip / receipt)</td><td>Collected amount matches; overpayment → sender credit; underpayment → wait or void</td><td>Ops verifies</td></tr>
+<tr><td>Accepted</td><td>Collecting</td><td>Instructions issued: an active endpoint of the leg's partner entity whose kind matches the collection method, or cash instructions</td><td>Endpoint active (a bank endpoint only with rail — D18) and of the right kind (D19)</td><td>Ops</td></tr>
+<tr><td>Collecting</td><td>Collected</td><td>All parts verified (hash / slip / receipt)</td><td>Collected amount matches; each part landed in an active endpoint of the leg's partner entity matching collection_method (D18, D19); overpayment → sender credit; underpayment → wait or void</td><td>Ops verifies</td></tr>
 <tr><td>Collected</td><td>Converting</td><td>Conversion instructed to the partner</td><td>Rate version still usable; receiver fee taken at conversion</td><td>Ops; Finance approves</td></tr>
 <tr><td>Converting</td><td>Converted</td><td>Partner books; actual_out recorded; margin recognised; whole-unit truncation applied</td><td>Variance within tolerance, else an exception opens (the deal does not wait)</td><td>System; Finance on exception</td></tr>
 <tr><td>Converted</td><td>Settled</td><td>Every euro of client net paid out and confirmed (whole units; dust carried)</td><td>Disbursement lifecycle, Figure 2</td><td>—</td></tr>
@@ -259,10 +237,10 @@ ${STATES.map((s) => `<tr><td class="mono">${esc(s[0])}</td><td>${esc(s[1])}</td>
 
 <h2>7 · Aging and the daily exception list</h2>
 <p>Four things age and are reported daily with deal, reason and hours since the event: client money in NPL's own wallet (custody), open offsets across receiver groups, open shortfalls, and open variance exceptions. Breached rate versions and frozen partner × pairs appear on the same list. Time limits for each are project configuration (THRESHOLD) and are not fixed by this document.</p>
-<p class="small"><i>Draft v1.0 — for review with NPL. State names are the proposal for the state columns the ERD leaves as free text; once agreed they become the enumerations of those columns.</i></p>
+<p class="small"><i>Draft v1.1 — for review with NPL. State names are the proposal for the state columns the ERD leaves as free text; once agreed they become the enumerations of those columns.</i></p>
 </body></html>`;
 
-const h = path.join(outDir, "NPLify-Lifecycle-and-Approvals-v1.0.html"), p = path.join(outDir, "NPLify-Lifecycle-and-Approvals-v1.0.pdf");
+const h = path.join(outDir, "NPLify-Lifecycle-and-Approvals-v1.1.html"), p = path.join(outDir, "NPLify-Lifecycle-and-Approvals-v1.1.pdf");
 fs.writeFileSync(h, html);
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });

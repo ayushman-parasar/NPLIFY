@@ -1,0 +1,28 @@
+// Controlled actions: [action, initiates, approves, escalates to Management when, on rejection].
+// Shared by the Lifecycle & Approvals document and the Roles & Visibility Matrix.
+export const ACTIONS = [
+  ["Quote a deal (price, fee, partner × pair)", "Operations", "Finance", "Below-margin quote: Finance approval mandatory before sending", "Returns to Ops with reason; the quote package is not sent; Ops re-prices as a new quote"],
+  ["Honour an expired quote (late decision)", "Operations", "Finance", "Project policy must allow honouring; market drift within grace_drift_pct", "Re-quote at today's rate with a new deal reference; the original stamp is kept"],
+  ["Enter a manual rate (reference feed outage)", "Operations", "Finance", "Evidence attached (both feeds down)", "No rate; quoting waits for the feed or a new manual entry"],
+  ["Confirm a partner rate version", "Operations (enters)", "Finance (confirms)", "Breached version: Finance approval with recorded reason, or rejection; no skip path", "Pair stays frozen; Ops may request a better rate from the partner, which is a new version"],
+  ["Verify a collection (hash / slip / receipt)", "Operations", "— (audited; Finance reviews in reconciliation)", "Underpayment left open beyond policy: Finance decides wait or void. The system refuses the part if its endpoint is not active, does not belong to the leg's partner entity, or its kind does not match the leg's collection method (D18, D19)", "Collection stays unverified; funds are not attributed"],
+  ["Activate a collection endpoint (COLLECTION_RECEIVING_ENDPOINT)", "Operations", "Finance", "— (the system refuses to activate a bank endpoint without rail, or a wallet whose rail differs from its network — D18)", "Endpoint stays inactive; no collection may reference it"],
+  ["Instruct a conversion", "Operations", "Finance", "Variance beyond tolerance opens an exception that Finance resolves", "Conversion not instructed; deal stays Collected"],
+  ["Resolve a conversion variance exception", "Finance", "Finance (second user)", "Variance above the project's exception limit → Management", "Exception stays open; the deal is already converted and does not wait"],
+  ["Prepare and release a disbursement", "Operations", "Finance", "Above settlement limit; third same-day slot; a counterparty receiver paid from a leg attributed to another group (offset) — never for a line paying a sender_return or partner_transit receiver, which debits the group of the leg named in its deal_id (D13, D17); only one Finance user on shift → Management countersigns", "Back to Prepared with reason; lines can be changed and re-submitted"],
+  ["Override the bank-fee treatment on one settlement", "Operations", "Finance", "—", "Project default applies"],
+  ["Top up a shortfall from the pool", "Finance", "Management", "Always Management (company money becomes client money)", "Shortfall stays open; receiver remains short"],
+  ["Pay a counterparty receiver from another group's leg (offset)", "Operations", "Finance", "Always Management, with tighter aging on the resulting offset. Does not apply to refund (sender_return) or hop (partner_transit) lines: cross_group_payout never fires on them", "Lines must stay within the entitled group"],
+  ["Request a reroute", "Operations", "Finance", "Contingency route set (applicable_for_reroute) is configuration: Management", "Deal stays on its route; if the partner is unavailable the deal waits or is voided"],
+  ["Outbound transfer from NPL's own wallet", "Finance", "Management (dual approval)", "Always; executed by NPL signers outside the platform (hardware or multisig)", "Funds stay in custody; aging continues to be reported"],
+  ["Recover dues on a reroute (net against forwarded funds)", "Finance", "Management", "Always; amount ≤ outstanding receivable at that partner; partner's agreement recorded", "Forward the full amount"],
+  ["Balance conversion (client balance to another currency)", "Finance", "Management", "Always; any excess over the served group's entitlement is an offset and needs the offset approval too", "Balance stays in its currency"],
+  ["Open a return leg after a rejected payout", "Operations", "Finance", "Destination other than the sender's own return receiver → Management with reason; markup apply / waive is a FEE_DECISION approved by Finance", "Returned funds stay in balance for later payouts"],
+  ["Override the network-fee policy on a refund", "Operations", "Finance", "—", "Project default applies"],
+  ["Void a deal before money moved", "Operations", "Finance", "—", "Deal continues"],
+  ["Void a deal after collection (refund / sender credit / hold)", "Operations", "Management", "Always", "Deal continues; funds stay attributed"],
+  ["Record a partner's destination approval (SETTLEMENT_REGISTRATION)", "Operations", "Finance", "— (payout details follow the account's kind: bank reference for a bank account, network and address for a wallet — D16)", "Registration stays pending_partner; quote-first deals for it cannot leave Inquiry"],
+  ["Change thresholds, fee structures, partner configuration, rates sources", "Finance", "Management", "Always; all versioned", "Current version stays in force"],
+  ["Create, change or remove a user or role", "Management", "Management (second user)", "Always", "No change"],
+  ["Ledger adjustment (reversal and re-posting)", "Finance", "Management", "Always; the reversal names the transaction it reverses", "Books unchanged; the discrepancy stays on the exception list"],
+];
