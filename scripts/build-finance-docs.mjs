@@ -1,5 +1,5 @@
 // Build two client deliverables from the agreed model:
-//   docs/NPLify-Ledger-Posting-Design-v1.0.pdf      (chart of accounts + worked postings)
+//   docs/NPLify-Ledger-Posting-Design-v1.1.pdf      (chart of accounts + worked postings)
 //   docs/NPLify-Calculation-Specification-v1.0.pdf  (formulas + reference vectors)
 // Every number in the worked examples is computed here; every transaction is checked to
 // balance per currency before the document is written. node scripts/build-finance-docs.mjs
@@ -136,8 +136,8 @@ const EUR = "EUR", USDT = "USDT";
 const CLIENT = "client", CO = "company";
 
 // Pattern 1: direct collection, conversion, accumulation (deal 1, collect-first, 10,000 USDT at PT)
-L.tx("T1 · Collection of deal 1: 10,000 USDT arrive at PT's wallet", "Collection", [
-  [`CL.PT.USDT.COLLECTED`, "Dr", 10000, USDT, CLIENT, "principal", "client money now sits at PT, unconverted"],
+L.tx("T1 · Collection of deal 1: 10,000 USDT arrive at PT-tour's USDT wallet endpoint (COLLECTION_RECEIVING_ENDPOINT, kind wallet)", "Collection", [
+  [`CL.PT.USDT.COLLECTED`, "Dr", 10000, USDT, CLIENT, "principal", "client money now sits at PT, unconverted; the account is per partner, the endpoint only says which vehicle's wallet"],
   [`CL.PROJECT.USDT.PAYABLE`, "Cr", 10000, USDT, CLIENT, "principal", "NPL owes this onward on the client's behalf"],
 ]);
 L.tx("T2 · Conversion of deal 1 at PT: 10,000 USDT → 8,950.00 EUR at 0.8950", "Conversion", [
@@ -180,7 +180,7 @@ L.tx(`T6 · Disbursement from PT: ${fmt(dueWhole)} EUR in two lines (NewXP Entit
   [`CL.PT.EUR.INTRANSIT`, "Dr", line1, EUR, CLIENT, "principal", "line 1 released by PT"],
   [`CL.PT.EUR.INTRANSIT`, "Dr", line2, EUR, CLIENT, "principal", "line 2 released by PT"],
   [`CL.PT.EUR.DUE`, "Cr", dueWhole, EUR, CLIENT, "principal", `whole euros leave DUE; ${fmt(dust)} EUR of rounding dust stays`],
-], `Disburse to less than one unit: the client balance at PT drops from ${fmt(dueTotal)} to ${fmt(dust)} EUR. Both lines pay entities of the same receiver, so no offset arises.`);
+], `Disburse to less than one unit: the client balance at PT drops from ${fmt(dueTotal)} to ${fmt(dust)} EUR. Both lines pay entities of the same receiver and each line names the leg it settles in deal_id (deals 1 and 2), so no offset arises.`);
 L.tx(`T7 · Confirmation, line 1 full: NewXP Entity received ${fmt(line1)} EUR`, "Confirmation", [
   [`CL.PROJECT.EUR.PAYABLE`, "Dr", line1, EUR, CLIENT, "principal", "the obligation is discharged"],
   [`CL.PT.EUR.INTRANSIT`, "Cr", line1, EUR, CLIENT, "principal", "the money reached the receiver"],
@@ -260,7 +260,7 @@ L.tx("T16 · Deal 4 collected and converted at PT: 2,000 USDT → 1,550.00 GBP (
   [`CL.PROJECT.GBP.PAYABLE`, "Cr", D4.clientNet, "GBP", CLIENT, "principal", ""],
   [`CO.NONE.GBP.EARN_GROSS`, "Cr", D4.earnings, "GBP", CO, "earnings", ""],
 ]);
-L.tx(`T17 · Disbursement of deal 4: ${fmt(D4.payable)} GBP released to the receiver's bank`, "Disbursement", [
+L.tx(`T17 · Disbursement of deal 4: ${fmt(D4.payable)} GBP released to the receiver's bank (the line names deal 4 in deal_id)`, "Disbursement", [
   [`CL.PT.GBP.INTRANSIT`, "Dr", D4.payable, "GBP", CLIENT, "principal", ""],
   [`CL.PT.GBP.DUE`, "Cr", D4.payable, "GBP", CLIENT, "principal", ""],
 ]);
@@ -271,7 +271,7 @@ L.tx(`T18 · The receiving bank rejects the transfer: ${fmt(D4.payable - bounce)
   [`CL.PT.GBP.INTRANSIT`, "Cr", D4.payable, "GBP", CLIENT, "principal", "nothing is in transit any more"],
   [`CL.PT.GBP.DUE`, "Dr", bounce, "GBP", CLIENT, "bank_fee", "NPL makes the client whole"],
   [`CO.PT.GBP.POOL`, "Cr", bounce, "GBP", CO, "bank_fee", "funded from NPL's pool at PT"],
-], "The failed line is reversed before anything else happens, so the receiver group's entitlement is restored. The money can now stay in balance for a later payout (option B) or fund a return leg (option A, T19).");
+], "The failed line is reversed before anything else happens, so the entitlement of Group A — the group deal 4 is attributed to — is restored. The money can now stay in balance for a later payout (option B) or fund a return leg (option A, T19).");
 const Rret = 1.2850; // USDT per GBP on the return conversion
 const retIn = D4.payable; // GBP available to convert back (whole units)
 const retOut = r2(retIn * Rret);
@@ -280,7 +280,7 @@ L.tx(`T19 · Return leg: ${fmt(retIn)} GBP converted back to ${fmt(retOut)} USDT
   [`CL.PT.GBP.DUE`, "Cr", retIn, "GBP", CLIENT, "principal", ""],
   [`CL.PT.USDT.DUE`, "Dr", retOut, USDT, CLIENT, "principal", "USDT owed to the sender's return receiver"],
   [`CL.PROJECT.USDT.PAYABLE`, "Cr", retOut, USDT, CLIENT, "principal", ""],
-], `NPL's margin from T16 (${fmt(D4.earnings)} GBP) stays in the pool: it was captured at the first conversion and is never at risk from a return. The round trip's rate loss falls on the client's funds. Had the FEE_DECISION applied a markup, part of the ${fmt(retOut)} USDT would have been posted to CO.PT.USDT.POOL and EARN_GROSS exactly as in T2. The payout of ${fmt(retOut)} USDT to the sender's wallet then follows T17 and T7.`);
+], `NPL's margin from T16 (${fmt(D4.earnings)} GBP) stays in the pool: it was captured at the first conversion and is never at risk from a return. The round trip's rate loss falls on the client's funds. Had the FEE_DECISION applied a markup, part of the ${fmt(retOut)} USDT would have been posted to CO.PT.USDT.POOL and EARN_GROSS exactly as in T2. The return leg inherits Group A from its parent leg (ERD D13), so this conversion and the payout that follows are attributed to Group A: no entitlement moves between groups. The payout of ${fmt(retOut)} USDT to the sender's return receiver then follows T17 and T7; that receiver has no group, so the payout line carries deal_id = the return leg (ERD D17), which is how GROUP_ENTITLEMENT knows which group it debits.`);
 
 // Balance conversion: 5,000 SGD → USDT at PT for group B
 const RsgdUsdt = 0.7400;
@@ -333,7 +333,7 @@ L.tx(`T24 · Conversion where the partner calculates: expected ${fmt(expected)} 
 // Pre-posted collection for T15 (3,000) and SGD balance for T20 are assumptions; note them in the text rather than in balances.
 
 const identities = [
-  ["Client due per partner = Σ group entitlements", "For each currency: client assets equal client liabilities, Σ COLLECTED + Σ HELD + Σ DUE + Σ INTRANSIT + Σ SHORTFALL = CL.PROJECT.<CCY>.PAYABLE + Σ CREDIT; and PAYABLE = Σ GROUP_ENTITLEMENT (ERD invariant 7)."],
+  ["Client due per partner = Σ group entitlements", "For each currency: client assets equal client liabilities, Σ COLLECTED + Σ HELD + Σ DUE + Σ INTRANSIT + Σ SHORTFALL = CL.PROJECT.<CCY>.PAYABLE + Σ CREDIT; and PAYABLE = Σ GROUP_ENTITLEMENT (ERD invariant 7). Since ERD v5.2 every payout line resolves to one group — the paid receiver's for a counterparty, the paying leg's via the line's deal_id for a refund or hop — so the identity is checked line by line, not only in total."],
   ["Pool per partner = partner-stated comms balance ± logged difference", "CO.<PARTNER>.<CCY>.POOL agrees to the partner's statement of what it holds for NPL."],
   ["Exposure ≤ policy", "Σ DUE + Σ INTRANSIT at a partner is within the project's exposure ceiling; under disburse_policy to_zero, DUE after each release is below one unit."],
   ["Own-wallet holdings = 0 unless an open reroute", "CL.OWN.<CCY>.HELD is zero except for rows the custody aging view can name (deal, reason, age)."],
@@ -396,9 +396,10 @@ const doc = (title, body) => `<!doctype html><html lang="en"><head><meta charset
 
 // ------------------------------------------------------------------ DOCUMENT 1: ledger
 const ledgerHtml = doc("NPLify — Ledger Posting Design & Chart of Accounts v1.0", `
-${titleBlock("", "Deliverable 2 — Ledger Posting Design &amp; Chart of Accounts · Draft v1.0", "7 October 2026")}
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v4.0 and the Project Understanding v1.0 with NPL's review comments. Every worked example below was produced by a small posting engine that refuses any transaction whose debits and credits do not match per currency, so the figures add up by construction.<br>
+${titleBlock("", "Deliverable 2 — Ledger Posting Design &amp; Chart of Accounts · Draft v1.1", "8 October 2026")}
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v5.2 and the Project Understanding v1.1. Every worked example below was produced by a small posting engine that refuses any transaction whose debits and credits do not match per currency, so the figures add up by construction.<br>
 <b>Audience:</b> NPL Finance and Management, and the New XP engineering team. Written in plain language; the account codes and field names are the ones used in the ERD.</p>
+<div class="box"><b>What changed in v1.1 (ERD v5.2, 8 October 2026).</b> No account changes: the chart of accounts, the ownership tags and the cost components are the ones in ERD v5.2 unchanged. Worked examples now name the collection endpoint a sender pays into (<code>COLLECTION_RECEIVING_ENDPOINT</code>, D15) and the deal leg a payout line settles (<code>DISBURSEMENT_LINE.deal_id</code>, D17). The rejected-payout example (Pattern F) states that a return leg is attributed to its parent leg's group, so its conversion and payout move no entitlement between groups (D13), and that a line paying a group-less receiver debits the group of the leg it names — which is how the entitlement identity is now checked line by line. The registration and endpoint rules of v5.2 (D16, D18, D19) do not touch postings.</div>
 <div class="rule"></div>
 
 <h2>1 · What the ledger is for, in one paragraph</h2>
@@ -420,7 +421,7 @@ ${titleBlock("", "Deliverable 2 — Ledger Posting Design &amp; Chart of Account
 <table><thead><tr><th>Code</th><th>Kind</th><th>Holder</th><th>What the balance means</th></tr></thead><tbody>
 ${PURPOSES.map(([o, p, k, h, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${p}</td><td>${k}</td><td>${esc(h)}</td><td>${esc(w)}</td></tr>`).join("")}
 </tbody></table>
-<p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. All purposes and holder types above are in ERD v4.0 (LEDGER_ACCOUNT); <code>ADVANCE</code> does not exist because NPL never advances money. Rebates are credited to <code>EXP_PARTNER</code> and referral commissions debited to <code>EARN_GROSS</code>, so no extra income or expense accounts are needed.</p>
+<p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. All purposes and holder types above are in ERD v5.2 (LEDGER_ACCOUNT); <code>ADVANCE</code> does not exist because NPL never advances money. Rebates are credited to <code>EXP_PARTNER</code> and referral commissions debited to <code>EARN_GROSS</code>, so no extra income or expense accounts are needed.</p>
 
 <h2>4 · Reading a posting table</h2>
 <p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example uses project Evo, sender Ayush, receiver Sud (receiver group A, the default group) with entities NewXP Entity and ReferScout Entity, partner PT (Ali, a disclosed-rate partner whose margin is inside its rate) and partner Jeton (a market + 0.50 % partner that states its fee separately). Rates: market 0.9000 EUR per USDT, PT 0.8950 EUR per USDT. Fee structure: basis partner, fixed, 1.00 % in total, 0.40 % sender share and 0.60 % receiver share. The arithmetic behind the amounts is in the Calculation Specification; the headline figures for deal 1 are:</p>
@@ -450,7 +451,7 @@ ${L.balancesHtml([["CL.PT.EUR.DUE", EUR, "rounding dust, plus the 50 EUR top-up 
 <div class="box"><b>The three bank-fee treatments on a 50 EUR fee.</b> <i>Waived</i>: the client bears it; the confirmation debits <code>CL.PROJECT.EUR.PAYABLE</code> for the full released amount and the client's claim simply ends 50 lower. <i>Carry-forward</i>: T8 and T9, the fee becomes a shortfall that NPL funds from its pool and adds to the next disbursement. <i>Absorbed</i> (gross-up): NPL releases 50 more than the client net so the receiver nets the right amount; at release <code>Dr CO.NONE.EUR.EXP_BANKFEE 50 / Cr CO.PT.EUR.POOL 50</code> is posted alongside the client's in-transit line, and a <code>BANK_FEE_EVENT</code> later trues up expected against actual. The project sets the default; one settlement can override it with an approved <code>FEE_DECISION</code>.</div>
 
 <h2 class="pb">8 · Pattern D — reroute through NPL's own wallet, with dues recovered</h2>
-<p>This is the only time NPL holds client money. When the intended partner cannot take the volume, an approved <code>REROUTE</code> collects into NPL's own wallet and forwards to an alternate partner. In v4.0 there is <b>no withholding of earnings at source</b>: NPL's margin is captured when the alternate partner converts, exactly as in Pattern A. What a reroute can do is <b>recover dues</b>: net what the alternate partner already owes NPL against the money being forwarded.</p>
+<p>This is the only time NPL holds client money. When the intended partner cannot take the volume, an approved <code>REROUTE</code> collects into NPL's own wallet and forwards to an alternate partner. Since v4.0 there is <b>no withholding of earnings at source</b>: NPL's margin is captured when the alternate partner converts, exactly as in Pattern A. What a reroute can do is <b>recover dues</b>: net what the alternate partner already owes NPL against the money being forwarded.</p>
 ${L.html('T10')}${L.html('T11')}${L.html('T12')}
 ${L.balancesHtml([["CL.OWN.USDT.HELD", USDT, "custody is empty again"], ["CO.OWN.USDT.WALLET", USDT, "dues recovered into NPL's wallet"], ["CL.JETON.EUR.DUE", EUR, "client balance at Jeton"], ["CO.JETON.EUR.POOL", EUR, "NPL's margin resting at Jeton"], ["CO.NONE.EUR.EXP_PARTNER", EUR, "Jeton's stated fee, before any rebate"]], "Balances after deal 3", snapDeal3)}
 <p class="small">A recovery is only allowed up to the outstanding receivable at that partner (ERD invariant 15): in real operation CO.JETON.USDT.POOL is positive from earlier deals before T11 and 30 USDT smaller after it. This document's examples start from an empty ledger, so that account is not shown above.</p>
@@ -465,11 +466,11 @@ ${L.balancesHtml([["CL.OWN.USDT.HELD", USDT, "custody is empty again"], ["CO.OWN
 ${L.html('T13')}${L.html('T14')}${L.html('T15a')}${L.html('T15')}
 
 <h2 class="pb">10 · Pattern F — rejected payout and return leg</h2>
-<p>Deal 4 converts 2,000 USDT to GBP at PT, is paid out, and bounces at the receiving bank. The failed line is reversed first, which restores the receiver group's entitlement. NPL can then leave the GBP in balance for a later payout to any receiver in the same group (another group would be an approved offset), or open a <b>return leg</b> on the same deal group that converts back and pays the sender's return receiver.</p>
+<p>Deal 4 (attributed to Group A, the default group) converts 2,000 USDT to GBP at PT, is paid out, and bounces at the receiving bank. The failed line is reversed first, which restores Group A's entitlement. NPL can then leave the GBP in balance for a later payout to any counterparty receiver in Group A (another group would be an approved offset), or open a <b>return leg</b> on the same deal group that converts back and pays the sender's return receiver. The return leg inherits Group A from its parent leg, and the payout line to the group-less return receiver carries the return leg's id in <code>deal_id</code>, so the entitlement view debits Group A and nothing moves between groups (ERD D13, D17).</p>
 ${L.html('T16')}${L.html('T17')}${L.html('T18')}${L.html('T19')}
 
 <h2>11 · Pattern G — inter-recipient offsets</h2>
-<p>An offset is <b>not</b> a ledger event. When a disbursement line pays a receiver in another receiver group than the one entitled to the money, the postings are exactly T6 and T7; the ledger sees client money leaving the client balance and reaching a receiver. What changes is the <code>GROUP_ENTITLEMENT</code> view: the paid group now shows less entitlement than it should (or a negative figure), the entitled group shows more, and the two differences are equal. The offset clears as later collections for the entitled group are converted and later payouts favour it. Within one group, paying any receiver or entity is ordinary settlement and nothing is tracked beyond an informational tally. Offsets across groups carry Management approval and tighter aging.</p>
+<p>An offset is <b>not</b> a ledger event. When a disbursement line pays a receiver in another receiver group than the one entitled to the money, the postings are exactly T6 and T7; the ledger sees client money leaving the client balance and reaching a receiver. What changes is the <code>GROUP_ENTITLEMENT</code> view: the paid group now shows less entitlement than it should (or a negative figure), the entitled group shows more, and the two differences are equal. The offset clears as later collections for the entitled group are converted and later payouts favour it. Within one group, paying any receiver or entity is ordinary settlement and nothing is tracked beyond an informational tally. Offsets across groups carry Management approval and tighter aging. A line paying a sender_return or partner_transit receiver is never an offset: those receivers have no group, and the line debits the group of the leg named in its <code>deal_id</code> (ERD D13, D17).</p>
 <table><thead><tr><th></th><th class="n">Group A entitled</th><th class="n">Group B entitled</th><th class="n">Client balance at PT</th><th>Comment</th></tr></thead><tbody>
 <tr><td>After converting 9,000 EUR for A and 6,000 EUR for B</td><td class="n">9,000.00</td><td class="n">6,000.00</td><td class="n">15,000.00</td><td>entitlements sum to the balance (invariant 7)</td></tr>
 <tr><td>Pay A 4,000</td><td class="n">5,000.00</td><td class="n">6,000.00</td><td class="n">11,000.00</td><td>ordinary settlement</td></tr>
@@ -498,7 +499,7 @@ ${identities.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).jo
 <tr><td>Collection</td><td>COLLECTED or HELD, PAYABLE, CREDIT</td><td>client</td><td>principal</td></tr>
 <tr><td>Conversion (deal leg)</td><td>COLLECTED/PAYABLE in the in-currency; DUE, PAYABLE, POOL, EARN_GROSS, EXP_PARTNER, VARIANCE in the out-currency</td><td>client and company</td><td>principal, rounding, earnings, partner_cost, variance</td></tr>
 <tr><td>BalanceConversion</td><td>DUE and PAYABLE in both currencies; POOL and EARN_GROSS if markup applied</td><td>client (and company)</td><td>principal, rounding, earnings</td></tr>
-<tr><td>Disbursement</td><td>INTRANSIT, DUE; EXP_BANKFEE and POOL when a fee is absorbed up front</td><td>client (and company)</td><td>principal, bank_fee</td></tr>
+<tr><td>Disbursement</td><td>INTRANSIT, DUE; EXP_BANKFEE and POOL when a fee is absorbed up front. Each line names the leg it settles (deal_id), which decides the group the entitlement view debits</td><td>client (and company)</td><td>principal, bank_fee</td></tr>
 <tr><td>DisbursementReturn</td><td>DUE, INTRANSIT; EXP_BANKFEE and POOL for the bounce fee</td><td>client and company</td><td>principal, bank_fee</td></tr>
 <tr><td>Confirmation</td><td>PAYABLE, INTRANSIT, SHORTFALL</td><td>client</td><td>principal, bank_fee</td></tr>
 <tr><td>BankFeeEvent</td><td>EXP_BANKFEE, POOL, DUE, SHORTFALL</td><td>company and client</td><td>bank_fee</td></tr>
@@ -510,7 +511,7 @@ ${identities.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).jo
 
 <h2>17 · Who sees what</h2>
 <p>Operations sees operational fields, sender-facing prices and partner rates as entered, but never a ledger balance, a margin, a pool, a cost breakdown or a variance, on any screen, export, message or report. Finance sees all postings and balances and owns reconciliation. Management additionally approves settlements above limit, cross-group payouts, shortfall top-ups, contingency routes, own-wallet outbound transfers, balance conversions, dues recovery and post-money voids. Approver is never the initiator, and every controlled action is audited with actor, time, reason and record version.</p>
-<p class="small"><i>Draft v1.0 — for review with NPL. Figures are worked examples, not NPL data.</i></p>
+<p class="small"><i>Draft v1.1 — for review with NPL. Figures are worked examples, not NPL data.</i></p>
 `);
 
 // ------------------------------------------------------------------ DOCUMENT 2: calculation specification
@@ -638,7 +639,7 @@ ${vectors.map((v) => `<tr><td>${esc(v.name.split(" · ")[0])}</td><td class="n">
 
 // ------------------------------------------------------------------ write + print
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-for (const [name, html] of [["NPLify-Ledger-Posting-Design-v1.0", ledgerHtml], ["NPLify-Calculation-Specification-v1.0", calcHtml]]) {
+for (const [name, html] of [["NPLify-Ledger-Posting-Design-v1.1", ledgerHtml], ["NPLify-Calculation-Specification-v1.0", calcHtml]]) {
   const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
   fs.writeFileSync(h, html);
   execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
