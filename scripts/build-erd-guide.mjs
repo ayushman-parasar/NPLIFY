@@ -184,7 +184,7 @@ const CH = {
 
 // ------------------------------------------------------------------ render diagrams (same as the ERD document)
 console.log("rendering diagrams …");
-const svgs = renderSvgs(DIAGRAMS.map((dg) => ({ id: dg.id, text: erDiagram(dg.nodes, { direction: "TB" }), config: {} })), path.join(outDir, ".mermaid-work"));
+const svgs = renderSvgs(DIAGRAMS.map((dg) => ({ id: dg.id, text: erDiagram(dg.nodes, { direction: "TB", noSelf: dg.noSelf }), config: {} })), path.join(outDir, ".mermaid-work"));
 const diagramPage = (dg) => {
   const svg = svgs[dg.id];
   const m = /data-w="(\d+)" data-h="(\d+)"/.exec(svg);

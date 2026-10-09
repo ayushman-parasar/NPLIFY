@@ -5991,7 +5991,7 @@
   "All monetary amounts are stored as exact decimals.",
   "Every table carries created_at / created_by.",
   "Audit, approvals and locking are modelled once (domain 4: APPROVAL, AUDIT_LOG, RECORD_LOCK) and apply to all master data.",
-  "Seven diagrams across four domains, one schema: 1a and 1b Configuration, 2 Rates, 3a and 3c Deal / collection / conversion / reroute, 3b Disbursement / confirmation / fees / losses, 4 Ledger & controls.",
+  "Seven diagrams across four domains, one schema: 1a and 1b Configuration, 2 Rates, 3a and 3b Deal / collection / conversion / reroute, 3c Disbursement / confirmation / fees / losses, 4 Ledger & controls.",
   "Derived figures (client balance, entitlement, offsets, custody, invoice balance, month volume) are views over postings and deals — never stored."
  ],
  "NOTES": {

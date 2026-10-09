@@ -26,7 +26,7 @@ const tables = Object.keys(D.E).filter((n) => D.E[n].d !== "view");
 for (const n of tables) if (!drawn.has(n)) throw new Error(`table ${n} is drawn in no diagram`);
 
 console.log("rendering diagrams …");
-const svgs = renderSvgs(DIAGRAMS.map((dg) => ({ id: dg.id, text: erDiagram(dg.nodes, { direction: "TB" }), config: {} })), path.join(outDir, ".mermaid-work"));
+const svgs = renderSvgs(DIAGRAMS.map((dg) => ({ id: dg.id, text: erDiagram(dg.nodes, { direction: "TB", noSelf: dg.noSelf }), config: {} })), path.join(outDir, ".mermaid-work"));
 const DG = Object.fromEntries(DIAGRAMS.map((dg) => [dg.id, dg]));
 const diagramPage = (dg) => {
   const svg = svgs[dg.id];
@@ -189,7 +189,7 @@ ${table(["Document", "What v5.3 changes in it"], [
   ["Roles &amp; Visibility Matrix v1.0 → v1.1", "Screening fields in the Operations group; rebate, party share and loss split in the economics group; a party-facing statement shows the share only, never the rebate."],
   ["Calculation Specification v1.0 → v1.1", "Tier split and blended fee; displayed source rate; rate-direction normalisation; rounding menu; same-currency conversion at rate 1; acceptance vectors from NPL's real figures (market 0.86050 / Ali 1 ÷ 1.1738; GDC 86,594; Raeen 41,520.17; THB 17,000,000; USDT 2,598 → 2,600)."],
   ["Configuration Schema v1.0 → v1.1", "Every new column and value set; the NPL-GR own-desk project; rebate rule basis and scope; cutoff times; cash locations; single-use endpoints."],
-  ["ERD Reading Guide v1.0 → v1.1", "The new boxes on 1a, 1b, 3a and 3b, the split of the deal diagram into 3a and 3c, and the decisions behind them."],
+  ["ERD Reading Guide v1.0 → v1.1", "The new boxes on 1a, 1b, 3a and 3c, the split of the deal diagram into 3a (deal, collection) and 3b (conversion, reroute) with disbursement now 3c, and the decisions behind them."],
   ["Fee Outlines v0.2 → v0.3", "Pink cells resolved (Ad Hoc INR 7 % total; Raeen 3.2 %; INR rounding); 'needs a system change' notes become 'configured in v5.3'; the tier split shown on pattern 5."],
   ["Model Gaps &amp; Proposals v1.0 → v1.1", "The corrections of 9 October (H simplified, J pending balance, L Operations, M generalised, B split) and the status 'applied in v5.3' on all thirteen."],
   ["ERD Review — Decision Record", "D20–D33 recorded (9 October 2026)."],
@@ -331,7 +331,7 @@ tr{break-inside:avoid}
 <h2 class="pb">Status and conventions</h2>
 <p><b>Status:</b> Draft v${V} (${DATE}) applies the thirteen fee-practice decisions D20–D32, the same-currency rule D33 and the three FRS-term decisions D34–D36, confirmed by NPL on 8–9 October from the fee table, Sud's workbook answers and the Project Context and Payment methods tabs: volume tiers and per-sender splits (D20, D21), the displayed fee (D22), NPL-GR as an own-desk project (D23), invoices paid in parts (D24), a rounding menu (D25), markup shared with a client party and rebates as their own stream (D26, D27), partner rates as quoted (D28), the bank cutoff and rate lock (D29), cash by token with rates per city (D30), wallet screening (D31), single-use accounts and loss events (D32), and same-currency pass-through (D33). Nine tables and two views are added; invariant 3 is restated; invariants 20–34 are new. The amendments of 9 October (D15 closed, D27, D29) and the evening additions D34–D36 (holiday calendar, quote package, message template — the FRS terms that had no home) are recorded in §6. It carries v5.0–v5.2 (D13–D19) unchanged. Supersedes v5.2, v5.1, v5.0 and v4.0 in full. This baseline is an internal New XP document; the client deliverables are derived from it. Dependent documents have <b>not</b> yet been regenerated against this version (see §6).</p>
 <p><b>Convention:</b> all monetary amounts are stored as exact decimals; every table carries ${code("created_at")} / ${code("created_by")}; audit, approvals and locking are modelled once (domain 4) and apply to all master data. Derived figures (client balance, group entitlement, offsets, custody) are <b>views over postings and deals — never stored</b>.</p>
-<p>Seven diagrams across four domains, one schema: ${tables.length} tables and ${views.length} views. In each diagram, entities defined in another diagram appear with no attributes and name that diagram. Relationship lines run from the referenced row to the row that stores the foreign key; ${code("||--o{")} is composition (the parent owns the child), ${code("||..o{")} a reference or a polymorphic link resolved by a type column plus an id. Diagram 3a of v5.2 is split into 3a and 3c in v5.3 because the deal leg and its stamps outgrew one page. Section 6 lists what changed since v4.0; Appendix A reconciles the model with the FRS; Appendix B is the data dictionary.</p>
+<p>Seven diagrams across four domains, one schema: ${tables.length} tables and ${views.length} views. In each diagram, entities defined in another diagram appear with no attributes and name that diagram. Relationship lines run from the referenced row to the row that stores the foreign key; ${code("||--o{")} is composition (the parent owns the child), ${code("||..o{")} a reference or a polymorphic link resolved by a type column plus an id. Diagram 3a of v5.2 is split in v5.3 because the deal leg and its stamps outgrew one page: 3a is the deal and its collection, 3b the conversion and its exceptions, and the disbursement diagram (3b in v5.2) becomes 3c. Section 6 lists what changed since v4.0; Appendix A reconciles the model with the FRS; Appendix B is the data dictionary.</p>
 <div class="rule"></div>
 
 <h2>1 · Configuration domain</h2>
@@ -347,10 +347,10 @@ ${diagramPage(DG["2"])}
 <h2>3 · Deal lifecycle domain</h2>
 <h3>3a · Deal group, legs, pricing stamps, invoice, collection</h3>
 ${diagramPage(DG["3a"])}
-<h3>3c · Conversion, reroute, earnings receivable, balance conversion, entitlement re-attribution (continues 3a)</h3>
-${diagramPage(DG["3c"])}
-<h3>3b · Disbursement, return, confirmation, fees, referrals, rebates and loss events</h3>
+<h3>3b · Conversion, reroute, earnings receivable, balance conversion, entitlement re-attribution</h3>
 ${diagramPage(DG["3b"])}
+<h3>3c · Disbursement, return, confirmation, fees, referrals, rebates and loss events</h3>
+${diagramPage(DG["3c"])}
 <h3>Derived views (never stored)</h3>
 ${table(["View", "Definition"], views.map((v) => [`<span class="mono">${esc(v)}(${D.E[v].f.map((f) => f[0]).join(", ")})</span>`, esc(D.E[v].desc)]), ["34%"])}
 <h3>Notes</h3><ul>${notes.deal.map((n) => `<li>${n}</li>`).join("")}</ul>

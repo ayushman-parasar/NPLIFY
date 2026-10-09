@@ -12,13 +12,14 @@ export const DIAGRAMS = [
   { id: "2", title: "Rates", nodes: [
       "MARKET_RATE", "RATE_COMPARISON", "PARTNER_RATE_VERSION", "~RATE_SOURCE", "~CURRENCY_PAIR", "~PARTNER_PAIR", "~DEAL", "~CONVERSION", "~BALANCE_CONVERSION"] },
   { id: "3a", title: "Deal lifecycle — deal group, legs, pricing stamps, invoice, collection", nodes: [
-      "DEAL_GROUP", "QUOTE_PACKAGE", "DEAL", "DEAL_FEE_TIER", "INVOICE", "COLLECTION", "SENDER_CREDIT",
+      "DEAL_GROUP", "DEAL", "DEAL_FEE_TIER", "INVOICE", "COLLECTION", "SENDER_CREDIT", "QUOTE_PACKAGE",
       "~PROJECT", "~SENDER", "~RECEIVER_GROUP", "~RECEIVER", "~PARTNER_PAIR", "~PARTNER_ENTITY", "~FEE_STRUCTURE", "~FEE_OVERRIDE", "~FEE_TIER",
-      "~COLLECTION_SENDING_ENTITY", "~COLLECTION_RECEIVING_ENDPOINT", "~WALLET_SCREENING", "~MESSAGE_TEMPLATE"] },
-  { id: "3c", title: "Deal lifecycle — conversion, reroute, earnings receivable, balance conversion, entitlement re-attribution", nodes: [
+      "~COLLECTION_SENDING_ENTITY", "~COLLECTION_RECEIVING_ENDPOINT", "~WALLET_SCREENING", "~MESSAGE_TEMPLATE"],
+    noSelf: ["QUOTE_PACKAGE"] },
+  { id: "3b", title: "Deal lifecycle — conversion, reroute, earnings receivable, balance conversion, entitlement re-attribution", nodes: [
       "CONVERSION", "REROUTE", "EARNINGS_RECEIVABLE", "BALANCE_CONVERSION", "ENTITLEMENT_REATTRIBUTION",
       "~DEAL", "~PROJECT", "~RECEIVER_GROUP", "~OWN_WALLET", "~PARTNER_CONFIG", "~PARTNER_PAIR", "~PARTNER_RATE_VERSION", "~MARKET_RATE"] },
-  { id: "3b", title: "Disbursement, return, confirmation, fees, referrals, rebates and loss events", nodes: [
+  { id: "3c", title: "Disbursement, return, confirmation, fees, referrals, rebates and loss events", nodes: [
       "DISBURSEMENT", "DISBURSEMENT_LINE", "BANK_FEE_EVENT", "DISBURSEMENT_RETURN", "CONFIRMATION", "SHORTFALL", "FEE_DECISION", "REFERRAL_ACCRUAL", "PARTNER_REBATE_ACCRUAL", "LOSS_EVENT",
       "~PROJECT", "~PARTNER_CONFIG", "~SETTLEMENT_SENDING_ENTITY", "~SETTLEMENT_RAIL", "~SETTLEMENT_REGISTRATION", "~RECEIVER", "~DEAL", "~COLLECTION", "~INVOICE", "~MARKET_RATE", "~BALANCE_CONVERSION", "~REFERRAL_RULE", "~PARTNER_REBATE_RULE"] },
   { id: "4", title: "Ledger & controls", nodes: [

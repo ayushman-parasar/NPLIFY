@@ -83,6 +83,7 @@ export function erDiagram(nodes, opts = {}) {
   for (const r of D.R) {
     if (r[2] === "view") continue;
     if (r[2] === "actor" && !(full.has(r[0]) && full.has(r[1]))) continue;
+    if (r[2] === "self" && (opts.noSelf || []).includes(r[0])) continue; // a self-loop the layout engine cannot place well; the column stays in the data dictionary
     if (!present(r[0]) || !present(r[1])) continue;
     if (!full.has(r[0]) && !full.has(r[1])) continue;
     const [a, b] = r[5].split(":");
