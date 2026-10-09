@@ -5792,7 +5792,7 @@
    "steps": [
     [
      "PROJECT",
-     "The client. Its policies (quote freshness and validity, grace, fee treatment, settle policy and exposure cap) govern everything below."
+     "One arrangement with the client (CLIENT → PROJECT, D38). Its policies (quote freshness and validity, grace, fee treatment, settle policy and exposure cap) govern everything below."
     ],
     [
      "SENDER",
@@ -6130,7 +6130,7 @@
  ],
  "NOTES": {
   "Configuration": [
-   "A Project (= client) owns its configuration. Partners are global counterparties; how a partner is used in this project is the partner configuration block — fees, vehicles, endpoints, registrations and rebate terms all hang off it.",
+   "A Client is the commercial relationship; a Project is one arrangement with it (D38) and owns its configuration. Partners are global counterparties; how a partner is used in this project is the partner configuration block — fees, vehicles, endpoints, registrations and rebate terms all hang off it.",
    "Receivers belong to receiver groups only when kind = counterparty: every project has one default group and every counterparty receiver is in exactly one group. sender_return (stands for a sender, for refunds via the ordinary payout path) and partner_transit (stands for a partner's collection endpoint, for the hop of a two-leg route) are group-less; they never appear on forward deals or allow lists, and a payout to them is attributed to the group of the leg that pays it (v5.0, D13). Entitlement is tracked per group; only payouts across groups are offsets; a project with a single group never has an offset.",
    "A receiving entity has one or more accounts, each with a currency and a rail (EUR via SWIFT and EUR via SEPA are two accounts). DESTINATION_APPROVAL and SETTLEMENT_LINE point at the account.",
    "Fees are per partner × pair (FEE_STRUCTURE under PARTNER_PAIR), so choosing the partner is part of pricing. PARTNER.disclosure_style records whether the partner’s markup is visible; PARTNER_PAIR.partner_fee_pct is known only for fee_on_market partners — otherwise partner cost is inferred through the rate comparison.",
