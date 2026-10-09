@@ -125,11 +125,11 @@ function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding
 
 // ------------------------------------------------------------------ worked example parameters
 const EX = { Rm: 0.9000, Rp: 0.8950, s: 0.004, r: 0.006 };
-const D1 = price({ amountIn: 10000, Rm: EX.Rm, Rp: EX.Rp, basis: "agent_rate", s: EX.s, r: EX.r });
-const D2 = price({ amountIn: 5000, Rm: EX.Rm, Rp: EX.Rp, basis: "agent_rate", s: EX.s, r: EX.r });
+const D1 = price({ amountIn: 10000, Rm: EX.Rm, Rp: EX.Rp, basis: "market", s: EX.s, r: EX.r });
+const D2 = price({ amountIn: 5000, Rm: EX.Rm, Rp: EX.Rp, basis: "market", s: EX.s, r: EX.r });
 const DJ = price({ amountIn: 10000, Rm: EX.Rm, Rp: EX.Rm, basis: "market", s: EX.s, r: EX.r, partnerFee: 0.005 });
-const DT = price({ amountIn: 3000, Rm: 32.60, Rp: 32.50, basis: "agent_rate", s: EX.s, r: EX.r, rounding: "round_up_n", unit: 1000 });
-const D4 = price({ amountIn: 2000, Rm: 0.7800, Rp: 0.7750, basis: "agent_rate", s: EX.s, r: EX.r });
+const DT = price({ amountIn: 3000, Rm: 32.60, Rp: 32.50, basis: "market", s: EX.s, r: EX.r, rounding: "round_up_n", unit: 1000 });
+const D4 = price({ amountIn: 2000, Rm: 0.7800, Rp: 0.7750, basis: "market", s: EX.s, r: EX.r });
 const DS = price({ amountIn: 5000, Rm: 1, Rp: 1, basis: "market", s: EX.s, r: EX.r });          // same-currency pass-through
 const DR = price({ amountIn: 10000, Rm: 0.9000, Rp: 0.9000, basis: "market", s: 0.04, r: 0, partnerFee: 0.008 }); // Raeen at Aquanow: 4 % sender_pays on market, partner 0.80 %
 
@@ -150,7 +150,7 @@ L.tx(`T2 · Conversion of deal 1 at Ali (fee_in_rate): 10,000 USDT → ${fmt(D1.
   ["CO.ALI.EUR.POOL", "Dr", D1.earnings, EUR, CO, "earnings", "NPL's margin, physically still at Ali (EARNINGS_RECEIVABLE)"],
   ["CL.PROJECT.EUR.PAYABLE", "Cr", D1.clientNet, EUR, CL, "principal", "owed to the receiver group, now in EUR"],
   ["CO.NONE.EUR.EARN_GROSS", "Cr", D1.earnings, EUR, CO, "earnings", "margin recognised: the client's claim shrinks from 10,000 USDT to its EUR entitlement, the difference is NPL's"],
-], `Ownership changes here and only here: ${fmt(D1.earnings)} EUR becomes company money, because the client's claim is re-denominated at the sender's price while the partner delivers at its rate. Ali's own cost is inside its rate (fee_in_rate), so no partner-cost line exists; the inferred cost against market, ${fmt(D1.inferredPartnerCost)} EUR, is kept on the deal as information only. Nothing differs for a leg split across two fee tiers (D21): the fee parts are the blended sum and the posting is identical. The customer-facing rate and fee (D22) are print-only and never post.`);
+], `Ownership changes here and only here: ${fmt(D1.earnings)} EUR becomes company money, because the client's claim is re-denominated at the sender's price while the partner delivers at its rate. The sender is priced on the market rate (rate_basis market: the fee is disclosed) and Ali converts at its own rate, so Ali's cost — ${fmt(D1.inferredPartnerCost)} EUR against market, inside its rate (fee_in_rate) — comes out of NPL's 1 % and no partner-cost line exists; NPL keeps the ${fmt(D1.earnings)} EUR. Under rate_basis agent_rate (a calculated rate, breakdown not disclosed) the sender's rate would be Ali's rate less the fee instead, and NPL would keep the whole 1 %; the postings have the same shape. Nothing differs for a leg split across two fee tiers (D21): the fee parts are the blended sum and the posting is identical. The customer-facing rate and fee (D22) are print-only and never post.`);
 const snapDeal1 = L.snapshot();
 L.tx(`T3 · Same-currency pass-through (D33): 5,000 EUR collected by bank transfer and converted at rate 1 — fee ${pct(EX.s + EX.r)} captured, client net ${fmt(DS.clientNet)} EUR`, "Conversion", [
   ["CL.ALI.EUR.COLLECTED", "Dr", 5000, EUR, CL, "principal", "collection (shown with the conversion)"],
@@ -186,7 +186,7 @@ L.tx(`T6 · Conversion of deal 2 at Ali: 5,000 USDT → ${fmt(D2.actualOut)} EUR
 // ---- Pattern C: settlement, confirmation, bank fees, shortfall, round-up
 const dueTotal = r2(D1.payable + D1.residual + D2.payable + D2.residual + DS.clientNet);
 const dueWhole = trunc(dueTotal), dust = r2(dueTotal - dueWhole);
-const line1 = 9000, line2 = dueWhole - 9000;
+const line1 = 8000, line2 = dueWhole - 8000;
 L.tx(`T7 · Settlement from Ali: ${fmt(dueWhole)} EUR in two lines (Entity X1 ${fmt(line1)}, Entity X2 ${fmt(line2)})`, "Settlement", [
   ["CL.ALI.EUR.INTRANSIT", "Dr", line1, EUR, CL, "principal", "line 1 released by Ali"],
   ["CL.ALI.EUR.INTRANSIT", "Dr", line2, EUR, CL, "principal", "line 2 released by Ali"],
@@ -377,14 +377,14 @@ L.tx(`T35 · Month-end: Raeen pays NPL its remainder ${fmt(nplRemainder)} EUR`, 
 // ---- Pattern K: variances by kind
 function varianceTx(key, title, source, { amountIn, Rexp, Ract, purpose, expectedNote, note }) {
   const expected = r2(amountIn * Rexp), actual = r2(amountIn * Ract);
-  const priced = price({ amountIn, Rm: Rexp + 0.005, Rp: Rexp, basis: "agent_rate", s: EX.s, r: EX.r });
+  const priced = price({ amountIn, Rm: EX.Rm, Rp: Rexp, basis: "market", s: EX.s, r: EX.r });
   const variance = r2(expected - actual); // positive = NPL received less than priced
   const rows = [
     ["CL.PROJECT.USDT.PAYABLE", "Dr", amountIn, USDT, CL, "principal", ""],
     ["CL.ALI.USDT.COLLECTED", "Cr", amountIn, USDT, CL, "principal", ""],
     ["CL.ALI.EUR.DUE", "Dr", priced.payable, EUR, CL, "principal", "client net is unchanged: the sender's price is write-once (invariant 5)"],
     ["CL.ALI.EUR.DUE", "Dr", priced.residual, EUR, CL, "rounding", ""],
-    ["CO.ALI.EUR.POOL", "Dr", r2(actual - priced.clientNet), EUR, CO, "earnings", "margin actually left at Ali"],
+    ["CO.ALI.EUR.POOL", actual >= priced.clientNet ? "Dr" : "Cr", Math.abs(r2(actual - priced.clientNet)), EUR, CO, "earnings", actual >= priced.clientNet ? "margin actually left at Ali" : "the partner delivered less than the client net: NPL's pool at Ali funds the gap"],
     [`CO.NONE.EUR.${purpose}`, variance > 0 ? "Dr" : "Cr", Math.abs(variance), EUR, CO, purpose === "VAR_CONVERSION" ? "variance" : purpose === "VAR_CUTOFF" ? "cutoff_timing" : "variance", expectedNote],
     ["CL.PROJECT.EUR.PAYABLE", "Cr", priced.clientNet, EUR, CL, "principal", ""],
     ["CO.NONE.EUR.EARN_GROSS", "Cr", r2(expected - priced.clientNet), EUR, CO, "earnings", "margin as priced"],
@@ -603,14 +603,14 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <p>Transaction sources (${code("LEDGER_TRANSACTION.source_type")}): Collection, Conversion, BalanceConversion, Settlement, SettlementReturn, Confirmation, BankFeeEvent, Reroute, MarkupShare, Rebate, LossEvent, Adjustment, and <span class="new">Invoice</span> for the reseller books. Section 21 lists what each one posts; Section 23 asks for the source record a loss recovery points at.</p>
 
 <h2>5 · Reading a posting table</h2>
-<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example is project Evo: Sender A, Receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2; partner Ali (fee_in_rate: its cost is inside its rate), partner Jeton (fee_on_market + ${pct(0.005)}) and partner Aquanow (fee_on_market + ${pct(0.008)}, rebate ${pct(0.003, 1)} of the amount). Rates: market ${EX.Rm.toFixed(4)} EUR per USDT, Ali ${EX.Rp.toFixed(4)}. Fee structure: basis agent_rate, fixed, ${pct(EX.s + EX.r)} in total, sender pays ${pct(EX.s)} and receiver pays ${pct(EX.r)}. The arithmetic is in the Calculation Specification; the headline figures for deal 1 are:</p>
+<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example is project Evo: Sender A, Receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2; partner Ali (fee_in_rate: its cost is inside its rate), partner Jeton (fee_on_market + ${pct(0.005)}) and partner Aquanow (fee_on_market + ${pct(0.008)}, rebate ${pct(0.003, 1)} of the amount). Rates: market ${EX.Rm.toFixed(4)} EUR per USDT, Ali ${EX.Rp.toFixed(4)}. Fee structure: rate_basis market (the sender is priced on the market rate and Ali converts at its own), fixed, ${pct(EX.s + EX.r)} in total, sender pays ${pct(EX.s)} and receiver pays ${pct(EX.r)}. The arithmetic is in the Calculation Specification; the headline figures for deal 1 are:</p>
 <table><thead><tr><th>Figure</th><th class="n">Deal 1 (10,000 USDT at Ali)</th><th>How</th></tr></thead><tbody>
-<tr><td>Sender rate</td><td class="n">${D1.Rs.toFixed(5)}</td><td>${EX.Rp} × (1 − ${pct(EX.s)})</td></tr>
+<tr><td>Sender rate</td><td class="n">${D1.Rs.toFixed(5)}</td><td>market ${EX.Rm.toFixed(4)} × (1 − ${pct(EX.s)}): the sender's part is taken off the rate</td></tr>
 <tr><td>Gross out</td><td class="n">${fmt(D1.grossOut)} EUR</td><td>10,000 × sender rate</td></tr>
 <tr><td>Receiver pays</td><td class="n">${fmt(D1.feeReceiver)} EUR</td><td>gross out × ${pct(EX.r)}</td></tr>
 <tr><td>Client net (entitlement)</td><td class="n">${fmt(D1.clientNet)} EUR</td><td>gross out − receiver part</td></tr>
-<tr><td>Converted at Ali</td><td class="n">${fmt(D1.actualOut)} EUR</td><td>10,000 × ${EX.Rp}</td></tr>
-<tr><td>NPL earnings</td><td class="n">${fmt(D1.earnings)} EUR</td><td>converted − client net (= sender part ${fmt(D1.feeSender)} + receiver part ${fmt(D1.feeReceiver)})</td></tr>
+<tr><td>Converted at Ali</td><td class="n">${fmt(D1.actualOut)} EUR</td><td>10,000 × ${EX.Rp} (Ali's own rate; its spread against market is ${fmt(D1.inferredPartnerCost)} EUR)</td></tr>
+<tr><td>NPL earnings</td><td class="n">${fmt(D1.earnings)} EUR</td><td>converted − client net = fee parts ${fmt(r2(D1.feeSender + D1.feeReceiver))} (sender ${fmt(D1.feeSender)} + receiver ${fmt(D1.feeReceiver)}) − Ali's spread ${fmt(D1.inferredPartnerCost)}</td></tr>
 <tr><td>Paid out in whole euros / dust</td><td class="n">${fmt(D1.payable)} / ${fmt(D1.residual)} EUR</td><td>amount_rounding truncate_unit; the dust stays client money</td></tr>
 </tbody></table>
 
