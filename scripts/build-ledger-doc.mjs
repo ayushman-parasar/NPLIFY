@@ -41,11 +41,13 @@ const PURPOSES = [
   ["CO", "SHARE_PAYABLE", "liability", "<PARTY>", "v5.2", "Markup share owed by NPL to a markup-share party (settlement_mode npl_pays, D26)."],
   ["CO", "LOSS_RECEIVABLE", "asset", "<PARTNER> / <SENDER>", "v1.2", "The partner's or the sender's agreed share of a loss event, owed to NPL after NPL booked the whole loss first (Pattern L)."],
   ["CO", "LOSS_PAYABLE", "liability", "NONE", "v1.2", "The unfunded part of a make-good: what NPL still has to put in after a loss. Mirrors CL.PROJECT.<CCY>.MAKEGOOD and is cleared by the same transfer."],
-  ["CO", "COLLECTED / DUE / INTRANSIT", "asset", "OWNDESK", "v1.2", "In a reseller project (NPL-GR) the money is NPL's from the moment it arrives, so the where-is-it purposes are used under owner CO with the own desk as holder (Pattern M)."],
+  ["CO", "VENDOR_PAYABLE", "liability", "<VENDOR>", "v1.2", "NPL-GR's reseller books: what NPL-GR owes a vendor on a vendor invoice, in the invoice currency; cleared as the remittance side's payout lines discharge the invoice (Pattern M)."],
+  ["CO", "RESALE_RECEIVABLE", "asset", "<CUSTOMER>", "v1.2", "NPL-GR's reseller books: what a reseller customer owes on a resale invoice, in the invoice currency; cleared when the customer pays the remittance side (Pattern M)."],
+  ["CO", "REMIT_CLAIM", "asset", "PROJECT", "v1.2", "NPL-GR's reseller books: what the remittance side holds for NPL-GR, in the invoice currency — the mirror, in EUR, of the remittance project's PAYABLE to its client NPL-GR (Pattern M)."],
   ["CO", "EARN_GROSS", "income", "NONE", "v5.2", "Margin recognised at conversion (sender and receiver fee parts), before partner cost. Markup shares are debited here, so the balance is NPL's margin after shares."],
   ["CO", "EARN_REBATE", "income", "NONE", "v5.3", "Rebate income, kept apart from EARN_GROSS and never in a markup-share base (D27)."],
-  ["CO", "RESELL_REVENUE", "income", "NONE", "v1.2", "The retail price a reseller customer pays NPL-GR, recognised when collected, in the currency collected (Pattern M)."],
-  ["CO", "RESELL_COST", "expense", "NONE", "v1.2", "The vendor's invoice, recognised as each payout line discharges part of it, in the currency paid, at the rate the deal was priced on (Pattern M)."],
+  ["CO", "RESELL_REVENUE", "income", "NONE", "v1.2", "NPL-GR's reseller books: the resale invoice to the customer at retail price, in the invoice currency, recognised when issued (Pattern M)."],
+  ["CO", "RESELL_COST", "expense", "NONE", "v1.2", "NPL-GR's reseller books: the vendor invoice at NPL's preferential price, in the invoice currency, recognised when received. Revenue − cost is the game reseller revenue, fixed on issue and never touched afterwards (Pattern M)."],
   ["CO", "EXP_PARTNER", "expense", "NONE", "v5.2", "Partner cost where the partner states it separately (fee_on_market). Zero by construction for fee_in_rate partners and the own desk."],
   ["CO", "EXP_BANKFEE", "expense", "NONE", "v5.2", "Bank and payout fees NPL absorbs: gross-ups, shortfall top-ups, bounce fees, covered fees (D41)."],
   ["CO", "EXP_NETWORK", "expense", "NONE", "v5.2", "Crypto network fees NPL absorbs: a refund, a bridge hop, a forwarded reroute."],
@@ -54,8 +56,8 @@ const PURPOSES = [
   ["CO", "VAR_CONVERSION", "expense", "NONE", "v1.2", "Partner converted differently from the engine's expectation (partner_calculates), and basis variance on a reroute. Gain or loss. Was VARIANCE."],
   ["CO", "VAR_CUTOFF", "expense", "NONE", "v1.2", "Rate stamped at lock versus the rate actually used when the conversion ran after the partner's cutoff; NPL absorbs it (D29)."],
   ["CO", "VAR_RATE_HONOUR", "expense", "NONE", "v1.2", "An expired quote's rate honoured by an approved override versus the partner's rate on the day of conversion; NPL's cost, chosen (D45)."],
-  ["CO", "VAR_FX_TIMING", "expense", "NONE", "v1.2", "An obligation priced on one day and discharged on another: the rate difference on invoice instalments (D24) and on an own-desk conversion after the customer's price was fixed."],
-  ["CO", "FX_CLEARING", "asset", "NONE", "v1.2", "Used only when a company balance in one currency is settled in another (a EUR share receivable paid in USDT): the receivable clears in its own currency, the receipt lands in its own, and the two legs meet here. Its balances are NPL's open currency position, valued through REPORTING_VALUE."],
+  ["CO", "VAR_FX_TIMING", "expense", "NONE", "v1.2", "The forex result of discharging an obligation stated in one currency with money held in another: each vendor instalment and the margin line of a resale invoice (D24). Gain or loss, always on the remittance margin, never on the reseller revenue."],
+  ["CO", "FX_CLEARING", "asset", "NONE", "v1.2", "Used only when a company balance in one currency is settled in another: a EUR share receivable paid in USDT, or NPL-GR's EUR claim paid out to its own wallet in USDT. The balance clears in its own currency, the receipt lands in its own, and the two legs meet here. Its balances are NPL's open currency position, valued through REPORTING_VALUE."],
 ];
 const KIND = {};
 for (const p of PURPOSES) for (const name of p[1].split(" / ")) KIND[name] = p[2];
@@ -426,47 +428,84 @@ L.tx(`T43 · The sender settles its share: ${fmt(shares.sender)} USDT paid to NP
 ]);
 const snapLoss = L.snapshot();
 
-// ---- Pattern M: reseller project (NPL-GR), full reseller P&L
-const INV = 9000, R0 = 0.8708, R1 = 0.87527, markup = 0.02;
-const costBasis = r2(INV / R0);                       // USDT needed for the invoice at the quote-day rate
-const retail = Math.ceil(costBasis / (1 - markup));   // USDT, rounded up (D25: USDT paid by reseller customers rounded up)
-const part1Eur = 3000, part2Eur = INV - part1Eur;
-const paid1 = r2(part1Eur / R0), paid2 = r2(part2Eur / R1);
-const cost1 = r2(part1Eur / R0), cost2 = r2(part2Eur / R0);   // cost at the priced rate
-const fx2 = r2(cost2 - paid2);                                // positive = NPL paid less than priced (gain)
-L.tx(`T44 · NPL-GR (reseller): the vendor's invoice of ${fmt(INV)} EUR is recorded (INVOICE, open); the customer is quoted ${fmt(retail)} USDT (invoice ÷ ${R0}, + ${pct(markup, 0)} markup, rounded up) and pays it`, "Collection", [
-  ["CO.OWNDESK.USDT.COLLECTED", "Dr", retail, USDT, CO, "principal", "NPL's money from the moment it arrives: the project's client is NPL-GR itself"],
-  ["CO.NONE.USDT.RESELL_REVENUE", "Cr", retail, USDT, CO, "resale", "the retail price, recognised when collected"],
-], "Recording the invoice posts nothing: the obligation is INVOICE_BALANCE (amount − Σ obligation_discharged), and the cost is booked as it is discharged, in the currency actually paid, so that revenue, cost and margin of a deal are in one currency.");
-L.tx(`T45 · The own desk makes the funds available (a same-currency conversion at rate 1, D23, D33): ${fmt(retail)} USDT ready to pay the vendor`, "Conversion", [
-  ["CO.OWNDESK.USDT.DUE", "Dr", retail, USDT, CO, "principal", "in NPL's own wallet (LT Sub at Aquanow), reported by the custody view"],
-  ["CO.OWNDESK.USDT.COLLECTED", "Cr", retail, USDT, CO, "principal", ""],
-], "No EARN_GROSS in a reseller project: the whole margin is revenue minus cost, so the conversion carries no fee parts. EXP_PARTNER is zero by construction (the own desk is NPL).");
-L.tx(`T46 · Instalment 1: ${fmt(paid1)} USDT paid to the vendor, discharging ${fmt(part1Eur)} EUR of the invoice at discharge_rate ${R0} (SETTLEMENT_LINE.invoice_id, obligation_discharged)`, "Settlement", [
-  ["CO.OWNDESK.USDT.INTRANSIT", "Dr", paid1, USDT, CO, "principal", ""],
-  ["CO.OWNDESK.USDT.DUE", "Cr", paid1, USDT, CO, "principal", ""],
-]);
-L.tx(`T47 · The vendor confirms instalment 1: cost of ${fmt(part1Eur)} EUR recognised at the priced rate = ${fmt(cost1)} USDT; no timing difference on the quote day`, "Confirmation", [
-  ["CO.NONE.USDT.RESELL_COST", "Dr", cost1, USDT, CO, "resale", "the discharged part of the vendor's invoice, at the rate the customer's price was built on"],
-  ["CO.OWNDESK.USDT.INTRANSIT", "Cr", paid1, USDT, CO, "principal", "delivered; INVOICE_BALANCE falls to 6,000 EUR"],
-]);
-L.tx(`T48 · Instalment 2, four days later: ${fmt(paid2)} USDT discharge the remaining ${fmt(part2Eur)} EUR at ${R1}; the vendor confirms (settlement and confirmation shown together)`, "Confirmation", [
-  ["CO.OWNDESK.USDT.INTRANSIT", "Dr", paid2, USDT, CO, "principal", "released"],
-  ["CO.OWNDESK.USDT.DUE", "Cr", paid2, USDT, CO, "principal", ""],
-  ["CO.NONE.USDT.RESELL_COST", "Dr", cost2, USDT, CO, "resale", "the remaining 6,000 EUR at the priced rate"],
-  ["CO.NONE.USDT.VAR_FX_TIMING", "Cr", fx2, USDT, CO, "fx_timing", "the rate moved in NPL's favour between pricing and payment (a debit when it moves against)"],
-  ["CO.OWNDESK.USDT.INTRANSIT", "Cr", paid2, USDT, CO, "principal", "delivered; INVOICE_BALANCE is zero, INVOICE settled"],
-], `Reseller margin on the deal = revenue ${fmt(retail)} − cost ${fmt(r2(cost1 + cost2))} + fx timing ${fmt(fx2)} = ${fmt(r2(retail - cost1 - cost2 + fx2))} USDT, which is exactly what is left in CO.OWNDESK.USDT.DUE. NPL accepts the forex difference within the 2 % markup (D24); the account shows how much of the markup it consumed.`);
-const resellerMargin = r2(retail - cost1 - cost2 + fx2);
+// ---- Pattern M: the reseller project (NPL-GR): reseller books in EUR, remittance as an ordinary client project
+const VENDOR_INV = 9000, RESALE_INV = 9450;                       // EUR
+const Rq = 0.8708, Rd2 = 0.87527;                                 // EUR per USDT at pricing and at the second instalment (NPL's figures, D24)
+const RmT = 1 / 32.50, RpT = 1 / 32.73;                           // USDT per THB: market and Ali (Ali's 0.7 % inside its rate)
+const targetOut = r2(RESALE_INV / Rq);                            // USDT the remittance side must deliver for the resale invoice
+const thbIn = r2(targetOut / (RmT * (1 - 0.02)));                 // amount_mode target_out, 2 % remittance markup on market (rate_basis market), bank transfer (no cash rounding)
+const DM = price({ amountIn: thbIn, Rm: RmT, Rp: RpT, basis: "market", s: 0.02, r: 0 });
+const mktValue = r2(thbIn * RmT);
+const inst1Eur = 3000, inst2Eur = 6000, marginEur = RESALE_INV - VENDOR_INV;
+const paid1 = r2(inst1Eur / Rq), reserved1 = r2(inst1Eur / Rq);
+const paid2 = r2(inst2Eur / Rd2), reserved2 = r2(inst2Eur / Rq), fx2 = r2(reserved2 - paid2);   // positive = gain for NPL
+const reserved3 = r2(DM.clientNet - reserved1 - reserved2), paid3 = r2(marginEur * (1 / Rd2)), fx3 = r2(reserved3 - paid3);
+const hop = r2(DM.clientNet - paid1);
+L.tx(`T44 · NPL-GR receives the vendor's invoice: ${fmt(VENDOR_INV)} EUR at NPL's preferential price (INVOICE kind vendor)`, "Invoice", [
+  ["CO.NONE.EUR.RESELL_COST", "Dr", VENDOR_INV, EUR, CO, "resale", "NPL-GR's cost, in the invoice currency, when received"],
+  ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", "Cr", VENDOR_INV, EUR, CO, "resale", "owed to the vendor; INVOICE_BALANCE shows the open part"],
+], "These are NPL-GR's reseller books: two invoice postings per deal, both in the invoice currency, and nothing else. The multi-currency work is left to the remittance side below.");
+L.tx(`T45 · NPL-GR issues the resale invoice to its customer: ${fmt(RESALE_INV)} EUR at retail price (INVOICE kind resale); game reseller revenue ${fmt(marginEur)} EUR is fixed here`, "Invoice", [
+  ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", "Dr", RESALE_INV, EUR, CO, "resale", "owed by the customer"],
+  ["CO.NONE.EUR.RESELL_REVENUE", "Cr", RESALE_INV, EUR, CO, "resale", "NPL-GR's revenue, in the invoice currency, when issued"],
+], `RESELL_REVENUE − RESELL_COST = ${fmt(marginEur)} EUR, and no later posting touches either account. The deal group that collects this invoice names it (DEAL_GROUP.invoice_id = the resale invoice).`);
+L.tx(`T46 · The customer pays the resale invoice in THB by bank transfer to Ali: ${fmt(thbIn, THB)} THB = ${fmt(RESALE_INV)} EUR at the sender rate with the ${pct(0.02, 0)} remittance markup (amount_mode target_out)`, "Collection", [
+  ["CL.ALI.THB.COLLECTED", "Dr", thbIn, THB, CL, "principal", "client money at Ali — the client of this remittance project is NPL-GR"],
+  ["CL.PROJECT.THB.PAYABLE", "Cr", thbIn, THB, CL, "principal", "the remittance side owes it onward on NPL-GR's behalf"],
+  ["CO.PROJECT.EUR.REMIT_CLAIM", "Dr", RESALE_INV, EUR, CO, "resale", "reseller books: the customer has paid, the remittance side now holds the value for NPL-GR"],
+  ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", "Cr", RESALE_INV, EUR, CO, "resale", "the customer's debt is settled"],
+], "The remittance side posts exactly like any client project (T1): Evo's sender is a customer of NPL-GR's here, and NPL-GR is the client. The two EUR lines are the reseller books recording that the customer paid; each owner's lines balance in their own currency.");
+L.tx(`T47 · Conversion at Ali (fee_in_rate, markup on market): ${fmt(thbIn, THB)} THB → ${fmt(DM.actualOut)} USDT at 32.73 (market 32.50); client net ${fmt(DM.clientNet)} USDT (= ${fmt(RESALE_INV)} EUR at ${Rq}), NPL's earnings ${fmt(DM.earnings)} USDT`, "Conversion", [
+  ["CL.PROJECT.THB.PAYABLE", "Dr", thbIn, THB, CL, "principal", ""],
+  ["CL.ALI.THB.COLLECTED", "Cr", thbIn, THB, CL, "principal", ""],
+  ["CL.ALI.USDT.DUE", "Dr", DM.clientNet, USDT, CL, "principal", "NPL-GR's entitlement in USDT, reserved for the vendor and for NPL-GR's margin"],
+  ["CO.ALI.USDT.POOL", "Dr", DM.earnings, USDT, CO, "earnings", "remittance earnings resting at Ali"],
+  ["CL.PROJECT.USDT.PAYABLE", "Cr", DM.clientNet, USDT, CL, "principal", ""],
+  ["CO.NONE.USDT.EARN_GROSS", "Cr", DM.earnings, USDT, CO, "earnings", `${pct(DM.earnings / mktValue)} of the market value: the 2 % markup less Ali's 0.7 % inside its rate`],
+], `The markup pays for the remittance service and carries the rate risk of the instalments, so the ${fmt(marginEur)} EUR reseller revenue is never diluted. Had the customer paid in USDT, the pair would be USDT → USDT at rate 1 (D33) and the same lines would post in USDT.`);
+L.tx(`T48 · Instalment 1 paid by Ali: ${fmt(paid1)} USDT to the vendor, discharging ${fmt(inst1Eur)} EUR of the vendor invoice at discharge_rate ${Rq} (settlement and confirmation shown together)`, "Confirmation", [
+  ["CL.ALI.USDT.INTRANSIT", "Dr", paid1, USDT, CL, "principal", "released by Ali on NPL's instruction"],
+  ["CL.ALI.USDT.DUE", "Cr", paid1, USDT, CL, "principal", ""],
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid1, USDT, CL, "principal", "the vendor confirms: the obligation is discharged"],
+  ["CL.ALI.USDT.INTRANSIT", "Cr", paid1, USDT, CL, "principal", ""],
+  ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", "Dr", inst1Eur, EUR, CO, "resale", "reseller books: the vendor is owed 3,000 EUR less (INVOICE_BALANCE 6,000)"],
+  ["CO.PROJECT.EUR.REMIT_CLAIM", "Cr", inst1Eur, EUR, CO, "resale", "the remittance side holds 3,000 EUR less for NPL-GR"],
+], `The line names the vendor invoice (SETTLEMENT_LINE.invoice_id, obligation_discharged ${fmt(inst1Eur)} EUR, discharge_rate ${Rq}). Paid on the pricing day, so the USDT reserved for these 3,000 EUR (${fmt(reserved1)}) equals the USDT paid: no forex line.`);
+L.tx(`T49 · Variant route: the remaining ${fmt(hop)} USDT of NPL-GR's balance hop from Ali to NPL's own desk (LT Sub at Aquanow; a SETTLEMENT_LINE to the partner_transit receiver; release and credit shown together)`, "Confirmation", [
+  ["CL.ALI.USDT.INTRANSIT", "Dr", hop, USDT, CL, "principal", "released by Ali"],
+  ["CL.ALI.USDT.DUE", "Cr", hop, USDT, CL, "principal", ""],
+  ["CL.OWNDESK.USDT.DUE", "Dr", hop, USDT, CL, "principal", "credited at the own desk: an ordinary partner-coded account with the own-desk configuration as holder (D23), reported by the custody view"],
+  ["CL.ALI.USDT.INTRANSIT", "Cr", hop, USDT, CL, "principal", ""],
+], "Whether Ali or the own desk pays the vendor depends on the vendor; the postings that follow are identical apart from the holder. Nothing is earned or charged on the hop; a network fee NPL bears posts as in T16.");
+L.tx(`T50 · Instalment 2 paid by the own desk four days later: ${fmt(paid2)} USDT discharge the remaining ${fmt(inst2Eur)} EUR at ${Rd2}; ${fmt(reserved2)} USDT had been reserved at ${Rq}, so ${fmt(fx2)} USDT are a forex gain for the remittance side`, "Confirmation", [
+  ["CL.OWNDESK.USDT.INTRANSIT", "Dr", paid2, USDT, CL, "principal", "released"],
+  ["CL.OWNDESK.USDT.DUE", "Cr", paid2, USDT, CL, "principal", ""],
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid2, USDT, CL, "principal", "the vendor confirms"],
+  ["CL.OWNDESK.USDT.INTRANSIT", "Cr", paid2, USDT, CL, "principal", ""],
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", fx2, USDT, CL, "fx_timing", "forex true-up: the 6,000 EUR cost fewer USDT than reserved, the surplus is not NPL-GR's"],
+  ["CL.OWNDESK.USDT.DUE", "Cr", fx2, USDT, CL, "fx_timing", "it leaves NPL-GR's balance"],
+  ["CO.OWNDESK.USDT.POOL", "Dr", fx2, USDT, CO, "fx_timing", "and becomes NPL's, resting at the own desk"],
+  ["CO.NONE.USDT.VAR_FX_TIMING", "Cr", fx2, USDT, CO, "fx_timing", "a gain; with the rate the other way the line is a debit and the pool tops NPL-GR's balance up"],
+  ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", "Dr", inst2Eur, EUR, CO, "resale", "reseller books: the vendor invoice is settled (INVOICE_BALANCE 0)"],
+  ["CO.PROJECT.EUR.REMIT_CLAIM", "Cr", inst2Eur, EUR, CO, "resale", ""],
+], "The forex true-up is the one place where the remittance side's USDT obligation to NPL-GR is re-measured: NPL-GR is entitled to EUR value, the markup absorbs the rate movement either way (NPL's 1.3 % less a 0.1 % forex loss gives 1.2 % in NPL's own example), and the reseller books never see it.");
+L.tx(`T51 · The margin line: ${fmt(marginEur)} EUR of the resale invoice are paid to NPL-GR's own wallet, ${fmt(paid3)} USDT at ${Rd2}; ${fmt(reserved3)} USDT had been reserved, ${fmt(fx3)} USDT forex gain`, "Confirmation", [
+  ["CL.OWNDESK.USDT.INTRANSIT", "Dr", paid3, USDT, CL, "principal", "released to NPL-GR's wallet (a receiver of the project)"],
+  ["CL.OWNDESK.USDT.DUE", "Cr", paid3, USDT, CL, "principal", ""],
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid3, USDT, CL, "principal", "confirmed: the resale invoice is fully discharged (INVOICE_BALANCE 0)"],
+  ["CL.OWNDESK.USDT.INTRANSIT", "Cr", paid3, USDT, CL, "principal", ""],
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", fx3, USDT, CL, "fx_timing", "forex true-up on the margin line"],
+  ["CL.OWNDESK.USDT.DUE", "Cr", fx3, USDT, CL, "fx_timing", ""],
+  ["CO.OWNDESK.USDT.POOL", "Dr", fx3, USDT, CO, "fx_timing", ""],
+  ["CO.NONE.USDT.VAR_FX_TIMING", "Cr", fx3, USDT, CO, "fx_timing", ""],
+  ["CO.OWN.USDT.WALLET", "Dr", paid3, USDT, CO, "resale", "reseller books: NPL-GR's margin arrives, in USDT"],
+  ["CO.NONE.USDT.FX_CLEARING", "Cr", paid3, USDT, CO, "resale", "the USDT leg of a EUR claim settled in USDT"],
+  ["CO.NONE.EUR.FX_CLEARING", "Dr", marginEur, EUR, CO, "resale", "the EUR leg"],
+  ["CO.PROJECT.EUR.REMIT_CLAIM", "Cr", marginEur, EUR, CO, "resale", "nothing is held for NPL-GR any more"],
+], `NPL-GR may instead leave its margin in the project balance to fund the next vendor payment (settlement_policy hold_allowed): then nothing in T51 posts, REMIT_CLAIM keeps ${fmt(marginEur)} EUR, the remittance side keeps the matching USDT payable, and the forex true-up of the margin waits for the line that pays it. FX_CLEARING carries ${fmt(marginEur)} EUR against ${fmt(paid3)} USDT, NPL's own currency position, valued through REPORTING_VALUE and closed when NPL converts or reports.`);
 const snapReseller = L.snapshot();
-const Rown = 0.9000, RownAct = 0.8968, ownExp = r2(retail * Rown), ownAct = r2(retail * RownAct);
-L.tx(`T49 · Variant: the own desk converts ${fmt(retail)} USDT to EUR to pay the vendor in EUR; expected ${fmt(ownExp)} EUR at ${Rown} (the rate the price was built on), obtained ${fmt(ownAct)} at ${RownAct}`, "Conversion", [
-  ["CO.NONE.USDT.RESELL_REVENUE", "Dr", retail, USDT, CO, "resale", "the revenue leaves the collected currency"],
-  ["CO.OWNDESK.USDT.COLLECTED", "Cr", retail, USDT, CO, "principal", ""],
-  ["CO.OWNDESK.EUR.DUE", "Dr", ownAct, EUR, CO, "principal", "what the desk obtained"],
-  ["CO.NONE.EUR.VAR_FX_TIMING", "Dr", r2(ownExp - ownAct), EUR, CO, "fx_timing", "the price was fixed in USDT; the rate moved before NPL converted"],
-  ["CO.NONE.EUR.RESELL_REVENUE", "Cr", ownExp, EUR, CO, "resale", "the revenue re-stated in the vendor's currency at the priced rate"],
-], `Revenue is re-denominated the way a client obligation is in T2, so the margin is then read in EUR: ${fmt(ownExp)} − 9,000 (cost booked in EUR as the instalments are confirmed) − ${fmt(r2(ownExp - ownAct))} fx timing = ${fmt(r2(ownAct - INV))} EUR. This variant is shown for the posting shape; the balances above are the USDT path only.`);
+const remitMargin = r2(DM.earnings + fx2 + fx3);
+
 // ------------------------------------------------------------------ identities
 const identities = [
   ["Client assets = client liabilities, per currency", "Σ COLLECTED + Σ HELD + Σ DUE + Σ INTRANSIT + Σ SHORTFALL + MAKEGOOD = PAYABLE + Σ CREDIT. Holds after every transaction because every transaction balances per owner as well as per currency."],
@@ -478,7 +517,8 @@ const identities = [
   ["Exposure ≤ ceiling", "Σ DUE + Σ INTRANSIT at a partner is within the project's exposure ceiling; Σ PROJECT_BALANCE across a client's projects, as REPORTING_VALUE, within CLIENT.exposure_ceiling (invariant 35)."],
   ["Own wallets hold client money only in three cases", "CL.OWN.<CCY>.HELD is zero except for rows the custody view can name: an open reroute, a bridge collection within custody_max_hours, an own-desk leg (invariant 3)."],
   ["Each confirmation = its released amount", "Confirmed + shortfall + fees booked = the amount released on the line."],
-  ["Reseller P&L closes", "In a reseller project: RESELL_REVENUE − RESELL_COST ± VAR_FX_TIMING − EXP_* on the deal = what remains in CO.OWNDESK.*.DUE after the invoice is settled, per currency."],
+  ["Reseller revenue is intact", "Per resale invoice: RESELL_REVENUE − RESELL_COST is set when the two invoices are posted and no later transaction touches either account. Σ VENDOR_PAYABLE = Σ INVOICE_BALANCE of vendor invoices; Σ RESALE_RECEIVABLE = resale invoices not yet paid; REMIT_CLAIM = the resale invoices paid by customers and not yet discharged by payout lines, in EUR."],
+  ["Remittance margin per deal", "EARN_GROSS − EXP_PARTNER ± VAR_FX_TIMING − fees on the deal's lines, in the converted currency; the forex result of the instalments lands here and nowhere else."],
   ["Every figure shown is a sum", "No screen stores a balance; all are sums over postings or deals (invariant 10). A converted total is a REPORTING_VALUE: an estimate at the latest platform-pair rate, never posted (invariant 38)."],
 ];
 
@@ -516,11 +556,11 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Posting Design &amp; Chart of Accounts · Draft v${DOC_VERSION}</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <p><b>Status:</b> Built against ERD &amp; Data Model Draft v${ERD_VERSION} (decisions D1–D45) and NPL's answers of 10 October on accrual timing, loss events, the reseller project and variance accounts. Every worked example was produced by a small posting engine that refuses any transaction whose debits and credits do not match per currency and per owner, so the figures add up by construction. Supersedes Draft v1.1 (ERD v5.2).<br>
 <b>Audience:</b> NPL Finance and Management, and the New XP engineering team. Written in plain language; the account codes and field names are the ones in the ERD, with NPL's vocabulary (settlement, partner entity, markup share, sender pays / receiver pays, fee on market / fee in rate, agent rate).</p>
-<div class="box"><b>What changed since v1.1.</b> The chart of accounts grows with the v5.3–v5.6 purposes (EARN_REBATE, SHARE_RECEIVABLE, EXP_ROUNDING, EXP_LOSS) and with the purposes this draft proposes (Section 22): four variance accounts in place of one, loss receivables and the unfunded make-good pair, the reseller revenue and cost accounts, and a clearing account for company balances settled in another currency. Rebates and markup shares are accrued at conversion. A loss is booked to NPL in full and recovered share by share. The NPL-GR project keeps a full reseller P&amp;L inside NPLify. New worked patterns: same-currency pass-through, round-up rounding, bridge-wallet hop, party-retains share with rebate, cutoff and honoured-rate variances, loss event with recoveries, invoice instalments.</div>
+<div class="box"><b>What changed since v1.1.</b> The chart of accounts grows with the v5.3–v5.6 purposes (EARN_REBATE, SHARE_RECEIVABLE, EXP_ROUNDING, EXP_LOSS) and with the purposes this draft proposes (Section 22): four variance accounts in place of one, loss receivables and the unfunded make-good pair, the reseller revenue and cost accounts, and a clearing account for company balances settled in another currency. Rebates and markup shares are accrued at conversion. A loss is booked to NPL in full and recovered share by share. The NPL-GR project keeps a full reseller P&amp;L inside NPLify: the vendor and resale invoices are posted in the invoice currency, the remittance deal posts like any client project with NPL-GR as the client, and the forex result of instalments lands on the remittance margin. New worked patterns: same-currency pass-through, round-up rounding, bridge-wallet hop, party-retains share with rebate, cutoff and honoured-rate variances, loss event with recoveries, the reseller deal with its two invoices and instalments.</div>
 <div class="rule"></div>
 
 <h2>1 · What the ledger is for, in one paragraph</h2>
-<p>NPL coordinates other people's money and, in one project, trades on its own account. The ledger answers, at any moment and for any past moment, three questions: <b>where is the money</b> (at which partner, in transit, in one of NPL's wallets), <b>whose money is it</b> (the client's, a sender's, or NPL's), and <b>what did each movement cost or earn</b> (NPL's margin and shares of it, rebates, partner cost, bank and network fees, rounding, losses, and the four kinds of variance). It does this with ordinary double-entry bookkeeping: every movement is a set of debits and credits that balance, nothing is ever edited or deleted, and every balance anyone sees is a sum over those entries.</p>
+<p>NPL coordinates other people's money and, in one project, is also its own client: NPL-GR resells goods and pays for the remittance like any customer. The ledger answers, at any moment and for any past moment, three questions: <b>where is the money</b> (at which partner, in transit, in one of NPL's wallets), <b>whose money is it</b> (the client's, a sender's, or NPL's), and <b>what did each movement cost or earn</b> (NPL's margin and shares of it, rebates, partner cost, bank and network fees, rounding, losses, and the four kinds of variance). It does this with ordinary double-entry bookkeeping: every movement is a set of debits and credits that balance, nothing is ever edited or deleted, and every balance anyone sees is a sum over those entries.</p>
 
 <h2>2 · Rules that every posting follows</h2>
 <ol>
@@ -531,7 +571,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <li><b>Accruals post with the conversion.</b> NPL's margin, each markup-share party's part and the partner rebate expected on the leg are all recognised at conversion, as separate transactions that name the same deal; the monthly statement settles them and any difference is a true-up, never a rewrite.</li>
 <li><b>Variances are booked by kind</b>, to four accounts: VAR_CONVERSION (the partner did something other than expected), VAR_CUTOFF (D29), VAR_RATE_HONOUR (D45), VAR_FX_TIMING (D24 and the own desk). Each can be a gain or a loss; each line names the leg or line it arose on.</li>
 <li><b>A loss is NPL's first.</b> A LOSS_EVENT posts the whole amount to EXP_LOSS and makes the client whole in the same transaction; each share the partner, the sender or the client agrees to bear is a separate, later recovery posting.</li>
-<li><b>A reseller project is company money throughout.</b> In NPL-GR the customer's price is revenue when collected, the vendor's invoice is cost as it is discharged, and the where-is-it accounts are kept under owner CO with the own desk as holder.</li>
+<li><b>NPL-GR is the client of its own remittance project.</b> Its reseller books are two postings per deal in the invoice currency, one per invoice, and a claim on the remittance side; the remittance deal posts like any client project; the forex result of paying the vendor in instalments is a true-up to VAR_FX_TIMING against NPL's pool, so the reseller revenue is never diluted.</li>
 <li><b>Append-only.</b> A correction is a reversing transaction that names what it reverses (${code("reversal_of_id")}) followed by the correct posting (invariant 2).</li>
 <li><b>Amounts stay in their own currency.</b> A converted total (volumes, earnings, balances, custody in the reporting currency) is a REPORTING_VALUE: computed at read time from the latest platform-pair market rate, carrying that rate and its time, flagged when stale, and never posted, quoted or settled (invariant 38).</li>
 <li><b>Rounding has an owner.</b> A dropped fraction stays client money in the balance; an amount added by rounding up is NPL's cost in EXP_ROUNDING (invariant 24).</li>
@@ -546,7 +586,7 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 
 <h2>4 · Cost components, owners and sources</h2>
 <table><thead><tr><th>Cost component</th><th>Used on</th><th>Meaning</th></tr></thead><tbody>
-<tr><td>principal</td><td>client money moving; reseller funds moving</td><td>The amount itself: collected, converted, released, confirmed, returned.</td></tr>
+<tr><td>principal</td><td>client money moving</td><td>The amount itself: collected, converted, released, confirmed, returned.</td></tr>
 <tr><td>earnings</td><td>POOL, EARN_GROSS, WALLET on dues recovery</td><td>NPL's margin (sender and receiver fee parts) and where it rests.</td></tr>
 <tr><td>partner_cost</td><td>EXP_PARTNER</td><td>A fee_on_market partner's stated fee, deducted at transaction level.</td></tr>
 <tr><td>rebate</td><td>REBATE_RECEIVABLE, EARN_REBATE, WALLET</td><td>A partner's rebate on NPLify deals: accrual, receipt, true-up.</td></tr>
@@ -558,9 +598,9 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <tr><td>cutoff_timing</td><td>VAR_CUTOFF</td><td>Rate at lock versus rate used after the partner's cutoff.</td></tr>
 <tr><td>fx_timing</td><td>VAR_FX_TIMING</td><td>Obligation priced on one day, discharged on another.</td></tr>
 <tr><td>loss</td><td>EXP_LOSS, LOSS_RECEIVABLE, POOL, WALLET, COLLECTED, PAYABLE</td><td>A loss event, its make-good and its recoveries.</td></tr>
-<tr><td><span class="new">resale</span></td><td>RESELL_REVENUE, RESELL_COST</td><td>The reseller project's retail price and vendor cost.</td></tr>
+<tr><td><span class="new">resale</span></td><td>RESELL_REVENUE, RESELL_COST, VENDOR_PAYABLE, RESALE_RECEIVABLE, REMIT_CLAIM, FX_CLEARING</td><td>NPL-GR's reseller books: the two invoices and the claim on the remittance side.</td></tr>
 </tbody></table>
-<p>Transaction sources (${code("LEDGER_TRANSACTION.source_type")}): Collection, Conversion, BalanceConversion, Settlement, SettlementReturn, Confirmation, BankFeeEvent, Reroute, MarkupShare, Rebate, LossEvent, Adjustment. Section 20 lists what each one posts; Section 22 asks for the source record a loss recovery points at.</p>
+<p>Transaction sources (${code("LEDGER_TRANSACTION.source_type")}): Collection, Conversion, BalanceConversion, Settlement, SettlementReturn, Confirmation, BankFeeEvent, Reroute, MarkupShare, Rebate, LossEvent, Adjustment, and <span class="new">Invoice</span> for the reseller books. Section 21 lists what each one posts; Section 23 asks for the source record a loss recovery points at.</p>
 
 <h2>5 · Reading a posting table</h2>
 <p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example is project Evo: Sender A, Receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2; partner Ali (fee_in_rate: its cost is inside its rate), partner Jeton (fee_on_market + ${pct(0.005)}) and partner Aquanow (fee_on_market + ${pct(0.008)}, rebate ${pct(0.003, 1)} of the amount). Rates: market ${EX.Rm.toFixed(4)} EUR per USDT, Ali ${EX.Rp.toFixed(4)}. Fee structure: basis agent_rate, fixed, ${pct(EX.s + EX.r)} in total, sender pays ${pct(EX.s)} and receiver pays ${pct(EX.r)}. The arithmetic is in the Calculation Specification; the headline figures for deal 1 are:</p>
@@ -625,12 +665,12 @@ ${L.html("T39")}${L.html("T40")}${L.html("T41")}${L.html("T42")}${L.html("T43")}
 ${L.balancesHtml([["CO.NONE.USDT.EXP_LOSS", USDT, "NPL's own share of the loss, once every recovery is settled"], ["CO.ALI.USDT.LOSS_RECEIVABLE", USDT, "nothing outstanding from Ali"], ["CO.SENDER_A.USDT.LOSS_RECEIVABLE", USDT, "nothing outstanding from the sender"]], "Loss accounts after the recoveries", snapLoss)}
 <p class="small">Net effect on NPL's money: the pool at Ali gave 6,000 and received 1,000 + 4,000 back (−1,000); the own wallet gave 4,000 and received 2,000 (−2,000); together −3,000, NPL's share. The client's claim on deal 7 is 9,000 USDT, backed by 9,000 at Ali.</p>
 
-<h2>18 · Pattern M — the reseller project (NPL-GR): full reseller P&amp;L</h2>
-<p>NPL-GR, a business unit of NPL, buys from vendors against invoices and sells to reseller customers at a retail price; the own desk (OWN_WALLET role own_desk, LT Sub at Aquanow; PARTNER_CONFIG.is_own_desk) holds and converts the funds (D23, D24). NPL's decision of 10 October: run the full reseller P&amp;L inside NPLify. The money is NPL's from the moment it arrives, so every line is company-tagged; the customer's price is revenue, the vendor's invoice is cost, and the margin is read in one currency per deal. The example uses NPL's own figures: a 9,000 EUR invoice paid in USDT in two instalments at ${R0} and ${R1}.</p>
-${L.html("T44")}${L.html("T45")}${L.html("T46")}${L.html("T47")}${L.html("T48")}
-${L.balancesHtml([["CO.OWNDESK.USDT.COLLECTED", USDT, "nothing unconverted"], ["CO.OWNDESK.USDT.DUE", USDT, "NPL's margin on the deal, resting in the own desk (custody view)"], ["CO.OWNDESK.USDT.INTRANSIT", USDT, "nothing in transit"], ["CO.NONE.USDT.RESELL_REVENUE", USDT, "retail price"], ["CO.NONE.USDT.RESELL_COST", USDT, "vendor invoice at the priced rate"], ["CO.NONE.USDT.VAR_FX_TIMING", USDT, "rate movement between pricing and payment (negative = gain)"]], "Reseller balances after the invoice is settled", snapReseller)}
-${L.html("T49")}
-<p>Bank fees on a vendor payment, network fees and a bounced vendor transfer post exactly as in Patterns C and F, with owner company on every line. A loss event in the reseller project has no make-good: the loss is NPL's and the recoveries are the same as Pattern L without the client-share lines.</p>
+<h2>18 · Pattern M — the reseller project (NPL-GR): two invoices, one remittance deal</h2>
+<p>NPL-GR, a business unit of NPL, buys from vendors at a preferential price and sells to its customers at a retail price (D23, D24). There are two invoices per deal: the vendor's invoice to NPL-GR, and NPL-GR's resale invoice to its customer, both in the vendor's currency. The difference is the game reseller revenue, and it must stay intact whatever happens afterwards. The customer pays the resale invoice through the remittance service with NPL's remittance markup on top; that markup pays for the remittance work, covers the partner's cost and absorbs the forex result of paying the vendor in instalments at different days' rates, and what is left is remittance earnings (NPL, 10 October).</p>
+<p>The ledger therefore keeps three things apart. <b>The reseller books</b> are two postings per deal in the invoice currency, one per invoice, plus a claim on the remittance side. <b>The remittance deal</b> posts exactly like any client project, with NPL-GR as the client (holder PROJECT = the NPL-GR remittance project) and the resale invoice as the obligation the deal group pays. <b>The forex result</b> of each discharging line is a true-up between NPL-GR's USDT balance and NPL's pool, booked to VAR_FX_TIMING. The example uses NPL's own figures: a 9,000 EUR vendor invoice resold at 9,450 EUR, collected in THB, paid to the vendor in USDT in two instalments at ${Rq} and ${Rd2}. Both payout routes are shown: Ali pays the first instalment; the balance hops to NPL's own desk, which pays the second and the margin line.</p>
+${L.html("T44")}${L.html("T45")}${L.html("T46")}${L.html("T47")}${L.html("T48")}${L.html("T49")}${L.html("T50")}${L.html("T51")}
+${L.balancesHtml([["CO.NONE.EUR.RESELL_REVENUE", EUR, "resale invoice, untouched since issue"], ["CO.NONE.EUR.RESELL_COST", EUR, "vendor invoice, untouched since receipt"], ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", EUR, "vendor settled"], ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", EUR, "customer paid"], ["CO.PROJECT.EUR.REMIT_CLAIM", EUR, "nothing held for NPL-GR"], ["CL.OWNDESK.USDT.DUE", USDT, "NPL-GR's balance at the own desk, fully paid out"], ["CO.OWNDESK.USDT.POOL", USDT, "the forex gains, resting at the own desk (the 143.66 USDT of earnings rest in NPL's pool at Ali, which this example's loss pattern also touched)"], ["CO.NONE.USDT.EARN_GROSS", USDT, "remittance earnings on the deal"], ["CO.NONE.USDT.VAR_FX_TIMING", USDT, "forex result (negative = gain)"], ["CO.NONE.EUR.FX_CLEARING", EUR, "NPL-GR's margin claim settled in USDT: the EUR leg"], ["CO.NONE.USDT.FX_CLEARING", USDT, "the USDT leg (negative = credit)"]], "Balances after the resale invoice is fully discharged", snapReseller)}
+<p>Reseller revenue ${fmt(marginEur)} EUR, intact. Remittance margin on the deal ${fmt(remitMargin)} USDT = earnings ${fmt(DM.earnings)} + forex ${fmt(r2(fx2 + fx3))}, which is ${pct(remitMargin / mktValue)} of the market value of the THB collected. Bank fees on a vendor payment, a bounced vendor transfer, a loss event and a rebate from Ali post exactly as in the other patterns, with NPL-GR as the client. A loss on NPL-GR's funds is made good like any client's (Pattern L) and the client share, if any, is NPL-GR's.</p>
 
 <h2 class="pb">19 · Identities and controls</h2>
 <table><thead><tr><th>Identity</th><th>Statement</th></tr></thead><tbody>
@@ -646,17 +686,18 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <li><b>Partner commissions.</b> Per partner and period: margin captured there, dues outstanding (EARNINGS_RECEIVABLE), rebates expected, reconciled and received (statement_ref).</li>
 <li><b>Markup shares.</b> Per party and period: base, share, direction, settled and open amounts; a party never sees a rebate.</li>
 <li><b>Variance and loss.</b> The four variance kinds by partner and month, each line traceable to its leg; loss events with their shares and recovery state.</li>
-<li><b>Reseller margin.</b> Per NPL-GR deal: revenue, cost, fx timing, fees, margin, in the currency of the deal; INVOICE_BALANCE per vendor invoice.</li>
+<li><b>Reseller and remittance margins, kept apart.</b> Per resale invoice: revenue, cost and game reseller revenue in EUR, intact. Per NPL-GR deal: remittance earnings, partner cost, forex result and fees in the converted currency. INVOICE_BALANCE per vendor and resale invoice.</li>
 </ul>
 
 <h2>21 · Transaction sources and what they post</h2>
 <table><thead><tr><th>Source event</th><th>Posts to</th><th>Owner tags</th><th>Cost components</th></tr></thead><tbody>
-<tr><td>Collection</td><td>COLLECTED or HELD, PAYABLE, CREDIT; in a reseller project COLLECTED and RESELL_REVENUE</td><td>client (reseller: company)</td><td>principal, resale</td></tr>
-<tr><td>Conversion (deal leg)</td><td>COLLECTED / PAYABLE in the in-currency; DUE, PAYABLE, POOL, EARN_GROSS, EXP_PARTNER, EXP_ROUNDING, SHARE_RECEIVABLE, a VAR_ account in the out-currency; reseller: COLLECTED → DUE, RESELL_REVENUE re-denominated, VAR_FX_TIMING</td><td>client and company</td><td>principal, rounding, earnings, partner_cost, share, variance, cutoff_timing, fx_timing</td></tr>
+<tr><td><span class="new">Invoice</span></td><td>RESELL_COST and VENDOR_PAYABLE (vendor invoice); RESALE_RECEIVABLE and RESELL_REVENUE (resale invoice)</td><td>company</td><td>resale</td></tr>
+<tr><td>Collection</td><td>COLLECTED or HELD, PAYABLE, CREDIT; in NPL-GR also REMIT_CLAIM and RESALE_RECEIVABLE</td><td>client (and company)</td><td>principal, resale</td></tr>
+<tr><td>Conversion (deal leg)</td><td>COLLECTED / PAYABLE in the in-currency; DUE, PAYABLE, POOL, EARN_GROSS, EXP_PARTNER, EXP_ROUNDING, SHARE_RECEIVABLE, a VAR_ account in the out-currency</td><td>client and company</td><td>principal, rounding, earnings, partner_cost, share, variance, cutoff_timing</td></tr>
 <tr><td>BalanceConversion</td><td>DUE and PAYABLE in both currencies; POOL and EARN_GROSS if a markup is decided</td><td>client (and company)</td><td>principal, rounding, earnings</td></tr>
 <tr><td>Settlement</td><td>INTRANSIT, DUE; EXP_BANKFEE and POOL when a fee is absorbed up front; EXP_NETWORK and WALLET on a hop. Each line names the leg it settles (deal_id) and, in NPL-GR, the invoice it discharges</td><td>client (and company)</td><td>principal, bank_fee, network_fee</td></tr>
 <tr><td>SettlementReturn</td><td>DUE, INTRANSIT; EXP_BANKFEE and POOL for the bounce fee</td><td>client and company</td><td>principal, bank_fee</td></tr>
-<tr><td>Confirmation</td><td>PAYABLE, INTRANSIT, SHORTFALL; a hop: COLLECTED at the partner; reseller: RESELL_COST, VAR_FX_TIMING</td><td>client (reseller: company)</td><td>principal, bank_fee, resale, fx_timing</td></tr>
+<tr><td>Confirmation</td><td>PAYABLE, INTRANSIT, SHORTFALL; a hop: COLLECTED or DUE at the partner; a line discharging an invoice: VENDOR_PAYABLE or REMIT_CLAIM, and the forex true-up PAYABLE / DUE / POOL / VAR_FX_TIMING</td><td>client and company</td><td>principal, bank_fee, resale, fx_timing</td></tr>
 <tr><td>BankFeeEvent</td><td>EXP_BANKFEE, POOL, DUE, SHORTFALL</td><td>company and client</td><td>bank_fee</td></tr>
 <tr><td>Reroute</td><td>HELD, COLLECTED at the alternate partner; WALLET and POOL for recovered dues; VAR_CONVERSION for basis variance</td><td>client and company</td><td>principal, earnings, variance</td></tr>
 <tr><td>MarkupShare</td><td>EARN_GROSS, SHARE_PAYABLE or SHARE_RECEIVABLE; WALLET or POOL on settlement</td><td>company</td><td>share</td></tr>
@@ -677,13 +718,13 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <p>The patterns above need the following additions to Draft v${ERD_VERSION}. Each is small; none changes an existing posting. They are listed for NPL's agreement and will be cut into the next ERD edition together.</p>
 <ol>
 <li><b>Variance by kind.</b> ${code("LEDGER_ACCOUNT.purpose")}: VARIANCE replaced by VAR_CONVERSION, VAR_CUTOFF, VAR_RATE_HONOUR, VAR_FX_TIMING. Invariants 28 and 39 and decisions D24, D29, D45 then name the account they post to.</li>
-<li><b>Loss first, recover later.</b> Purposes LOSS_RECEIVABLE (holder Partner or Sender), and the pair MAKEGOOD (client asset, holder Project) / LOSS_PAYABLE (company liability) for an unfunded make-good. A table ${code("LOSS_RECOVERY")} (loss_event_id, party kind sender / partner / client, amount, state agreed / received, received_at, reference, approved_by) as the source record of each recovery posting, under source LossEvent. ${code("COLLECTION.state")} reversed is used only when the deal is unwound. Invariant 16 restated: ownership flips client → company at margin recognition and, by partial reversal of a make-good, when a Management-approved loss share is borne by the client.</li>
+<li><b>Loss first, recover later.</b> Purposes LOSS_RECEIVABLE (holder Partner or Sender), and the pair MAKEGOOD (client asset, holder Project) / LOSS_PAYABLE (company liability) for an unfunded make-good. A table ${code("LOSS_RECOVERY")} (loss_event_id, party kind sender / partner / client, amount, state agreed / received, received_at, reference, approved_by) as the source record of each recovery posting, under source LossEvent. ${code("COLLECTION.state")} reversed is used only when the deal is unwound. Invariant 16 restated: ownership moves between client and company at margin recognition, at the forex true-up of a line that discharges an invoice obligation (either way), and by partial reversal of a make-good when a Management-approved loss share is borne by the client.</li>
 <li><b>Accrual timing.</b> ${code("MARKUP_SHARE_ACCRUAL")} and ${code("PARTNER_REBATE_ACCRUAL")} are created and posted by the conversion that gives rise to them (invariant 25 and 26 restated to say so); ${code("PARTNER_REBATE_RULE.payout_currency")} names the currency the partner pays in, in which the accrual is expressed (the amount basis for pct_of_amount, the conversion's own rate for pct_of_partner_fee).</li>
-<li><b>Reseller project.</b> ${code("PROJECT.ownership_model")} client_money / own_business (own_business requires is_own_desk on its partner configuration and Management approval, like enable_own_desk); purposes RESELL_REVENUE, RESELL_COST and the where-is-it purposes under owner CO; cost component resale; ${code("SETTLEMENT_LINE.obligation_discharged")} and ${code("discharge_rate")} drive the cost posting; a view ${code("RESELLER_MARGIN")}(deal_group) = revenue − cost ± fx timing − fees. D23's note that own-desk deals use the client-money accounts applies only to an own desk inside a client_money project.</li>
-<li><b>Cross-currency company settlements.</b> Purpose FX_CLEARING (holder None), used only by Finance adjustments when a rebate, share or loss share is paid in a currency other than the one it accrued in; its balances are reported as NPL's open currency position through REPORTING_VALUE.</li>
-<li><b>Holder types.</b> ${code("LEDGER_ACCOUNT.holder_type")} gains Client (reserved) and keeps Sender for LOSS_RECEIVABLE; OwnDesk is the own-desk PARTNER_CONFIG, not a new type.</li>
+<li><b>Reseller project.</b> ${code("INVOICE.kind")} vendor / resale, with ${code("receiver_id")} for the vendor and ${code("sender_id")} for the customer of a resale invoice; ${code("DEAL_GROUP.invoice_id")} names the resale invoice the deal collects; ${code("SETTLEMENT_LINE.invoice_id")} names the invoice a line discharges (vendor invoice for a vendor line, resale invoice for the margin line), with ${code("obligation_discharged")} and ${code("discharge_rate")} as today; purposes RESELL_REVENUE, RESELL_COST, VENDOR_PAYABLE, RESALE_RECEIVABLE, REMIT_CLAIM; source Invoice; cost component resale; views ${code("RESELLER_MARGIN")}(resale invoice) = resale − vendor amount and ${code("REMITTANCE_MARGIN")}(deal) = earnings − partner cost ± fx timing − fees. D24's forex line is the true-up of T50 and T51; D23 stands: own-desk balances are ordinary partner-coded client accounts with the own-desk configuration as holder.</li>
+<li><b>Cross-currency company settlements.</b> Purpose FX_CLEARING (holder None), used when a company balance in one currency is settled in another: a rebate, share or loss share paid in another currency, or NPL-GR's EUR claim paid to its wallet in USDT; its balances are NPL's open currency position, reported through REPORTING_VALUE and closed by a Finance adjustment when NPL converts.</li>
+<li><b>Holder types.</b> ${code("LEDGER_ACCOUNT.holder_type")} keeps Sender for LOSS_RECEIVABLE and RESALE_RECEIVABLE and Receiver for VENDOR_PAYABLE; the own desk is a PARTNER_CONFIG, not a new type.</li>
 </ol>
-<p class="small"><i>Draft v${DOC_VERSION} — for review with NPL. Figures are worked examples, not NPL data, except the invoice instalment rates of Pattern M, which are NPL's.</i></p>
+<p class="small"><i>Draft v${DOC_VERSION} — for review with NPL. Figures are worked examples, not NPL data, except the invoice amounts and instalment rates of Pattern M, which are NPL's.</i></p>
 </body></html>`;
 
 // ------------------------------------------------------------------ write + print
