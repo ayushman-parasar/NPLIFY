@@ -73,7 +73,7 @@ const WHY = {
   APPROVAL: "Requested, approved, rejected or escalated; the approver is never the requester.",
   AUDIT_LOG: "Field-level history of every change, with the acting user.",
   RECORD_LOCK: "Prevents two people editing the same record at once.",
-  CLIENT_BALANCE: "How much client money sits at a partner, per currency — a sum over postings, never stored.",
+  PROJECT_BALANCE: "How much client money sits at a partner, per currency — a sum over postings, never stored.",
   GROUP_ENTITLEMENT: "How much of the client's money belongs to each group — a sum over converted legs and payout lines.",
   OFFSET: "Entitlement minus paid, per group; non-zero only when a counterparty was paid from another group's leg.",
   CUSTODY: "What sits in NPL's own wallet under open reroutes, and for how long.",
@@ -177,7 +177,7 @@ const CH = {
     confusions: [
       "Almost none of the money in the system belongs to NPL. Most jars are CL jars; money changes to CO at exactly one event — margin recognition at conversion. NPL never advances money to a receiver.",
       "Client money is written on two mirrored shelves — assets that say where it is, liabilities that say to whom it is owed — and they must always add up to the same number per currency. Group entitlement is a view on the payable, not a jar.",
-      "The dashed boxes (CLIENT_BALANCE, GROUP_ENTITLEMENT, OFFSET, CUSTODY) are calculators, not tables: counted again every time you ask, so they can never disagree with the notebook.",
+      "The dashed boxes (PROJECT_BALANCE, GROUP_ENTITLEMENT, OFFSET, CUSTODY) are calculators, not tables: counted again every time you ask, so they can never disagree with the notebook.",
     ],
   },
 };
