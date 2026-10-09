@@ -110,7 +110,7 @@ export const SKELETON = `
           <button class="btn primary" id="chatSend" type="submit">Ask</button>
           <button class="btn" id="chatStop" type="button" hidden>Stop</button>
         </form>
-        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v5.4, the review decision record (D1–D41), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
+        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v5.4, the review decision record (D1–D42), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
       </div>
       <div id="oq" hidden></div>
     </aside>
