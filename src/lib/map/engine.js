@@ -28,7 +28,7 @@ const IC = {
 export const SKELETON = `
 <div id="app">
   <header>
-    <h1>NPLify Unified ERD <small>P0 data model · draft v5.4 · 65 tables + 9 views</small></h1>
+    <h1>NPLify Unified ERD <small>P0 data model · draft v5.4 · 66 tables + 9 views</small></h1>
     <div class="tools">
       <div class="search">${IC.search}<input id="q" type="search" placeholder="Find an entity or field…" aria-label="Find entity or field" autocomplete="off"><kbd>/</kbd></div>
       <div class="selwrap"><select id="walkSel" aria-label="Walkthrough"><option value="">Walk a data flow…</option></select>${IC.chev}</div>
@@ -110,7 +110,7 @@ export const SKELETON = `
           <button class="btn primary" id="chatSend" type="submit">Ask</button>
           <button class="btn" id="chatStop" type="button" hidden>Stop</button>
         </form>
-        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v5.4, the review decision record (D1–D43), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
+        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v5.4, the review decision record (D1–D44), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
       </div>
       <div id="oq" hidden></div>
     </aside>
