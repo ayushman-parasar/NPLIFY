@@ -91,9 +91,15 @@ class Ledger {
   find(key) { const t = this.txs.findIndex((x) => x.title.startsWith(key + " ·")); if (t < 0) throw new Error("no transaction " + key); return t; }
   html(key) {
     const t = this.txs[this.find(key)];
+    const inOut = (acct, side) => {
+      const kind = KIND[acct.split(".").pop()];
+      const grows = (kind === "asset" || kind === "expense") === (side === "Dr");
+      const word = { asset: "money", liability: "owed", income: "earned", expense: "cost" }[kind];
+      return `<b>${grows ? "IN" : "OUT"}</b> · ${word}`;
+    };
     return `<div class="tx"><div class="txh"><b>${esc(t.title)}</b> <span class="src">source: ${esc(t.source)}</span></div>
-<table class="post"><thead><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th><th>Ccy</th><th>Owner</th><th>Cost component</th><th>Why</th></tr></thead><tbody>
-${t.rows.map(([a, s, amt, c, o, comp, why]) => `<tr><td class="mono">${esc(a)}</td><td class="n">${s === "Dr" ? fmt(amt, c) : ""}</td><td class="n">${s === "Cr" ? fmt(amt, c) : ""}</td><td>${c}</td><td>${o}</td><td>${comp}</td><td>${why}</td></tr>`).join("")}
+<table class="post"><colgroup><col style="width:22%"><col style="width:9%"><col style="width:9%"><col style="width:11%"><col style="width:5.5%"><col style="width:8.5%"><col style="width:10%"><col style="width:25%"></colgroup><thead><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th><th>In / Out</th><th>Ccy</th><th>Owner</th><th>Component</th><th>Why</th></tr></thead><tbody>
+${t.rows.map(([a, s, amt, c, o, comp, why]) => `<tr><td class="mono">${esc(a).replace(/\./g, ".<wbr>")}</td><td class="n">${s === "Dr" ? fmt(amt, c) : ""}</td><td class="n">${s === "Cr" ? fmt(amt, c) : ""}</td><td class="io">${inOut(a, s)}</td><td>${c}</td><td>${o}</td><td>${comp}</td><td>${why}</td></tr>`).join("")}
 </tbody></table>${t.note ? `<p class="txnote">${t.note}</p>` : ""}</div>`;
   }
   balancesHtml(list, caption, snap) {
@@ -543,7 +549,9 @@ tr{break-inside:avoid}
 .pb{break-before:page}
 .tx{break-inside:avoid;margin:10pt 0 12pt}
 .txh{font-size:10pt;margin-bottom:2pt} .src{color:#666;font-size:9pt;margin-left:8pt}
-table.post td,table.post th{font-size:8.6pt;padding:2pt 4pt}
+table.post td,table.post th{font-size:8.4pt;padding:2pt 3pt}
+table.post{table-layout:fixed}
+td.io{font-size:8.2pt;white-space:nowrap}
 table.bal caption{text-align:left;font:700 9.5pt Helvetica,Arial,sans-serif;margin:6pt 0 2pt}
 .txnote{font-size:9.3pt;color:#333;margin:3pt 0 0}
 .box{border:1px solid #2f5d9e;background:#f3f6fb;padding:6pt 9pt;margin:8pt 0;font-size:9.8pt}
@@ -603,7 +611,7 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <p>Transaction sources (${code("LEDGER_TRANSACTION.source_type")}): Collection, Conversion, BalanceConversion, Settlement, SettlementReturn, Confirmation, BankFeeEvent, Reroute, MarkupShare, Rebate, LossEvent, Adjustment, and <span class="new">Invoice</span> for the reseller books. Section 21 lists what each one posts; Section 23 asks for the source record a loss recovery points at.</p>
 
 <h2>5 · Reading a posting table</h2>
-<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example is project Evo: Sender A, Receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2; partner Ali (fee_in_rate: its cost is inside its rate), partner Jeton (fee_on_market + ${pct(0.005)}) and partner Aquanow (fee_on_market + ${pct(0.008)}, rebate ${pct(0.003, 1)} of the amount). Rates: market ${EX.Rm.toFixed(4)} EUR per USDT, Ali ${EX.Rp.toFixed(4)}. Fee structure: rate_basis market (the sender is priced on the market rate and Ali converts at its own), fixed, ${pct(EX.s + EX.r)} in total: this sender type pays ${pct(EX.s)} (Evo's other type pays 1.00 %) and the receiver always pays ${pct(EX.r)}. The arithmetic is in the Calculation Specification; the headline figures for deal 1 are:</p>
+<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts in bookkeeping's two columns; <i>In / Out</i> says the same thing in plain words, from the point of view of the account on that line: <b>IN · money</b> means money arrives in that place (a partner, a wallet, a balance), <b>OUT · money</b> that it leaves; <b>IN · owed</b> means NPL owes more to that party, <b>OUT · owed</b> that it owes less; <b>IN · earned</b> is margin or income recognised, <b>IN · cost</b> a cost NPL bears, and <b>OUT</b> on either is a reduction. A reader who ignores the Debit and Credit columns and reads only Account, In / Out and Why will follow every example. <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example is project Evo: Sender A, Receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2; partner Ali (fee_in_rate: its cost is inside its rate), partner Jeton (fee_on_market + ${pct(0.005)}) and partner Aquanow (fee_on_market + ${pct(0.008)}, rebate ${pct(0.003, 1)} of the amount). Rates: market ${EX.Rm.toFixed(4)} EUR per USDT, Ali ${EX.Rp.toFixed(4)}. Fee structure: rate_basis market (the sender is priced on the market rate and Ali converts at its own), fixed, ${pct(EX.s + EX.r)} in total: this sender type pays ${pct(EX.s)} (Evo's other type pays 1.00 %) and the receiver always pays ${pct(EX.r)}. The arithmetic is in the Calculation Specification; the headline figures for deal 1 are:</p>
 <table><thead><tr><th>Figure</th><th class="n">Deal 1 (10,000 USDT at Ali)</th><th>How</th></tr></thead><tbody>
 <tr><td>Sender rate</td><td class="n">${D1.Rs.toFixed(5)}</td><td>market ${EX.Rm.toFixed(4)} × (1 − ${pct(EX.s)}): the sender's part is taken off the rate</td></tr>
 <tr><td>Gross out</td><td class="n">${fmt(D1.grossOut)} EUR</td><td>10,000 × sender rate</td></tr>
