@@ -8127,7 +8127,7 @@
    ],
    [
     "Ledger Posting Design & Chart of Accounts",
-    "v1.2, 10 October 2026 — against ERD v5.6 with NPL’s answers of 10 October (accruals at conversion, loss booked to NPL first, full reseller P&L for NPL-GR, four variance accounts); proposes D46 (Section 23)"
+    "v1.2, 10 October 2026 — against ERD v5.6 with NPL’s answers of 10 October (accruals at conversion, loss booked to NPL first, full reseller P&L for NPL-GR, four variance accounts) and the earnings offset between partners; proposes D46 (Section 24)"
    ],
    [
     "Transaction Lifecycle & Approval State Machines",
