@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 T = ROOT / "standalone/nplify-erd-map.html"
 d = json.loads((ROOT / "data/erd.v5.json").read_text())
-NAMES = ["E", "ORDER", "R", "INV", "WALKS", "DOC_META", "CONVENTIONS", "NOTES", "OPENQ", "UND_NEW", "UNDERSTANDING", "DECISIONS", "SCENARIOS", "SCENARIO_V4", "FRS_VOCAB", "FRS_DEV", "FEE_PRACTICE"]
+NAMES = ["E", "ORDER", "R", "INV", "WALKS", "DOC_META", "CONVENTIONS", "NOTES", "OPENQ", "UND_NEW", "UNDERSTANDING", "DECISIONS", "SCENARIOS", "SCENARIO_V4", "FRS_VOCAB", "FRS_DEV", "FEE_PRACTICE", "SCENARIO_CATALOGUE"]
 
 def js(v):
     return json.dumps(v, ensure_ascii=False).replace("\u2028", "\\u2028").replace("\u2029", "\\u2029").replace("</script", "<\\/script")

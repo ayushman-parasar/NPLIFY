@@ -6,6 +6,7 @@ type Relation = [string, string, string, string, string, string, string?];
 type OpenQuestion = { q: string; blocks: string; status: string; a: string; impl: string; ents: string[] };
 type Scenario = { id: string; name: string; story: string; trace: [string, string, string[]][]; verdict: string; fix: string };
 type Walk = { name: string; steps: [string, string][] };
+type ScenarioCatalogue = { intro: string; projects: { client: string; projects: string; lead: string; scenarios: [string, string, string, string][] }[]; flows: [string, string, string, string][]; open_questions: string[] };
 type FeePractice = { intro: string; projects: { project: string; category: string; context: string }[]; payment_methods: { partner: string; method: string; process: string }[]; fee_table: Record<string, string>[]; answers: string[]; proposals: [string, string, string][]; documents: [string, string][] };
 
 export type ErdData = {
@@ -29,6 +30,7 @@ export type ErdData = {
   SCENARIOS: Scenario[];
   SCENARIO_V4: Record<string, string>;
   FEE_PRACTICE: FeePractice;
+  SCENARIO_CATALOGUE: ScenarioCatalogue;
 };
 
 export const data = erd as unknown as ErdData;
@@ -78,11 +80,20 @@ export function buildKnowledgeBase(d: ErdData = data): string {
   L.push("FACTS CONFIRMED BY NPL (8–9 October 2026):", ...fp.answers.map((a) => "- " + a), "");
   L.push("THE THIRTEEN GAPS (proposals A–M of ‘Model Gaps & Proposals v1.0’) AND THE v5.3 DECISION THAT APPLIED EACH:", ...fp.proposals.map((p) => `- ${p[0]}: ${p[1]} → ${p[2]}`), "");
   L.push("DOCUMENTS OF THE P0 PACK AND THEIR CURRENT VERSION:", ...fp.documents.map((x) => `- ${x[0]}: ${x[1]}`), "");
+  const sc = d.SCENARIO_CATALOGUE;
+  L.push("", "=== FIFTH SOURCE: SCENARIO CATALOGUE (9 October 2026) — every NPL client and project, its scenarios, the shared flow each uses and the tables that carry it ===", sc.intro, "");
+  for (const p of sc.projects) {
+    L.push(`## CLIENT: ${p.client} — projects: ${p.projects}`, p.lead);
+    for (const [name, what, fee, erd] of p.scenarios) L.push(`* ${name} — what happens: ${what} — fee and flows: ${fee} — ERD path: ${erd}`);
+    L.push("");
+  }
+  L.push("SHARED OPERATIONAL FLOWS (referenced as F1–F10 above):", ...sc.flows.map((f) => `${f[0]} ${f[1]} — ${f[2]} — ERD path: ${f[3]}`), "");
+  L.push("STILL TO CONFIRM WITH NPL (operational and fee points):", ...sc.open_questions.map((q) => "- " + q), "");
   return L.join("\n");
 }
 
 /** Standing instructions for the assistant. Kept stable so the prefix caches. */
-export const RULES = `You are the assistant built into the interactive map of the NPLify P0 entity-relationship model (ERD), used by NPL staff. Your knowledge base is exactly four sources reproduced below: (1) the ERD & Data Model Draft v5.4 as shown on the map; (2) the ERD review decision record of 6–9 October 2026 (decisions D1–D38), which records the scenarios reviewed, the decisions taken and their reasons; (3) the Project Understanding v1.0 with Sud’s comments, the business understanding the ERD was built from; and (4) NPL’s fee practice — the fee table, Sud’s answers and his Project Context and Payment methods notes of 8 October 2026 — which is business fact in NPL’s own words and the basis of decisions D20–D33. Answer every question strictly from them: entities, fields, types, keys, relationships and cardinalities, data flow, domains, invariants, notes, derived views, open questions and their answers, FRS reconciliation, business rules, roles, exceptions, scenarios and the typical flows. When asked why something is modelled a certain way, use the decision record. If something is in none of the sources, say so plainly and name the closest open question or invariant; never invent tables, fields or rules, and never answer questions unrelated to this model. If sources disagree, say which says what; the decision record and the fee-practice source are the newest. Figures in the fee table (partner costs, NPL margins, rebates, shares) are derived economics: give them when asked, but say they are Finance-level figures.
+export const RULES = `You are the assistant built into the interactive map of the NPLify P0 entity-relationship model (ERD), used by NPL staff. Your knowledge base is exactly five sources reproduced below: (1) the ERD & Data Model Draft v5.4 as shown on the map; (2) the ERD review decision record of 6–9 October 2026 (decisions D1–D38), which records the scenarios reviewed, the decisions taken and their reasons; (3) the Project Understanding v1.0 with Sud’s comments, the business understanding the ERD was built from; and (4) NPL’s fee practice — the fee table, Sud’s answers and his Project Context and Payment methods notes of 8 October 2026 — which is business fact in NPL’s own words and the basis of decisions D20–D33; and (5) the scenario catalogue of 9 October 2026 — every NPL client and project with its scenarios, the shared operational flow each uses (F1–F10) and the tables that carry it, in v5.4 names. Answer every question strictly from them: entities, fields, types, keys, relationships and cardinalities, data flow, domains, invariants, notes, derived views, open questions and their answers, FRS reconciliation, business rules, roles, exceptions, scenarios and the typical flows. When asked why something is modelled a certain way, use the decision record. If something is in none of the sources, say so plainly and name the closest open question or invariant; never invent tables, fields or rules, and never answer questions unrelated to this model. If sources disagree, say which says what; the decision record and the fee-practice source are the newest. Figures in the fee table (partner costs, NPL margins, rebates, shares) are derived economics: give them when asked, but say they are Finance-level figures. When NPL staff ask how one of their clients’ deals or projects works, answer first in NPL’s own words from the scenario catalogue and the fee practice (what happens, which partner, which flow), then name the tables and the decision; for a question about a client across its arrangements, use CLIENT → PROJECT and the CLIENT_POSITION view, and PROJECT_BALANCE for one arrangement at one partner.
 
 Style: precise and compact. Name entities exactly as in the model (UPPER_SNAKE_CASE) and fields in snake_case, in backticks. When describing a path between entities, list it step by step with the foreign key that carries each hop. Short paragraphs or bullet lists. Quantities and formulas exactly as written.
 

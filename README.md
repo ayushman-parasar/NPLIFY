@@ -69,7 +69,7 @@ Never commit `seed/users.json`. To disable a user, set `"active": false` for the
 
 ## Cost and model
 
-Each question sends the whole knowledge base (about 35k tokens). It is cached for an hour, so after the first question of each hour the knowledge base is billed at the cache-read rate and only the conversation turns at full price. The model defaults to `claude-opus-5-5`; set `ANTHROPIC_MODEL=claude-sonnet-5-5` for a cheaper deployment. `ANTHROPIC_EFFORT` tunes thinking depth (`low` is usually enough for chat).
+Each question sends the whole knowledge base (about 70k tokens: the model, the decision record, the Understanding, NPL’s fee practice and the scenario catalogue). It is cached for an hour, so after the first question of each hour the knowledge base is billed at the cache-read rate and only the conversation turns at full price. The model defaults to `claude-opus-5-5`; set `ANTHROPIC_MODEL=claude-sonnet-5-5` for a cheaper deployment. `ANTHROPIC_EFFORT` tunes thinking depth (`low` is usually enough for chat).
 
 ## Updating the model
 
