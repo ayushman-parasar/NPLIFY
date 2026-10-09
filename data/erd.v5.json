@@ -40,7 +40,7 @@
   },
   {
    "t": "Configuration",
-   "s": "fees, registrations, wallets"
+   "s": "fees, approvals, wallets"
   },
   {
    "t": "Rates",
@@ -67,7 +67,7 @@
   "PROJECT": {
    "d": "config",
    "col": 0,
-   "desc": "One arrangement with a client: a product line with its own configuration — parties, groups, pairs, thresholds, partner configurations — and its own policies. Several projects may belong to one CLIENT (BF, BF Sub and BF Withdrawal). In v4.0 it also carries the settle policy with an exposure cap (Q5), the network-fee policy (Q7) and the receiver-fee default at conversion (Q6).",
+   "desc": "One arrangement with a client: a product line with its own configuration — parties, groups, pairs, thresholds, partner configurations — and its own policies. Several projects may belong to one CLIENT (BF, BF Sub and BF Withdrawal). In v4.0 it also carries the settlement policy with an exposure cap (Q5), the network-fee policy (Q7) and the receiver-fee default at conversion (Q6).",
    "f": [
     [
      "id",
@@ -177,7 +177,7 @@
      "disclosure_style",
      "string",
      "",
-     "markup_included / fee_on_market"
+     "fee_in_rate / fee_on_market — whether the partner’s fee sits inside its rate or is stated on top of market (D37; was markup_included / market_plus)"
     ],
     [
      "rate_expiry_time",
@@ -549,7 +549,7 @@
   "PARTNER_CONFIG": {
    "d": "config",
    "col": 1,
-   "desc": "How a partner is used in this project. Fees, vehicles, endpoints, registrations and rebate rules hang off it. applicable_for_reroute defines the alternate-partner set. v5.3 (D23): an own-desk configuration is NPL itself as the converting party; its PARTNER_PAIR rows are priced fee_on_market with NPL’s markup and its endpoints are NPL’s own wallets.",
+   "desc": "How a partner is used in this project. Fees, vehicles, endpoints, destination approvals and rebate rules hang off it. applicable_for_reroute defines the alternate-partner set. v5.3 (D23): an own-desk configuration is NPL itself as the converting party; its PARTNER_PAIR rows are priced fee_on_market with NPL’s markup and its endpoints are NPL’s own wallets.",
    "f": [
     [
      "id",
@@ -862,7 +862,7 @@
   "RECEIVING_ENTITY_ACCOUNT": {
    "d": "config",
    "col": 3,
-   "desc": "One account of a receiving entity, with its own currency and rail (Q4: EUR via SWIFT and EUR via SEPA are two accounts). An account is a bank account or a wallet (account_kind): a bank account carries bank_details_ref and a bank rail; a wallet carries network and address explicitly, mirroring the partner-side COLLECTION_RECEIVING_ENDPOINT (v5.1), so addresses are checksum-validated, checked against the rail, and found when one address is registered with two partners (v5.0, D14). Registrations and payout lines point at the account; no table stores actual bank details.",
+   "desc": "One account of a receiving entity, with its own currency and rail (Q4: EUR via SWIFT and EUR via SEPA are two accounts). An account is a bank account or a wallet (account_kind): a bank account carries bank_details_ref and a bank rail; a wallet carries network and address explicitly, mirroring the partner-side COLLECTION_RECEIVING_ENDPOINT (v5.1), so addresses are checksum-validated, checked against the rail, and found when one address is registered with two partners (v5.0, D14). Destination approvals and settlement lines point at the account; no table stores actual bank details.",
    "f": [
     [
      "id",
@@ -1849,7 +1849,7 @@
   "REROUTE": {
    "d": "deal",
    "col": 5,
-   "desc": "Contingency on a leg: the only way the partner or facilitating entity changes after quote. Forwarding is forward_full or forward_and_recover_dues: NPL nets what the alternate partner owes it (EARNINGS_RECEIVABLE) against the funds forwarded. Withholding earnings is gone: NPL’s cut is always captured at conversion (Q2).",
+   "desc": "Contingency on a leg: the only way the partner or partner entity changes after quote. Forwarding is forward_full or forward_and_recover_dues: NPL nets what the alternate partner owes it (EARNINGS_RECEIVABLE) against the funds forwarded. Withholding earnings is gone: NPL’s cut is always captured at conversion (Q2).",
    "f": [
     [
      "id",
@@ -2637,7 +2637,7 @@
   "LEDGER_TRANSACTION": {
    "d": "ledger",
    "col": 7,
-   "desc": "One balanced transaction per source event (polymorphic). Append-only; corrections are reversing transactions. v4.0 adds the sources BalanceConversion, SettlementReturn, Referral and Rebate.",
+   "desc": "One balanced transaction per source event (polymorphic). Append-only; corrections are reversing transactions. v4.0 added the sources BalanceConversion, SettlementReturn, MarkupShare (then Referral) and Rebate; v5.3 adds LossEvent.",
    "f": [
     [
      "id",
@@ -2675,14 +2675,14 @@
    ],
    "v": "changed",
    "ch": [
-    "+ source types BalanceConversion, SettlementReturn, Referral, Rebate",
+    "+ source types BalanceConversion, SettlementReturn, MarkupShare (was Referral, D37), Rebate",
     "v5.3 (D32): + source type LossEvent"
    ]
   },
   "LEDGER_POSTING": {
    "d": "ledger",
    "col": 7,
-   "desc": "A debit or credit line; postings in one transaction sum to zero per currency. Ownership flips client → company at one event only: margin recognition at conversion. Cost components gain referral and rounding.",
+   "desc": "A debit or credit line; postings in one transaction sum to zero per currency. Ownership flips client → company at one event only: margin recognition at conversion. Cost components gain share (the markup-share party’s part; was referral, D37) and rounding.",
    "f": [
     [
      "id",
@@ -3594,7 +3594,7 @@
   "MESSAGE_TEMPLATE": {
    "d": "config",
    "col": 1,
-   "desc": "A versioned template for a message the system sends or renders: the quote package to a sender, the payment instructions, a confirmation request to a receiver, a settlement advice. Global, or owned by a project that needs its own wording. A template names the fields it prints; a template of purpose quote may print only sender-facing figures (sender rate, displayed fee and source rate, amount out, validity) — never partner rates, margins or costs — which is how invariant 9’s ‘Operations never receives derived economics’ is enforced on outgoing messages. Changing a template is a configuration change approved by Management. v5.3 (D36).",
+   "desc": "A versioned template for a message the system sends or renders: the quote package to a sender, the payment instructions, a confirmation request to a receiver, a settlement advice. Global, or owned by a project that needs its own wording. A template names the fields it prints; a template of purpose quote may print only sender-facing figures (sender rate, customer-facing fee and rate, amount out, validity) — never partner rates, margins or costs — which is how invariant 9’s ‘Operations never receives derived economics’ is enforced on outgoing messages. Changing a template is a configuration change approved by Management. v5.3 (D36).",
    "f": [
     [
      "id",
@@ -5559,7 +5559,7 @@
     "RECEIVING_ENTITY_ACCOUNT",
     "RECEIVER_GROUP"
    ],
-   "Destination approval precedes collection: a quote-first deal cannot leave Inquiry unless at least one account in the entitled group has an approved DESTINATION_APPROVAL with the chosen partner."
+   "Destination approval precedes collection: a quote-first deal cannot leave Inquiry unless at least one account in the entitled group has a DESTINATION_APPROVAL in state approved with the chosen partner."
   ],
   [
    [
@@ -5671,7 +5671,7 @@
     "FEE_STRUCTURE",
     "DEAL_GROUP"
    ],
-   "Displayed figures are derived, never typed: customer_facing_rate = sender_rate ÷ (1 − customer_facing_fee_pct), stamped at quote; the true rates and fee parts are stored beside them and Operations sees the displayed pair only (v5.3, D22)."
+   "Customer-facing figures are derived, never typed: customer_facing_rate = sender_rate ÷ (1 − customer_facing_fee_pct), stamped at quote; the true rates and fee parts are stored beside them and Operations sees the customer-facing pair only (v5.3, D22)."
   ],
   [
    [
@@ -5774,7 +5774,7 @@
     "MESSAGE_TEMPLATE",
     "MARKET_RATE"
    ],
-   "A quote-first leg leaves Quoted for Sent only when a QUOTE_PACKAGE of its group has sent_at; the package’s content_hash is the leg’s quote_hash and its printed figures equal the group’s displayed figures (derived, never typed); freshness runs from the leg’s market snapshot (MARKET_RATE.captured_at) to sent_at within PROJECT.quote_freshness_min, validity from sent_at. Packages are append-only: a re-issue supersedes, a new price is a new deal group. A quote template prints sender-facing fields only (v5.3, D35, D36)."
+   "A quote-first leg leaves Quoted for Sent only when a QUOTE_PACKAGE of its group has sent_at; the package’s content_hash is the leg’s quote_hash and its printed figures equal the group’s customer-facing figures (derived, never typed); freshness runs from the leg’s market snapshot (MARKET_RATE.captured_at) to sent_at within PROJECT.quote_freshness_min, validity from sent_at. Packages are append-only: a re-issue supersedes, a new price is a new deal group. A quote template prints sender-facing fields only (v5.3, D35, D36)."
   ],
   [
    [
@@ -5792,7 +5792,7 @@
    "steps": [
     [
      "PROJECT",
-     "One arrangement with the client (CLIENT → PROJECT, D38). Its policies (quote freshness and validity, grace, fee treatment, settle policy and exposure cap) govern everything below."
+     "One arrangement with the client (CLIENT → PROJECT, D38). Its policies (quote freshness and validity, grace, fee treatment, settlement policy and exposure cap) govern everything below."
     ],
     [
      "SENDER",
@@ -5800,11 +5800,11 @@
     ],
     [
      "RECEIVER_GROUP",
-     "The entitled group. One of its receivers’ accounts must hold an approved registration with the chosen partner before the deal leaves Inquiry."
+     "The entitled group. One of its receivers’ accounts must hold an approved destination (DESTINATION_APPROVAL) with the chosen partner before the deal leaves Inquiry."
     ],
     [
      "PARTNER_PAIR",
-     "Choosing partner × currency pair is part of pricing. Partner and facilitating entity are fixed per leg."
+     "Choosing partner × currency pair is part of pricing. Partner and partner entity are fixed per leg."
     ],
     [
      "FEE_STRUCTURE",
@@ -5934,7 +5934,7 @@
     ],
     [
      "RECEIVER",
-     "The destination is the sender_return receiver linked to the parent leg’s sender. Any other receiver needs Management approval, a reason, and prior registration."
+     "The destination is the sender_return receiver linked to the parent leg’s sender. Any other receiver needs Management approval, a reason, and a prior destination approval."
     ],
     [
      "RECEIVING_ENTITY_ACCOUNT",
@@ -6091,7 +6091,7 @@
    "steps": [
     [
      "CONVERSION",
-     "A source event (collection, conversion, balance conversion, settlement, return, confirmation, bank fee event, reroute, referral, rebate, adjustment)."
+     "A source event (collection, conversion, balance conversion, settlement, return, confirmation, bank fee event, reroute, markup share, rebate, loss event, adjustment)."
     ],
     [
      "LEDGER_TRANSACTION",
@@ -6130,7 +6130,7 @@
  ],
  "NOTES": {
   "Configuration": [
-   "A Client is the commercial relationship; a Project is one arrangement with it (D38) and owns its configuration. Partners are global counterparties; how a partner is used in this project is the partner configuration block — fees, vehicles, endpoints, registrations and rebate terms all hang off it.",
+   "A Client is the commercial relationship; a Project is one arrangement with it (D38) and owns its configuration. Partners are global counterparties; how a partner is used in this project is the partner configuration block — fees, vehicles, endpoints, destination approvals and rebate terms all hang off it.",
    "Receivers belong to receiver groups only when kind = counterparty: every project has one default group and every counterparty receiver is in exactly one group. sender_return (stands for a sender, for refunds via the ordinary payout path) and partner_transit (stands for a partner's collection endpoint, for the hop of a two-leg route) are group-less; they never appear on forward deals or allow lists, and a payout to them is attributed to the group of the leg that pays it (v5.0, D13). Entitlement is tracked per group; only payouts across groups are offsets; a project with a single group never has an offset.",
    "A receiving entity has one or more accounts, each with a currency and a rail (EUR via SWIFT and EUR via SEPA are two accounts). DESTINATION_APPROVAL and SETTLEMENT_LINE point at the account.",
    "Fees are per partner × pair (FEE_STRUCTURE under PARTNER_PAIR), so choosing the partner is part of pricing. PARTNER.disclosure_style records whether the partner’s markup is visible; PARTNER_PAIR.partner_fee_pct is known only for fee_on_market partners — otherwise partner cost is inferred through the rate comparison.",
@@ -6138,7 +6138,7 @@
    "Destination approval is per partner: DESTINATION_APPROVAL is an account of the project’s receiving entity as registered with this partner, carrying that partner’s approval status and payout details. The payout details follow the account’s kind: bank_details_ref for a bank account, network and address for a wallet (v5.2, D16).",
    "SETTLEMENT_SENDING_ENTITY is the narrative on an outgoing transfer; SETTLEMENT_RAIL is the bank/EMI that executes it — neither holds money, neither is a ledger holder. COLLECTION_SENDING_ENTITY is provenance — where the sender’s funds originated; reference only, never a payout destination.",
    "OWN_WALLET exists for rerouting and pass-through (AQN-LT-Sub is an own wallet at Aquanow); PARTNER_CONFIG.applicable_for_reroute defines the alternate-partner set. MARKUP_SHARE_PARTY and MARKUP_SHARE_RULE record markup shares NPL pays; PARTNER_REBATE_RULE records rebates a partner pays NPL.",
-   "v5.3 adds the configuration behind NPL’s fee practice: FEE_TIER volume tiers per calendar month (D21), FEE_OVERRIDE with its own split (D20), displayed-fee settings on FEE_STRUCTURE (D22), MARKUP_SHARE_RULE as a share of the net markup settled by the party (D26), PARTNER_REBATE_RULE with a basis and a scope (D27), an own-desk PARTNER_CONFIG for NPL-GR whose endpoints are NPL’s own wallets (D23), the partner’s bank cutoff on PARTNER with per-day extensions and early closes in PARTNER_CUTOFF_OVERRIDE (D29), a rounding menu per pair (D25), single-use endpoints and accounts (D32) and WALLET_SCREENING (D31).",
+   "v5.3 adds the configuration behind NPL’s fee practice: FEE_TIER volume tiers per calendar month (D21), FEE_OVERRIDE with its own split (D20), customer-facing fee settings on FEE_STRUCTURE (D22), MARKUP_SHARE_RULE as a share of the net markup settled by the party (D26), PARTNER_REBATE_RULE with a basis and a scope (D27), an own-desk PARTNER_CONFIG for NPL-GR whose endpoints are NPL’s own wallets (D23), the partner’s bank cutoff on PARTNER with per-day extensions and early closes in PARTNER_CUTOFF_OVERRIDE (D29), a rounding menu per pair (D25), single-use endpoints and accounts (D32) and WALLET_SCREENING (D31).",
    "v5.3 (D34, D36): HOLIDAY rows under PARTNER are the dates behind every ‘next business day’; MESSAGE_TEMPLATE is the versioned wording of outgoing messages, with the fields a template may print — a quote template prints sender-facing figures only.",
    "v5.4 (D38): CLIENT is the commercial relationship above PROJECT. BF, BF Sub and BF Withdrawal are three projects of one client; client-level balances, exposure, earnings and rebates are the CLIENT_POSITION roll-up, never stored."
   ],
