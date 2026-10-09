@@ -28,7 +28,7 @@ const IC = {
 export const SKELETON = `
 <div id="app">
   <header>
-    <h1>NPLify Unified ERD <small>P0 data model · draft v5.4 · 64 tables + 7 views</small></h1>
+    <h1>NPLify Unified ERD <small>P0 data model · draft v5.4 · 64 tables + 8 views</small></h1>
     <div class="tools">
       <div class="search">${IC.search}<input id="q" type="search" placeholder="Find an entity or field…" aria-label="Find entity or field" autocomplete="off"><kbd>/</kbd></div>
       <div class="selwrap"><select id="walkSel" aria-label="Walkthrough"><option value="">Walk a data flow…</option></select>${IC.chev}</div>
@@ -65,10 +65,8 @@ export const SKELETON = `
           <marker id="m-self" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="var(--k-self)"/></marker>
           <marker id="m-hi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="var(--hi)"/></marker>
           <marker id="m-hi-s" viewBox="0 0 12 10" refX="0" refY="5" markerWidth="12" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,5 L5,1 L10,5 L5,9 z" fill="var(--hi)"/></marker>
-          <filter id="nshadow" x="-10%" y="-10%" width="120%" height="130%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.16"/></filter>
           <filter id="nglow" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="0" stdDeviation="7" flood-color="#ff5a2e" flood-opacity="0.55"/></filter>
           <filter id="nglow-a" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#6366f1" flood-opacity="0.5"/></filter>
-          <filter id="eglow" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#ff5a2e" flood-opacity="0.5"/></filter>
         </defs>
         <g id="world">
           <g id="lanes"></g>
@@ -112,7 +110,7 @@ export const SKELETON = `
           <button class="btn primary" id="chatSend" type="submit">Ask</button>
           <button class="btn" id="chatStop" type="button" hidden>Stop</button>
         </form>
-        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v5.4, the review decision record (D1–D38), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
+        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v5.4, the review decision record (D1–D41), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
       </div>
       <div id="oq" hidden></div>
     </aside>
@@ -168,6 +166,7 @@ function drawNodes(){
   for(const name in E){const e=E[name],n=nodes[name];
     const g=el('g',{class:'node'+(e.d==='view'?' view':''),'data-id':name,transform:`translate(${n.x},${n.y})`},gN);
     const inner=el('g',{class:'in'},g);
+    el('rect',{class:'sh',x:0,y:2,width:n.w,height:n.h,rx:RX},inner);   // fake drop shadow: no SVG filter (slow in Safari)
     el('rect',{class:'body',width:n.w,height:n.h,rx:RX},inner);
     el('rect',{class:'head',width:n.w,height:HEAD,rx:RX,fill:DOMS[e.d].c},inner);
     el('rect',{width:n.w,height:RX,y:HEAD-RX,fill:DOMS[e.d].c},inner);
@@ -380,10 +379,11 @@ let vt={x:0,y:0,k:1};
 let vtAnim=null;
 function applyVT(){world.setAttribute('transform',`translate(${vt.x},${vt.y}) scale(${vt.k})`)}
 function stopTween(){if(vtAnim){vtAnim.pause();vtAnim=null}}
-function goTo(target,instant){
+function goTo(target,instant,ms){
   stopTween();
   if(instant||RM){Object.assign(vt,target);applyVT();return}
-  vtAnim=animate(vt,{x:target.x,y:target.y,k:target.k,duration:620,ease:'outExpo',onUpdate:applyVT,onComplete:()=>{vtAnim=null}});
+  moving();
+  vtAnim=animate(vt,{x:target.x,y:target.y,k:target.k,duration:ms||480,ease:'outQuart',onUpdate:()=>{moving();applyVT()},onComplete:()=>{vtAnim=null}});
 }
 function bounds(){let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;for(const n in nodes){const o=nodes[n];if(o.g.style.display==='none')continue;x1=Math.min(x1,o.x);y1=Math.min(y1,o.y);x2=Math.max(x2,o.x+o.w);y2=Math.max(y2,o.y+o.h)}return {x1:x1-40,y1:y1-60,x2:x2+40,y2:y2+40}}
 let needFit=false;
@@ -398,18 +398,26 @@ function fitTo(names,instant){const vis=names.filter(n=>nodes[n]&&nodes[n].g.sty
   const k=Math.max(0.12,Math.min(1.15,(r.width-pad*2)/(x2-x1),(r.height-pad*2)/(y2-y1)));
   goTo({k,x:(r.width-(x2-x1)*k)/2-x1*k,y:(r.height-(y2-y1)*k)/2-y1*k},instant)}
 function zoomAt(f,cx,cy){stopTween();const nk=Math.min(3,Math.max(0.12,vt.k*f));vt.x=cx-(cx-vt.x)*(nk/vt.k);vt.y=cy-(cy-vt.y)*(nk/vt.k);vt.k=nk;applyVT()}
-function zoomButton(f){const r=stage.getBoundingClientRect(),cx=r.width/2,cy=r.height/2;const nk=Math.min(3,Math.max(0.12,vt.k*f));goTo({k:nk,x:cx-(cx-vt.x)*(nk/vt.k),y:cy-(cy-vt.y)*(nk/vt.k)})}
-stage.addEventListener('wheel',ev=>{ev.preventDefault();const r=stage.getBoundingClientRect();const f=Math.exp(-ev.deltaY*0.0015);zoomAt(f,ev.clientX-r.left,ev.clientY-r.top)},{passive:false});
+function zoomButton(f){const r=stage.getBoundingClientRect(),cx=r.width/2,cy=r.height/2;const nk=Math.min(3,Math.max(0.12,vt.k*f));goTo({k:nk,x:cx-(cx-vt.x)*(nk/vt.k),y:cy-(cy-vt.y)*(nk/vt.k)},false,280)}
+let movingTimer=null,raf=0,pendingWheel=null,pendingPan=null;
+function moving(){svg.classList.add('moving');clearTimeout(movingTimer);movingTimer=setTimeout(()=>svg.classList.remove('moving'),160)}
+cleanups.push(()=>clearTimeout(movingTimer));
+function flush(){raf=0;
+  if(pendingWheel){const {f,cx,cy}=pendingWheel;pendingWheel=null;zoomAt(f,cx,cy)}
+  if(pendingPan){vt.x=pendingPan.x;vt.y=pendingPan.y;pendingPan=null;applyVT()}}
+function schedule(){if(!raf)raf=requestAnimationFrame(flush)}
+stage.addEventListener('wheel',ev=>{ev.preventDefault();moving();const r=stage.getBoundingClientRect();const f=Math.exp(-ev.deltaY*(ev.ctrlKey?0.01:0.002));
+  pendingWheel={f:(pendingWheel?pendingWheel.f*f:f),cx:ev.clientX-r.left,cy:ev.clientY-r.top};schedule()},{passive:false});
 let drag=null;
 const hint=$('hint');
 function byeHint(){hint.classList.add('bye')}
 const hintTimer=setTimeout(byeHint,9000);cleanups.push(()=>clearTimeout(hintTimer));
 svg.addEventListener('pointerdown',ev=>{if(ev.button!==0&&ev.pointerType==='mouse')return;stopTween();drag={x:ev.clientX,y:ev.clientY,vx:vt.x,vy:vt.y,moved:false,onNode:!!(ev.target.closest&&ev.target.closest('.node,.edge-hit')),id:ev.pointerId}});
-svg.addEventListener('pointermove',ev=>{if(!drag)return;const dx=ev.clientX-drag.x,dy=ev.clientY-drag.y;if(!drag.moved&&Math.abs(dx)+Math.abs(dy)>4){drag.moved=true;byeHint();try{svg.setPointerCapture(drag.id)}catch(e){}svg.classList.add('panning')}if(!drag.moved)return;vt.x=drag.vx+dx;vt.y=drag.vy+dy;applyVT()});
+svg.addEventListener('pointermove',ev=>{if(!drag)return;const dx=ev.clientX-drag.x,dy=ev.clientY-drag.y;if(!drag.moved&&Math.abs(dx)+Math.abs(dy)>4){drag.moved=true;byeHint();try{svg.setPointerCapture(drag.id)}catch(e){}svg.classList.add('panning')}if(!drag.moved)return;moving();pendingPan={x:drag.vx+dx,y:drag.vy+dy};schedule()});
 svg.addEventListener('pointerup',ev=>{if(drag&&!drag.moved&&!drag.onNode){/* click on empty canvas: unlock */ if(state.walk===null){state.sel=null;state.trace=null;state.hover=null;previewed=null;applyHighlight();pBody.innerHTML=emptyPanel;panelIn()}}try{svg.releasePointerCapture(ev.pointerId)}catch(e){}drag=null;svg.classList.remove('panning')});
 svg.addEventListener('pointercancel',()=>{drag=null;svg.classList.remove('panning')});
-$('zIn').addEventListener('click',()=>zoomButton(1.25));
-$('zOut').addEventListener('click',()=>zoomButton(0.8));
+$('zIn').addEventListener('click',()=>zoomButton(1.5));
+$('zOut').addEventListener('click',()=>zoomButton(1/1.5));
 $('zFit').addEventListener('click',()=>fit());
 $('bFit').addEventListener('click',()=>fit());
 $('bClear').addEventListener('click',()=>{$('q').value='';state.q='';clearAll();fit()});
