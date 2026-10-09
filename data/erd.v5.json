@@ -6225,5 +6225,773 @@
   "S3": "Resolved. BALANCE_CONVERSION (SGD → USDT at PT) is its own Finance-approved action using the same PARTNER_RATE_VERSION and MARKET_RATE machinery; markup is a FEE_DECISION; the CONVERSION it owns truncates to whole units with the fraction kept as client dust; ENTITLEMENT_REATTRIBUTION moves the served group’s SGD entitlement to USDT (chosen split, excess booked as an approved offset); then an ordinary DISBURSEMENT pays the 15K USDT."
  },
  "version": "5.3",
- "generatedAt": "2026-10-09"
+ "generatedAt": "2026-10-09",
+ "FEE_PRACTICE": {
+  "intro": "NPL’s fee practice as given to New XP: the ‘Table of Remittance Customers Fees’ (October 2026), Sud’s answers in the Fee Outlines workbook (8 October 2026) and his two tabs ‘Project Context’ and ‘Payment methods’, and Ayush’s clarifications of 8–9 October. This is business fact, in NPL’s own words where quoted; the ERD v5.3 decisions D20–D33 were made from it.",
+  "projects": [
+   {
+    "project": "BF",
+    "category": "BF",
+    "context": "BF project is where the senders are customers of Betfair and they need to fund their own accounts with Betfair. These senders typically would send USDT which needs to be converted to EUR and sent to BF's receiving bank account. The collection methods are - USDT (but few years ago the collections also happened via INR cash and THB cash). For now its USDT only and additional currency pairs will be enabled if needed. The fund coversion is USDT to EUR. EUR gets sent to BF's receiving account (called Sporting Exchange). \n\nIn case of Raeen (for the standard flow), they collect funds from their downlines (instead of funding on their own), as such, they NPL applies a markup in the sender facing calculation - ie 1% whereas the cost of sending the funds via Aquanow is 0.8%. This arrangement is only applicable for Aquanow because the cost of sending the funds is less than 1%. however if they did it via Ali or Jeton, then the actual cost is already be 1% so there is no room for markup.\n\nPartners - \nNPL uses Jeton (although currently inactive), Ali and Aquanow. Aquanow is the most preferred partner right now (all transactions are happening via Aquanow currently) because they have the lowest fee for the customers. The process is also much faster as both the customers and BF has accounts within Aquanow platform and thus the EUR payment happens as an internal transfer within the platform, which is instantly recognized by BF. In contrast, a transfer from Ali's route (SWIFT) may take 1-2 days. \n\nFee structure - \nfor Jeton, the fee structure was straightforward i.e. Jeton applies 1% fee for most senders (for Novi the fee was 0.9%) and there is an arrangement that Jeton will pay NPL 0.4% for each transaction given as rebate (i.e. the earnings for NPL)\nfor Ali, NPL been calculating a revised base rate to match Jeton's 1% fee but still generate 0.3% to 0.4% margin. this is because Ali's rates are higher, so effectively the total fee applicable (against market rate) ends up around 1.5%.\nfor Aquanow, they charge a flat 0.8% (with 0.3% rebate for NPL, paid monthly)"
+   },
+   {
+    "project": "BF Sub (e.g. Raeen Sub type of cases",
+    "category": "BF",
+    "context": "In case of Sub Accounts (also BF) Senders get a sub account from another customer. So they fund these accounts at a premium. NPL works out an arrangement with the customer providing the sub account to share the margin from the collections. As such, the sender facing rate is higher than what it actually costs to remit the funds. \n\nPartners - \nNPL will utilize either Aquanow or Ali for BF Sub type of transactions.\nIf its Ali, then the bank transfer is sent to BF under the narrative of the actual customer who is providing the sub accounts (e.g. Raeen). once the funds are received at Betfair, they are allocated into the sub account by the customer (ie Raeen)\nIf its Aquanow, then the funds go into Raeen's aquanow account and they allocate the funds into the sub account accordingly.\n\nFee structure - \nThe sender collection computation will be similar for both Ali and Aquanow\n\nfirst deduct the markup % from the sent amount \nthen get the rest converted as per partner rate\nthen for customer, recompute using the converted EUR value.\n\nif this was done via Aquanow, for a USDT 50K transfer, the actual amount being converted would be 48,500 (i.e. minus 3%) which yielded 48,500 x 0.856086 = EUR 41,520.71. So then for the customer, the calculation is reversed to show 50,000 x new_rate = EUR 41,520.71"
+   },
+   {
+    "project": "BF withdrawal",
+    "category": "BF",
+    "context": "BF Withdrawal project is where the BF customers take funds back from their BF accounts. In this case BF sends the bank transfer to the partner that can receive bank transfer on behalf of the customer. Currently only partner that can do this is Jeton. The process is that customer requests BF to initiate the withdrawal to the Jeton provided bank account. NPL is notified that the transfer is initiated (and occasionally they may provide a transfer slip - mostly they dont). When Jeton receives the incoming wire transfer, they notify NPL. NPL then asks for the amount to be converted to USDT (Jeton applies their 1% fee over market rate) and the USDT is subsequently sent to the customer."
+   },
+   {
+    "project": "Evo",
+    "category": "Evo",
+    "context": "Evo has multiple senders and 2 receiver groups - Bplay and Tbet. \nBplay has 3 receiving entities:\n-- Babylon (sending narrative is Bplay paying Babylon - invoice reference)\n-- Bplay (sending narrative is Bplay transferring from its account with partner to its own bank account - self transfer)\n-- Lex (sending narrative is Bplay transferring from its account with partner to its subsidiary - self transfer)\n\nTBet has 1 receiving entity:\n-- TBet (sending narrative is Tbet transferring from its account with partner to its own bank account - self transfer)\n\nSenders are designated per group - i.e. some senders will belong to Bplay group and some will belong to TBet group. Senders are essentially customers of Evo and are paying their invoices to Evo. Some senders may pay what they can (collect-convert) and others pay exact invoice value (quote-collect-convert)\n\nPartners:\nAli - can send to Babylon and TBet (SWIFT transfers). Ali can collect USDT as well as other currencies.\nJeton - can send to Bplay, Lex (not being used currently) and TBet. Jeton can only collect USDT\n\nFee Structure:\nAll conversions are done into EUR.\n- Most collections are in USDT - where standard fee structure is sender 1.4% and receiver 0.6%. both sides of the calculation are applied at the time of conversion (a few senders have a discounted \"sender\" rate of 1%). The sender only sees the sender rate & sender-facing calculation. If the collection is done via Ali, then rate comparison is done in the morning and anything before 2.30pm GMT+8 can be converted instantly. For collections initiated after 2.30pm GMT+8 Ali can't lock in the rate and thus, the collection is done and the sender-facing calculation is done as per the original approach, however the actual conversion only happens on the next business day. \n- for other currencies, the rate is taken from Ali in the morning and the deal is confirmed before 2.30pm GMT+8. the sender is required to complete the transfer during the day and the conversion is done once the collection is indicated as completed. The 2.30pm gmt+8 is essentially a bank cutoff where any currency pair that is dependent on the banking channel has to be locked in (since in Evo's case all conversions are to EUR, this condition is enforced). Even if the transaction happens later in the day, as long as the rate / deal is locked with the partner, the transaction can be converted on that day's Partner rate)."
+   },
+   {
+    "project": "Game Reseller",
+    "category": "Game Reseller",
+    "context": "Game reseller is where NPL resells games to different customers (gets wholesale rate from vendors and sells at retail - thus an arbitrage play). From remittance standpoint, NPL needs to collect its invoice receivables from its customers, so that it can pay its vendors.\n\nPartners:\nAli only (for THB cash), otherwise USDT collections happen directly into NPL's own wallet. Occassionally NPL can receive the USDT into Ali's wallet for holding (from the system standpoint, this wallet from Ali, in this case, can be considered as NPL's wallet). \n\nFee structure:\nFor one customer (27 Group), they pay via THB cash, so in this case theTHB needs to be collected by Ali. Customer always pays based on an EUR value (either against an invoice or advance against a future invoice). As such, the customer is given a EUR>THB rate (based on market rate + 2% markup). Consideration for this is that Ali will be required to convert the THB to USDT and that rate should be below 1.5% of market rate - this is to make sure NPL has a 0.5% margin (minimum). If Ali's rate is not acceptable, no collection will be arranged. Once the collection and subsequent conversion happens. the USDT is either moved to NPL's wallet or kept with Ali (NPL-as-a-client's balance). \nFor all other customers, they pay in USDT itself, so they are given EUR>USDT calculation and the USDT amount is collected by NPL.\n\nAfter USDT accumulates in NPL's wallet, the funds are used to pay the vendors (different days).  Please note that the market rate for EUR>USDT used at the time of collection (i.e. collecting USDT equivalent to the EUR invoice value) may have a positive/negative movement to the USDT>EUR rate at the time of actual vendor invoice payment. While NPL's is collecting the EUR value based on retail invoice and paying vendor based on wholesale invoice value, the forex gain/loss from rate variance shouldn't eat into the reseller revenue. This is why the markup of 2% is charged on all collections. The 2% remittance markup needs to handle the forex variance without losing reseller revenue. \n\nThere is a possibility that one of these customers may choose to pay in INR (cash). In such a scenario, the process will be same as THB Cash."
+   },
+   {
+    "project": "JTN-JPY Cash",
+    "category": "JTN-JPY Cash",
+    "context": "JTN-JPY cash is where JTN sends USDT to Ali (NPL faciliates) and USDT is converted to JPY cash and handed over to them. So the sender and receiver are essentially the same party (we can just use the same names in both fields). The rate for the day is taken from Ali, compared, and then quoted with a variable markup. the markup differs based on how high or low the partner rate is. There is a max markup of 0.5%. Generally, the total fee = agent fee + 0.2% to 0.5% is between 1% to 1.8%"
+   },
+   {
+    "project": "YN Remit",
+    "category": "YN Remit",
+    "context": "YN Group has multiple third party invoice payments that they ask for NPL's help with. Usually they will have a clear sending entity and receiving entity relationship including the invoice that needs to be paid + KYC of the sending entity that can be onboarded on to Ali's PT channels. Once the route is reviewed and approved based on the provided documentation, NPL faciliates the collection based on quote first approach (the fee used is partner rate + 0.5% markup) - YN sends the required USDT to cover the invoice value to be transferred via bank transfer.\n\nThe common currency pairs are USDT>USD, USDT>EUR, USDT>GBP\n\nWhen sending the outgoing bank transfer (settlement), the sending entity and receiving entity are defined as per the invoice and KYC. Occassionally NPL's own entity may be used as a declared sender (if a route was not possible using the actual documentation)."
+   },
+   {
+    "project": "GDC",
+    "category": "GDC",
+    "context": "GDC needs to convert USDT to USD and wants the funds in their bank account. Similar to JTN-JPY Cash, the sender and receiver are the same. However GDC has multiple receiving entities and they specify how much needs to be sent to which receiving account.\n\nfew of the receiving entity accounts they use are:\n- Adu Ads\n- Ad Fusion\n- TDC\n- Pixel Labs\n\nThe process is straightforward - i.e. they specify the amount they need to transfer to receiver (bank transfer). Based on that NPL quotes the USDT value (USD-USDT rate is considered as 1:1 + 2.5% fee). The Fee is lowered to 2.25% if their monthly processing volume is more than USD 500,000 (as per calendar month). Their usual monthly volumes are less than 200k, but they have hit the 500K limit once few months ago."
+   },
+   {
+    "project": "66 Group",
+    "category": "66 Group",
+    "context": "66 Group sometimes requires their invoices to be paid in different currencies - exactly similar to YN Remit. However sometimes they may do the collections payment in INR (cash)"
+   },
+   {
+    "project": "AK Personal",
+    "category": "AK Personal",
+    "context": "AK personal is the account of one of the NPL stakeholder. This account is operated with Ali and while collection & conversions happen normally the settlement is not done immediately. The balance simply sits with the partner (the balance holding threshold is refreshed/updated from time to time - but for the time being we can assume it to USD 400K equivalent). While the balances sit in the account, the stakeholder may request different payments/withdrawals (via local bank payment, SWIFT bank transfers, USDT transfers or cash withdrawals). There is no markup on these transactions, so the conversion simply happens as per the partner rate.\n\nAlso the currencies in which the balance is maintained (currently) are USD, SGD, USDT, however may change in the future. \n\nThe USD, SGD conversion are dependent on bank cutoff as these are banking-ready balances. So if a collection of 10K USDT happens at night and it needs to be converted to SGD, the conversion will only happen next business day morning."
+   },
+   {
+    "project": "Peru Remittance",
+    "category": "Peru Remittance",
+    "context": "Peru Remittance is a project where the client sends bank transfers to Ali's receiving entity (a production company in Indonesia - PT Silver Lining Production) and the amounts are subsequently converted to USDT. Ali's rate for this specific remittance USD>USDT is 3% and NPL applies a 1% markup so total fee applied to the the client is 4%."
+   }
+  ],
+  "payment_methods": [
+   {
+    "partner": "Ali",
+    "method": "Cash",
+    "process": "1. NPL shares the rate from the partner with the sender by afternoon HK time (depending on whether the conversion type involves bank route, this will likely happen before the 2.30pm GMT+8 cutoff time)\n2. once the rate is confirmed by sender, NPL arranges the cash collection. This is done in the form of a \"token\" (a token is a local currency bill and the receiving party shares the serial number of the token and their contact details in advance)\n3. NPL gets the token # + contact details of the receiving agent (from the partner) and shares it with sender.\n4. Sender's point of contact communicates with the receiving agent and figures out the location/meeting time\n5. at the meet, the receiving agent shows the token (since every currency bill has a unique serial #, this verifies that the receiving agent is the right person). \n6. the sender then gives the cash to the receiving agent. The receiving agent hands over the token as a proof of collection.\n7. since the sender now has the physical token, they share a photo of the token with NPL team.\n8. NPL team shares the token photo with the partner to close the loop.\n9. once they count the funds, the partner confirms with NPL that the funds are accounted for. after this NPL arranges the settlement.\n\nNote - the process for cash collection and cash settlement are exactly same, just that the sender and receiver roles are switched. \n\nFor Cash collection/settlement, the general location needs to be known before the token can be arranged. The rates may also vary based on location. For eg. INR collection via Cash in Delhi vs. Mumbai will mean 2 different rates. USD cash in Bangkok vs. Singapore will equally be handled by different local agents, different rates, etc."
+   },
+   {
+    "partner": "Ali",
+    "method": "USDT",
+    "process": "Collection:\n1. NPL asks the sender to declare their sending wallet.\n2. NPL team does a screening of the source wallet\n3. If the wallet risk profile is acceptable they share the appropriate partner's receiving wallet (where the collection will happen) with the sender. If the risk profile is high (but can still be accepted, there are alternate receiving wallets where the funds are sent. If the risk profile is not acceptable, then the sender is requested to arrange a different wallet. \n4. the sender sends the transfer and shares the Tx hash\n5. NPL team verifies the Tx Hash on the blockchain (tronscan or etherscan)\n6. if the funds are shown as confirmed on blockchain, the hash is shared with the partner\n7. Partner confirms the funds are received. \n\nNote - for Evo, the upfront sender wallet screening is not done across all senders (as not all of them are okay with the friction).\n\nNote - for settlement, NPL verifies the receiver's wallet and screens it and then proceeds to get the partner to execute the settlement transfer. Once the partner provides the hash, it is shared with the receiver and once the receiver confirms that the funds are received, the process is considered as completed."
+   },
+   {
+    "partner": "Ali",
+    "method": "Bank Transfer (International - SWIFT, maybe SEPA in the future)",
+    "process": "For Collection:\n1. NPL gets the sender's bank account and company profile (company name, address, nature of business) and asks the partner for a receiving account. NPL also asks for additional KYC docs if the partner requires it.\n2. If the partner approves the sender and arranges a collection receiving account, then the details are shared with the sender.\n3. Sender executes the transfer and shares the proof of transfer with NPL team.\n4. NPL team then shares the transfer proof/slip with the partner\n5. once the partner gets the incoming transfer, they confirm with NPL team.\n6. Based on the currency pair/conversion flow agreed with the sender prior to the transfer, NPL then asks the partner to convert the funds received via bank transfer. \n7. converted value is now available for settlement.\n\nFor Settlement:\n1. NPL gets the receiver's bank details and company profile + additional KYC if needed. \n2. The partner confirms whether they can send to this destination or not and which route will be utilized. \n3. If the settlement bank details are approved, then the collection is initiated.\n4. Once the collection has been completed, the settlement bank transfer is initiated.\n5. The partner shares the transfer slip with NPL team.\n6. NPL team shares this transfer slip with the client/receiver\n7. Once the client/receiver confirms that the bank transfer has been received, the process is marked as complete. Occasionnaly the client/receiver will ask for the fees in the bank transfer to be covered (which will be accepted on special cases)\n8. If the receiver doesn't receive the bank transfer, NPL team will ask partner to inquire with the banking channel (e.g. PT Sukses, PT Global). \n9. If the transfer gets returned to sender (i.e. back to the partner), NPL team will coordinate the follow up - either resend, use returned funds for another transfer or reconvert/return the funds to original sender/client."
+   },
+   {
+    "partner": "Ali",
+    "method": "Local Bank deposit/payment",
+    "process": "For collection:\nLocal bank account deposits utilize ad hoc accounts arranged by the partner. These are not meant to be used perpetually and typically one time use only. \n\n1. NPL gets the local deposit bank details from the partner\n2. NPL shares the local bank account (name, account number, bank name and specific amount to be deposited) with the sender\n3. sender makes the payment (either deposit in the branch phyically or local online transfer)\n4. sender than shares proof of the transfer/deposit/payment\n5. NPL shares this proof of transfer/deposit/payment with the partner. \n6. Partner then confirms whether the funds have been recognized.\n7. If there is any follow up issue with the transfer, e.g. the receiving account was frozen by the bank - then the partner will require the sender to confirm if their account is still functional (meaning they didn;t cause the freeze). If such a case happens and the receiver looses the funds due to sender's issue, then this will act as a reversal of collection. \n\nFor settlement:\n1. the receiver shares their local bank account (provided the partner confirms this option is possible and in which country it needs to be done). Usually local account payments (settlements) for small amounts are accepted for SG, HK, Indonesia, Thailand, etc. \n2. the NPL team shares the payment instructions (name, account number, bank, amount) with the partner.\n3. Partner makes the payment and shares the proof (usually this is via cash deposits or in some cases bank to bank local online transfer)\n4. Receiver confirms they received the funds. transaction is complete."
+   },
+   {
+    "partner": "Jeton",
+    "method": "USDT",
+    "process": "Same as Ali."
+   },
+   {
+    "partner": "Jeton",
+    "method": "Bank transfer (international — SWIFT / SEPA)",
+    "process": "Same as Ali."
+   }
+  ],
+  "fee_table": [
+   {
+    "client": "BF-Seven",
+    "partner": "Jeton",
+    "total_fee": "1 %",
+    "partner_cost": "0.6 %",
+    "npl_margin": "0.40% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For USDT 661,060: /  / Rate: 0.857097 / Fee: 1% / Amount: EUR 560,927",
+    "internal_calculation": "USDT received * Market rate -1%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Seven",
+    "partner": "Aquanow",
+    "total_fee": "0.8 %",
+    "partner_cost": "0.5 %",
+    "npl_margin": "0.30% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "\"For USDT 195,000: /  / Fee: 0.80% / Amount: EUR 166,009.55\"",
+    "internal_calculation": "USDT received * Market rate - 0.8%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Seven",
+    "partner": "Ali",
+    "total_fee": "1.4 %",
+    "partner_cost": "1 %",
+    "npl_margin": "0.4 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For USDT 661,060: /  / Rate: 0.857097 / Fee: 1% / Amount: EUR 560,927 /  / Note - source rate is manually recomputed to allow the sender-facing calculation to land at 1%",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": ""
+   },
+   {
+    "client": "BF- Arrow Wood",
+    "partner": "Jeton",
+    "total_fee": "1 %",
+    "partner_cost": "0.6 %",
+    "npl_margin": "0.40% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the 499,780 USDT collected: /  / Rate: 0.843784 / Fee: 1% / Amount: EUR 417,489",
+    "internal_calculation": "USDT received * Market rate -1%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF- Arrow Wood",
+    "partner": "Ali",
+    "total_fee": "1.4 %",
+    "partner_cost": "1 %",
+    "npl_margin": "0.4 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the 400,000 USDT collected: /  / Rate: 0.8679402 / Fee: 1% / Amount: EUR 343,704 /  / Note - source rate is manually recomputed to allow the sender-facing calculation to land at 1%",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": ""
+   },
+   {
+    "client": "BF-Trade Lab",
+    "partner": "Jeton",
+    "total_fee": "1 %",
+    "partner_cost": "0.5 %",
+    "npl_margin": "0.40% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "",
+    "internal_calculation": "",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Orbit",
+    "partner": "Jeton",
+    "total_fee": "1 %",
+    "partner_cost": "0.6 %",
+    "npl_margin": "0.40% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the 699,000 USDT collected: /  / Fee: 1.25% / EUR Amount: 619,332",
+    "internal_calculation": "USDT received * Market rate -1%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Blue Sapphire",
+    "partner": "Jeton",
+    "total_fee": "1 %",
+    "partner_cost": "0.6 %",
+    "npl_margin": "0.40% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the 200,000 USDT collected: /  / Rate: 0.838313 / Fee: 1% / Amount: EUR 165,986",
+    "internal_calculation": "USDT received * Market rate -1%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Blue Sapphire",
+    "partner": "Aquanow",
+    "total_fee": "0.8 %",
+    "partner_cost": "0.5 %",
+    "npl_margin": "0.30% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For USDT 195,000: /  / Fee: 0.80% / Amount: EUR 166,009.55",
+    "internal_calculation": "USDT received * market rate -0.8%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Blue Sapphire",
+    "partner": "Ali",
+    "total_fee": "1.4 %",
+    "partner_cost": "1 %",
+    "npl_margin": "0.4 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For USDT 1,000,000: /  / Rate: 0.872249 / Fee: 1% / Amount: EUR 863,527 /  / Note - source rate is manually recomputed to allow the sender-facing calculation to land at 1%",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": ""
+   },
+   {
+    "client": "BF-Raeen",
+    "partner": "Jeton",
+    "total_fee": "1 %",
+    "partner_cost": "0.6 %",
+    "npl_margin": "0.40% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the 200,000 USDT collected: /  / Rate: 0.8610999 / Fee: 1% / Amount: EUR 170,498",
+    "internal_calculation": "USDT received * Market rate -1%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Raeen (direct from downlines)",
+    "partner": "Aquanow",
+    "total_fee": "1% (sender pays 1%, the partner charges 0.8%, and the balance 0.2% is shared between NPL and Raeen",
+    "partner_cost": "0.5 %",
+    "npl_margin": "0.30% (NPL gets this as referral commission) /  / and  /  / 1/4 of 0.20%",
+    "pair": "USDT > EUR",
+    "earnings_share": "0.2% shared with Raeen (75% raeen) (25% NPL)",
+    "customer_facing_calculation": "For USDT 40,593: / Fee: 1% /  / Amount: EUR 34,590.11",
+    "internal_calculation": "USDT received * Market rate -0.8%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Raeen",
+    "partner": "Ali",
+    "total_fee": "1.4 %",
+    "partner_cost": "1 %",
+    "npl_margin": "0.4 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For USDT 300,000: /  / Rate: 0.864189 / Fee: 1.00% / Amount: EUR 256,664 /  / Note - source rate is manually recomputed to allow the sender-facing calculation to land at 1%",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": ""
+   },
+   {
+    "client": "BF-Raeen - Sub Account",
+    "partner": "Aquanow",
+    "total_fee": "4 %",
+    "partner_cost": "0.5 %",
+    "npl_margin": "2 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "3% shared with Raeen equally",
+    "customer_facing_calculation": "For USDT 50,000: /  / Rate: 0.8650036 / Fee: 4% / Amount: EUR 41,520.17",
+    "internal_calculation": "USDT received * Market rate - 0.8%",
+    "note": ""
+   },
+   {
+    "client": "BF-Novi",
+    "partner": "Jeton",
+    "total_fee": "0.9 %",
+    "partner_cost": "0.6 %",
+    "npl_margin": "0.30% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the 500,000 USDT collected: /  / Rate: 0.865245 / Fee: 0.90% / Amount: EUR 428,729",
+    "internal_calculation": "USDT received * Market rate -0.9%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Novi",
+    "partner": "Aquanow",
+    "total_fee": "0.8 %",
+    "partner_cost": "0.5 %",
+    "npl_margin": "0.30% (NPL gets this as referral commission)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For USDT 195,000: /  / Fee: 0.80% / Amount: EUR 166,009.55",
+    "internal_calculation": "USDT received * market rate -0.8%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Novi",
+    "partner": "Ali",
+    "total_fee": "1.3 %",
+    "partner_cost": "1 %",
+    "npl_margin": "0.3 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the 500,000 USDT collected: /  / Rate: 0.865245 / Fee: 0.90% / Amount: EUR 428,729 /  / Note - source rate is manually recomputed to allow the sender-facing calculation to land at 0.9%",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "BF-Withdrawal  / (client sends EUR bank transfer and then takes settlement in USDT)",
+    "partner": "Jeton",
+    "total_fee": "1 %",
+    "partner_cost": "0.6 %",
+    "npl_margin": "0.40% (NPL gets this as referral commission)",
+    "pair": "GBP > USDT / EUR > USDT",
+    "earnings_share": "none",
+    "customer_facing_calculation": "For the GBP 51,000 withdrawn. Actual rate is 0.72739556 /  / GBP Amount: GBP 51,000 / Fee: 1% / USDT Amount: USDT 69,412",
+    "internal_calculation": "EUR/GBP received * Market rate - 1%",
+    "note": "Fee is not fixed and is subject to change, but we have charged 1% in most recent transactions."
+   },
+   {
+    "client": "Evo USDT Collection",
+    "partner": "Ali",
+    "total_fee": "2.00% (sender pays 1.40% and receiver pays 0.60%)",
+    "partner_cost": "0.85 %",
+    "npl_margin": "1.15 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Sender calculation / USDT>>EUR /  / Market Rate: 0.888977323 / Fee: 1.40% / Final Rate: 0.876531640478 / USDT 29,325 = EUR 25,704 /  / Receiver calculation /  / EUR 25,704 - 0.6% = 25,550",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fixed Fee---1.4% charged to Evo customer and 0.6% charged to Evo"
+   },
+   {
+    "client": "Evo USDT Collection",
+    "partner": "Jeton",
+    "total_fee": "2.00% (sender pays 1.4% and receiver pays 0.6%)",
+    "partner_cost": "0.85 %",
+    "npl_margin": "1.15 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Sender calculation / USDT>>EUR /  / Market Rate: 0.888977323 / Fee: 1.40% / Final Rate: 0.876531640478 / USDT 29,325 = EUR 25,704 /  / Receiver calculation /  / EUR 25,704 - 0.6% = 25,550",
+    "internal_calculation": "USDT received * Market rate - 1.25%",
+    "note": "Fixed Fee---1.4% charged to Evo customer and 0.6% charged to Evo"
+   },
+   {
+    "client": "Evo USDT Collection (selected senders)",
+    "partner": "Ali",
+    "total_fee": "1.60% (sender pays 1.00% and receiver pays 0.6%)",
+    "partner_cost": "0.75 %",
+    "npl_margin": "0.85 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Sender calculation / EUR>>USDT /  / Market Rate: 1.15580212667591 (1 ÷ 0.8652) / Fee: 1.00% / Final Rate: 1.16736014794267 / EUR 50,000 = USDT 58,368 /  / Receiver calculation /  / EUR 50,000 - 0.6% = 49,700",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "For select customers (GTSI ,HG, Komodo)--but haven't transacted with us for some time"
+   },
+   {
+    "client": "Evo USDT Collection (selected senders)",
+    "partner": "Jeton",
+    "total_fee": "1.60% (sender pays 1.00% and receiver pays 0.6%)",
+    "partner_cost": "0.75 %",
+    "npl_margin": "0.85 %",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Sender calculation / EUR>>USDT /  / Market Rate: 1.15580212667591 (1 ÷ 0.8652) / Fee: 1.00% / Final Rate: 1.16736014794267 / EUR 50,000 = USDT 58,368 /  / Receiver calculation / EUR 50,000 - 0.6% = 49,700",
+    "internal_calculation": "USDT received * Market rate - 1.25%",
+    "note": "For select customers (GTSI ,HG, Komodo)--but haven't transacted with us for some time"
+   },
+   {
+    "client": "Evolution CNY Collection",
+    "partner": "Ali",
+    "total_fee": "6.75 %",
+    "partner_cost": "3.5%-5.5%",
+    "npl_margin": "1%-1.5%",
+    "pair": "CNY > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Sender calculation / EUR > CNY = 8.5193784 / EUR 70,427.67 = CNY 600,000 (rounded off) /  / Receiver calculation / EUR 70,427 - 2.5% = 68,666",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fees change based on agent cost, but on average it is 6.75%---2.5% is charged to Evo balance will be borne by customer"
+   },
+   {
+    "client": "Evolution PHP, THB, SGD, HKD",
+    "partner": "Ali",
+    "total_fee": "3.2 %",
+    "partner_cost": "1.5%-2.5%",
+    "npl_margin": "0.7%-1.7%",
+    "pair": "PHP > EUR  / THB > EUR  / SGD > EUR / HKD > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Sender calculation / EUR > PHP = 72.503792 / EUR 100,000 = PHP 7,250,000 /  / Receiver calculation / EUR 100,000- 1.6% = 98,400",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fixed Fee---1.6% charged to Evo customer and 1.6% charged to Evolution. Among these pairs only PHP>EUR has been active recently (in 2025)."
+   },
+   {
+    "client": "Evolution USD, EUR, GBP (bank transfers)",
+    "partner": "Ali",
+    "total_fee": "2.8 %",
+    "partner_cost": "no recent data",
+    "npl_margin": "no recent data",
+    "pair": "USD > EUR / EUR > EUR / GBP > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "",
+    "internal_calculation": "",
+    "note": "Fixed Fee---1.4% charged to Evo customer and 1.4% charged to Evolution. None of these pairs have been executed in the past couple of years."
+   },
+   {
+    "client": "Evolution USD, AED (cash in Dubai)",
+    "partner": "Ali",
+    "total_fee": "5.5 %",
+    "partner_cost": "no recent data",
+    "npl_margin": "no recent data",
+    "pair": "AED (cash) > EUR / USD (cash) > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "",
+    "internal_calculation": "",
+    "note": "Fixed Fee---2.25% charged to Evo customer and 2.25% charged to Evolution. None of these pairs have been executed in the past couple of years."
+   },
+   {
+    "client": "66 Group Remittance INR",
+    "partner": "Ali",
+    "total_fee": "7 %",
+    "partner_cost": "5.25 %",
+    "npl_margin": "1.75 %",
+    "pair": "INR > USD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USD>>INR /  / XE Market Rate: 90.83911443 / Fee: 7.00% / Final Rate: 97.19785244 / USD 23,960.18 x 97.1978524401 = INR 2,328,878.04 / --- Rounded off to INR 2,329,000",
+    "internal_calculation": "INR received * Agent rate",
+    "note": "Customer-facing fees are not fixed and are subject to change every transaction, but on average it is 6%. also min margin expected is 0.5%"
+   },
+   {
+    "client": "66 Group Remittance USD",
+    "partner": "Ali",
+    "total_fee": "1.5 %",
+    "partner_cost": "0.4 %",
+    "npl_margin": "1.1 %",
+    "pair": "USDT > USD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Market Rate: 1.00041 (1/0.99959) / Fee: 1.50% / Final Rate: 1.01541632 / USD 23,960.18 x 1.01541632 = USDT 24,329.56 / --- Rounded off to USDT 24,330",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "66 Group Remittance GBP",
+    "partner": "Ali",
+    "total_fee": "2.25 %",
+    "partner_cost": "1.22 %",
+    "npl_margin": "1.03 %",
+    "pair": "USDT > GBP",
+    "earnings_share": "none",
+    "customer_facing_calculation": "GBP>>USDT = 1.354309 / GBP 25,000 x  1.354309 = USDT 33,858",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "GDC (up to $500K monthly volume)",
+    "partner": "Ali",
+    "total_fee": "2.5 %",
+    "partner_cost": "0.4 %",
+    "npl_margin": "2.1 %",
+    "pair": "USDT > USD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USD 84,482.00 + 2.5% = USDT 86,594",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": ""
+   },
+   {
+    "client": "GDC (for $500K-1M monthly volume)",
+    "partner": "Ali",
+    "total_fee": "2.25 %",
+    "partner_cost": "0.4 %",
+    "npl_margin": "1.85 %",
+    "pair": "USDT > USD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USD 84,482.00 + 2.25% = USDT 86,383",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fee is lowered to 2.25% if their monthly processing volume is more than USD 500,000"
+   },
+   {
+    "client": "Jeton JPY",
+    "partner": "Ali",
+    "total_fee": "1 %",
+    "partner_cost": "0.65 %",
+    "npl_margin": "0.35 %",
+    "pair": "USDT > JPY",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USDT>>JPY = 156.06 / USDT 150,000 = JPY 23,409,000",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fee changes every transaction, but on average it is 1%"
+   },
+   {
+    "client": "Kingdom",
+    "partner": "Ali",
+    "total_fee": "0.9 %",
+    "partner_cost": "0.4 %",
+    "npl_margin": "0.5 %",
+    "pair": "USDT > USD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USD 50,000 + 0.9% = USDT 50,540",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "Working Lab",
+    "partner": "Ali",
+    "total_fee": "0.75 %",
+    "partner_cost": "0.4 %",
+    "npl_margin": "0.35 %",
+    "pair": "USD > USDT",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USD 10,000 - 0.75% = USDT 9,925",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fee is not fixed and changes every transaction, but on average it is 0.75%"
+   },
+   {
+    "client": "27 Group Remittance Collection for Game Reseller",
+    "partner": "Ali",
+    "total_fee": "2 %",
+    "partner_cost": "0.5%-1.5%",
+    "npl_margin": "1.5%-0.5%",
+    "pair": "THB > USDT then USDT >> EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Customer Collection: /  /  / Advance Payment: /  / THB>>EUR /  / Market Rate: 0.0259463782412186 / Fee: 2% / Updated Rate: 0.02542745 /  / THB 17,000,000 x 0.02542745 = EUR 432,266.66 / --- Rounded off to EUR 432,267 /  / THB>>USDT /  / Market Rate: 0.0297503941927231 (1 ÷ 33.613) / Agent Fee: 0.6414425066510566% / Final Rate: 0.0295595625184747 (1 ÷ 33.83) /  / THB 17,000,000 x 0.0295595625184747 = USDT 502,513 /  /  / Balance Invoice Clearance: /  / EUR>>THB /  / Market Rate: 38.13570206 / Fee: 2.00% / Final Rate: 38.8984161012 / EUR 329,408 x 38.8984161012 = THB 12,813,449.45 / ---Rounded Off to THB 12,813,000 /  / THB >> USDT /  / Market Rate: 0.0303508558941362 (1 ÷ 32.948) / Agent Fee: 0.729135281711311% / Final Rate: 0.0301295570955107 (1 ÷ 33.19) /  / THB 12,813,000 x 0.0301295570955107 = USDT 386,050 /  / === / === / === /  / Vendor Payment: /  /  / SACCO SIA (Latvia): / EUR>>USDT / Market Rate: 1.148412335637132 / EUR 162,000 x 1.148412335637132 = USDT 186,042.80 /  / Mitratech (QT): / EUR>>USDT / Market Rate: 1.153600110032772 / EUR 29,487.18 x 1.153600110032772 = USDT 34,016.41 /  / EZ-EVO (Samino): / USDT>>EUR / Market Rate: 1.154934460230491 / EUR 492,665.17 x 1.154934460230491 = USDT 568,995.98 /  / BraversPlay (Darwin): / EUR>>USDT / Market Rate: 1.156470452179947 / EUR 13,270.28 x 1.156470452179947 = USDT 15,347 /",
+    "internal_calculation": "THB received * agent rate",
+    "note": "For Game reseller projects, the EUR invoices from vendors are marked up by NPL-Reseller and a higher value invoice is issued to customers.  /  / Customer needs to pay an EUR invoice value (in this case customer wants to pay in THB - either as an advance payment or balance for a current invoice. The EUR>THB rate for the customer is calculated with a fixed 2% fee markup /  / The rate from the partner is THB>USDT (partner fee comparison should show that the partner rate is below 1.5%), so NPL's margin will be min 0.5%. /  / Once the THB is paid by customer (cash), Partner converts it to USDT. This USDT is then used to pay the vendors as per the share of invoices. Vendors provide the USDT equivalent for the EUR amount due as per market rates."
+   },
+   {
+    "client": "Bala Remittance Collection for Game Reseller",
+    "partner": "LT Sub (Aquanow)",
+    "total_fee": "2 %",
+    "partner_cost": "0% (NPL's own wallet)",
+    "npl_margin": "2% (plus/minus forex variance)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Customer Collection: /  /  / EUR>>USDT / Market Rate: 1.14731528223956 (1 ÷ 0.8716) / Fee: 2% / Final Rate: 1.17026158788435 /  / EUR 2,220 x 1.17026158788435 = USDT 2,597.98 / --- Round-up to USDT 2,600 /  /  / Vendor Payment: /  /  / EZ-EVO (Samino): / EUR>>USDT / Market Rate: 1.140965082766247 / EUR 1,358.98 x 1.140965082766247 = USDT 1,550.55 /",
+    "internal_calculation": "USDT received * market rate",
+    "note": "For Game reseller projects, the EUR invoices from vendors are marked up by NPL-Reseller and a higher value invoice is issued to customers.  /  / Customer needs to pay an EUR invoice value (in this case customer wants to pay in USDT. NPL offers the EUR >> USDT plus its markup. Customer sends USDT to NPL. This USDT is then used to pay the vendors as per the share of invoices. Vendors provide the USDT equivalent for the EUR amount due as per market rates."
+   },
+   {
+    "client": "Fair Remittance Collection for Game Reseller",
+    "partner": "LT Sub (Aquanow)",
+    "total_fee": "0.75 %",
+    "partner_cost": "0% (NPL's own wallet)",
+    "npl_margin": "0.75% (plus/minus forex variance)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Customer Collection: /  /  / Market Rate: 1.15713955102985 (1/0.8642) / Fee: 0.75% / Final Rate: 1.16581809766258 /  / EUR 1,079 x 1.16581809766258 = USDT 1,257.92 / --- Rounded off to USDT 1,258 /  /  / Vendor Payment: /  /  / EZ-EVO (Samino): / USDT>>EUR / Market Rate: 1.154934460230491 / EUR 697.99 x 1.154934460230491 = USDT 806.13",
+    "internal_calculation": "USDT received * market rate",
+    "note": "For Game reseller projects, the EUR invoices from vendors are marked up by NPL-Reseller and a higher value invoice is issued to customers.  /  / Customer needs to pay an EUR invoice value (in this case customer wants to pay in USDT. NPL offers the EUR >> USDT plus its markup. Customer sends USDT to NPL. This USDT is then used to pay the vendors as per the share of invoices. Vendors provide the USDT equivalent for the EUR amount due as per market rates."
+   },
+   {
+    "client": "66 Group Remittance Collection for Game Reseller",
+    "partner": "LT Sub (Aquanow)",
+    "total_fee": "1.5 %",
+    "partner_cost": "0% (NPL's own wallet)",
+    "npl_margin": "1.5% (plus/minus forex variance)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Customer Collection: /  /  / Market Rate: 1.1368804 (1/0.8796) / Fee: 1.50% / Final Rate: 1.15393361 / EUR 239,149 x 1.15393361 = USDT 275,962.07 / --- Rounded off to USDT 275,962 /  /  / Vendor Payment: /  /  / Marbles: / EUR>>USDT / Market Rate: 1.148038054369771 / Fee: 1% / Final Rate: 1.159518434913469 / EUR 53.16 x 1.159518434913469 = USDT 61.64 /  / Mitratech (QT): / Market Rate: 1.137541599423579 / EUR 19,126.04 x 1.137541599423579 = USDT 21,756.67 /  / EZ-EVO (Samino): / EUR>>USDT / Market Rate: 1.134950126147394 / EUR 175,789.33 x 1.134950126147394 = USDT 199,512.12",
+    "internal_calculation": "USDT received * market rate",
+    "note": "For Game reseller projects, the EUR invoices from vendors are marked up by NPL-Reseller and a higher value invoice is issued to customers.  /  / Customer needs to pay an EUR invoice value (in this case customer wants to pay in USDT. NPL offers the EUR >> USDT plus its markup. Customer sends USDT to NPL. This USDT is then used to pay the vendors as per the share of invoices. Vendors provide the USDT equivalent for the EUR amount due as per market rates."
+   },
+   {
+    "client": "TripleSeven/GZ Remittance Collection for Game Reseller",
+    "partner": "LT Sub (Aquanow)",
+    "total_fee": "1.5 %",
+    "partner_cost": "0% (NPL's own wallet)",
+    "npl_margin": "1.5% (plus/minus forex variance)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Customer Collection: /  /  / Market Rate: 1.163061177 (1 ÷ 0.8598) / Fee: 1.50% / Final Rate: 1.18050709467318 / EUR 4,097 x 1.18050709467318 = USDT 4,837 /  /  / Vendor Payment: /  /  / Mitratech (QT): / EUR>>USDT / Market Rate: 1.137541599423579 / EUR 3,403.10 x 1.137541599423579 = USDT 3,871.17",
+    "internal_calculation": "USDT received * market rate",
+    "note": "For Game reseller projects, the EUR invoices from vendors are marked up by NPL-Reseller and a higher value invoice is issued to customers.  /  / Customer needs to pay an EUR invoice value (in this case customer wants to pay in USDT. NPL offers the EUR >> USDT plus its markup. Customer sends USDT to NPL. This USDT is then used to pay the vendors as per the share of invoices. Vendors provide the USDT equivalent for the EUR amount due as per market rates."
+   },
+   {
+    "client": "Alpha Plus Remittance Collection for Game Reseller",
+    "partner": "LT Sub (Aquanow)",
+    "total_fee": "1.5 %",
+    "partner_cost": "0% (NPL's own wallet)",
+    "npl_margin": "1.5% (plus/minus forex variance)",
+    "pair": "USDT > EUR",
+    "earnings_share": "none",
+    "customer_facing_calculation": "Customer Collection: /  /  / Market Rate: 1.14784206 (1/0.8712) / Fee: 1.50% / Final Rate: 1.16505969 /  / EUR 2,939 x 1.16505969 = USDT 3,424.11 / --- Rounded off to USDT 3,424 /  /  / Vendor Payment: /  /  / Mitratech (QT): / EUR>>USDT / Market Rate: 1.137541599423579 / EUR 2,299.93 x 1.137541599423579 = USDT 2,616.27",
+    "internal_calculation": "USDT received * market rate",
+    "note": "For Game reseller projects, the EUR invoices from vendors are marked up by NPL-Reseller and a higher value invoice is issued to customers.  /  / Customer needs to pay an EUR invoice value (in this case customer wants to pay in USDT. NPL offers the EUR >> USDT plus its markup. Customer sends USDT to NPL. This USDT is then used to pay the vendors as per the share of invoices. Vendors provide the USDT equivalent for the EUR amount due as per market rates."
+   },
+   {
+    "client": "Remit YN",
+    "partner": "Ali",
+    "total_fee": "0.50%-2.19%",
+    "partner_cost": "0.83%-1.47%",
+    "npl_margin": "0.5 %",
+    "pair": "USDT > GBP / USDT > EUR / USDT > USD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "GBP 21,216 = USDT 28,591",
+    "internal_calculation": "USDT received * Agent rate",
+    "note": "Fee is not fixed and changes every transaction, but on average it is 1.84%"
+   },
+   {
+    "client": "Remittance Peru",
+    "partner": "Ali",
+    "total_fee": "4 %",
+    "partner_cost": "3 %",
+    "npl_margin": "1 %",
+    "pair": "USD>USDT",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USD 299,350 - 4% = USDT 287,376",
+    "internal_calculation": "USDT received - 3%",
+    "note": "Fixed Fee"
+   },
+   {
+    "client": "Ad Hoc INR Cash",
+    "partner": "Ali",
+    "total_fee": "0.5 %",
+    "partner_cost": "5.5% - 7.5%",
+    "npl_margin": "0 %",
+    "pair": "INR > USD / INR > SGD / INR > USDT",
+    "earnings_share": "none",
+    "customer_facing_calculation": "INR 8,500,000 / 79.52918721",
+    "internal_calculation": "INR received * Agent rate",
+    "note": ""
+   },
+   {
+    "client": "AK collections (INR)",
+    "partner": "Ali",
+    "total_fee": "0 %",
+    "partner_cost": "5.5% - 7.5%",
+    "npl_margin": "0 %",
+    "pair": "INR > USD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "INR 8,735,000 / 100.80",
+    "internal_calculation": "8,735,000 / 100.80",
+    "note": "Internal stakeholder collection"
+   },
+   {
+    "client": "AK collections (USDT)",
+    "partner": "Ali",
+    "total_fee": "0 %",
+    "partner_cost": "0.4% (USDT>USD) / 0.75%-1.5% (USDT > SGD)",
+    "npl_margin": "0 %",
+    "pair": "USDT > USD / USDT > SGD",
+    "earnings_share": "none",
+    "customer_facing_calculation": "USDT 10,000 * 0.996",
+    "internal_calculation": "USDT 10,000 * 0.996",
+    "note": "Internal stakeholder collection"
+   }
+  ],
+  "answers": [
+   "Jeton deducts its full fee (1 % on most BF senders, 1.25 % on Evo, 0.9 % on Novi) and pays NPL a rebate back, accumulated monthly: 0.4 % of the amount on the 1 % and 1.25 % fees, 0.3 % on Novi’s 0.9 %. On BF deals via Jeton that rebate is NPL’s only margin. Jeton is currently inactive.",
+   "Aquanow charges a flat 0.8 % and pays NPL 0.3 % back monthly. Aquanow is the preferred partner for BF because the EUR payout is an internal transfer inside the Aquanow platform, recognised by BF instantly; Ali’s SWIFT route takes 1–2 days. Aquanow does not allow BF withdrawals.",
+   "Ali’s margin sits inside the rate it gives. For BF via Ali NPL recomputes a ‘market rate’ so the customer’s calculation shows ‘fee 1 %’ while the true parts are Ali ≈ 1 % + NPL 0.4 % (a BF-only rule; it may later become partner rate + markup, at which point the displayed-fee setting is cleared). Ali sometimes quotes USDT → EUR the other way round (1.1738 for 0.851934); the market that day was 0.86050.",
+   "Evo: two receiver groups — Bplay (entities Babylon, Bplay, Lex) and TBet (entity TBet); senders are designated per group; Ali can pay Babylon and TBet, Jeton can pay Bplay, Lex and TBet; all conversions are into EUR. Standard fee 2 % = sender 1.4 % + receiver 0.6 % at conversion; selected senders (GTSI, HG, Komodo) pay 1.0 % while Evo still pays 0.6 % — the receiver part is fixed for all senders. Some senders pay what they can (collect-first), others the exact invoice (quote-first).",
+   "Bank cutoff: for pairs that depend on the banking channel Ali’s rate is compared in the morning and a deal locked before 14:30 GMT+8 converts the same day; after the cutoff the collection goes ahead on the morning’s figures and the conversion happens the next business day at that day’s partner rate. NPL absorbs the difference; if Ali’s next-day rate breaches the minimum margin, NPL asks for a better rate or waits another day. Today’s balances should show the locked leg’s converted value as pending; a cancellation voids it.",
+   "GDC: USDT → USD at 1 : 1 plus 2.5 %, lowered to 2.25 % when the calendar-month volume passes USD 500,000 (not a rolling 30 days; last month 163,124). A transaction that crosses the threshold attributes the part above USD 500,000 to the lower tier, and later transactions in the month follow the lower tier. Minimum margin: 2.5 % (or 2.25 %) − Ali’s 0.4 % = 1.8 %. GDC chooses which of its receiving entities (Adu Ads, Ad Fusion, TDC, Pixel Labs …) gets how much; NPL’s own entity New Pinnacle Ltd is used for this client’s contracts.",
+   "Raeen sub-accounts: downlines fund a Betfair sub-account Raeen provides at 4 %. The markup to share is the 4 % less the partner’s fee — 3 % via Ali (1.5 % each), 3.2 % via Aquanow (1.6 % each) — split equally with Raeen; the Aquanow 0.3 % rebate is NPL’s alone and not visible to Raeen. The converted EUR lands in Raeen’s own Aquanow account; Raeen allocates it to the sub-account, keeps its share and pays NPL’s share monthly. Raeen direct from downlines: 1 % to the sender, Aquanow 0.8 %, the 0.2 % left split 75 / 25 (0.15 % Raeen, 0.05 % NPL). Future deals may have more than one party with different shares.",
+   "Rebates are tracked separately from NPL’s earnings on deals and never mixed into them. NPLify sees only the deals it serviced; customers working with Jeton or Aquanow directly are out of scope, so the rebate NPLify reconciles is the subset of the partner’s rebate statement that belongs to NPLify deals.",
+   "Game reseller: NPL resells games (wholesale from vendors, retail to customers) and collects its invoice receivables to pay vendors. Customers pay in USDT straight into NPL’s own wallet (LT Sub at Aquanow; occasionally held in Ali’s wallet as NPL’s own balance) or, for 27 Group, in THB cash through Ali at market + 2 %, with Ali’s THB → USDT rate required within 1.5 % of market so NPL keeps at least 0.5 % (otherwise Finance is warned). USDT is paid to vendors on different days; the forex gain or loss between collection and payment is accepted within the 2 % markup. NPL (a business unit ‘NPL-GR’) is the client; Bala is a sender and NPL-GR the receiver; the USDT the customer pays is rounded up when possible; invoice-balance tracking is wanted. Management confirmed running NPL-GR inside NPLify as an own-desk project.",
+   "Rounding: round up to the nearest 1,000 for Asian currencies (THB, INR, JPY …), to the nearest unit for USD, SGD, HKD; the 66 Group INR example rounds 2,328,878 to 2,329,000. The rounding option is a per-pair setting; what is dropped stays client money, what is added by rounding up is NPL’s cost.",
+   "Cash: a collection or settlement is arranged by token — a local-currency bill whose serial number identifies the receiving agent; the sender meets the agent, hands over the cash, keeps the token and shares a photo; the partner counts and confirms; then NPL arranges the settlement. The location must be known first and rates differ by city (INR in Delhi vs Mumbai, USD cash in Bangkok vs Singapore). 66 Group INR is almost always cash at 7 % total; Ad Hoc INR Cash is 7 % total fee.",
+   "USDT collections: the sender declares its sending wallet; NPL screens it; acceptable wallets get the partner’s receiving wallet, higher-risk-but-acceptable wallets an alternate receiving wallet, unacceptable ones are refused; the sender shares the transaction hash, NPL verifies it on chain (Tronscan / Etherscan), the partner confirms. Receivers’ wallets are screened before settlement. Screening is an Operations activity (transaction coordination). Not all Evo senders accept up-front screening.",
+   "Bank transfers (SWIFT, maybe SEPA later): the partner approves the sender or receiver from company profile and KYC and provides or confirms the account; proofs of transfer are exchanged through NPL; a returned transfer is resent, reused for another transfer, or reconverted and returned. Local bank deposits use ad hoc accounts the partner provides for one transaction and one amount; small local payouts are possible in SG, HK, Indonesia, Thailand. A frozen receiving account that loses funds because of the sender’s side is a reversal of the collection; losses can be partial, can be shared between NPL and the partner as well as the sender, and can happen on the settlement side and by other methods. Cash found short at hand-over is adjusted in a subsequent transaction or by a separate payout.",
+   "BF withdrawals: BF sends the customer’s bank transfer to Jeton’s SWIFT account (Jeton is the only partner that can receive them; Ali cannot); Jeton converts to USDT at 1 % over market and pays the customer’s wallet (customers have both TRC-20 and ERC-20 wallets); 0.4 % comes back to NPL monthly.",
+   "AK Personal: a stakeholder account operated with Ali; collections and conversions happen normally but the balance (USD, SGD, USDT; about USD 400,000 equivalent, revised from time to time) sits at the partner and is paid out on request by local bank payment, SWIFT, USDT or cash; no markup. USD and SGD are banking-ready balances: 10,000 USDT collected at night converts to SGD the next business morning.",
+   "Narratives on payouts are often the customer’s own entity (Seven Investments N.V., Bplay) or NPL’s own entity (New Pinnacle Ltd for GDC, NPL for 66 Group, occasionally as declared sender for YN Remit). For Ali the executing vehicle is PT Sukses or PT Global; Jeton and Aquanow both offer TRC-20 and ERC-20 collection wallets.",
+   "JTN-JPY cash: JTN sends USDT to Ali, converted to JPY cash and handed to the same party; Ali’s rate is compared and quoted with a variable markup of 0.2–0.5 % (maximum 0.5 %), total fee 1–1.8 %. YN Remit: third-party invoice payments on a quote-first basis at partner rate + 0.5 %; USDT → USD, EUR, GBP. 66 Group: like YN Remit, sometimes INR cash. Peru: bank transfer to Ali’s receiving entity (PT Silver Lining Production), USD → USDT, Ali 3 % + NPL 1 %.",
+   "Same-currency pass-through (Evolution bank transfers) stays in scope: the fee is still applied because the currency is collected and then settled separately."
+  ],
+  "proposals": [
+   [
+    "A",
+    "A per-sender override carries its own sender / receiver split",
+    "D20"
+   ],
+   [
+    "B",
+    "Fees by monthly volume: FEE_TIER per calendar month; a crossing deal is split across tiers",
+    "D21"
+   ],
+   [
+    "C",
+    "The fee the customer sees may differ from the fee charged: displayed fee and derived source rate",
+    "D22"
+   ],
+   [
+    "D",
+    "NPL as its own exchange desk: NPL-GR as an own-desk project, invariant 3 restated",
+    "D23"
+   ],
+   [
+    "E",
+    "Invoices paid in parts: INVOICE, per-line discharge, INVOICE_BALANCE",
+    "D24"
+   ],
+   [
+    "F",
+    "A rounding menu per currency pair; round-up cost is NPL’s (EXP_ROUNDING)",
+    "D25"
+   ],
+   [
+    "G",
+    "Markup shared with a client party: share of net markup, several parties, party holds the funds",
+    "D26"
+   ],
+   [
+    "H",
+    "Rebates as their own earnings stream (EARN_REBATE); rebate rule with a basis and a scope",
+    "D27"
+   ],
+   [
+    "I",
+    "Partner rates stored as quoted, with direction; normalised rate derived",
+    "D28"
+   ],
+   [
+    "J",
+    "Bank cutoff, rate lock, next-day conversion; pending converted value in the client balance",
+    "D29"
+   ],
+   [
+    "K",
+    "Cash by token, with rates per city",
+    "D30"
+   ],
+   [
+    "L",
+    "Wallet screening (an Operations action) and risk-routed receiving wallets",
+    "D31"
+   ],
+   [
+    "M",
+    "Single-use accounts on both sides; loss events, partial and shared",
+    "D32"
+   ],
+   [
+    "—",
+    "Same-currency pass-through stays in scope, converted at rate 1",
+    "D33"
+   ]
+  ],
+  "documents": [
+   [
+    "ERD & Data Model",
+    "Draft v5.3, 9 October 2026 — this model (59 tables, 6 views, invariants 1–32, decisions D1–D33)"
+   ],
+   [
+    "Model Gaps & Proposals",
+    "v1.0, 8 October 2026 — gaps A–M with their ERD footprint; all applied in v5.3 (the corrections of 9 October — H simplified, J pending balance, L Operations, M generalised, B split — are in v5.3 and not yet in the document)"
+   ],
+   [
+    "Fee Outlines (simulation workbook)",
+    "v0.2, 8 October 2026 — every line of NPL’s fee table as a fill-in outline with a worked calculation per pattern; NPL’s answers of 8 October folded in"
+   ],
+   [
+    "Ledger Posting Design & Chart of Accounts",
+    "v1.1, 8 October 2026 — against ERD v5.2; v1.2 pending for v5.3"
+   ],
+   [
+    "Transaction Lifecycle & Approval State Machines",
+    "v1.1, 8 October 2026 — against ERD v5.2; v1.2 pending"
+   ],
+   [
+    "Roles & Visibility Matrix",
+    "v1.0, 8 October 2026 — against ERD v5.2; v1.1 pending"
+   ],
+   [
+    "ERD Reading Guide",
+    "v1.0, 8 October 2026 — plain-language companion to the diagrams of v5.2; v1.1 pending"
+   ],
+   [
+    "Calculation Specification",
+    "v1.0 — v1.1 pending"
+   ],
+   [
+    "Configuration Schema",
+    "v1.0 — v1.1 pending"
+   ],
+   [
+    "Project Understanding",
+    "v1.1 (with Sud’s comments)"
+   ]
+  ]
+ }
 }
