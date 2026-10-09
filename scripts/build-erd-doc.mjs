@@ -340,10 +340,10 @@ ${diagramPage(DG["2"])}
 <h2>3 · Deal lifecycle domain</h2>
 <h3>3a · Deal group, legs, pricing stamps, invoice, collection</h3>
 ${diagramPage(DG["3a"])}
+<h3>3c · Conversion, reroute, earnings receivable, balance conversion, entitlement re-attribution (continues 3a)</h3>
+${diagramPage(DG["3c"])}
 <h3>3b · Disbursement, return, confirmation, fees, referrals, rebates and loss events</h3>
 ${diagramPage(DG["3b"])}
-<h3>3c · Conversion, reroute, earnings receivable, balance conversion, entitlement re-attribution</h3>
-${diagramPage(DG["3c"])}
 <h3>Derived views (never stored)</h3>
 ${table(["View", "Definition"], views.map((v) => [`<span class="mono">${esc(v)}(${D.E[v].f.map((f) => f[0]).join(", ")})</span>`, esc(D.E[v].desc)]), ["34%"])}
 <h3>Notes</h3><ul>${notes.deal.map((n) => `<li>${n}</li>`).join("")}</ul>
