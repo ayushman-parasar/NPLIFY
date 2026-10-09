@@ -28,7 +28,7 @@ const IC = {
 export const SKELETON = `
 <div id="app">
   <header>
-    <h1>NPLify Unified ERD <small>P0 data model · draft v5.4 · 66 tables + 9 views</small></h1>
+    <h1>NPLify Unified ERD <small>P0 data model · draft v5.4 · 67 tables + 9 views</small></h1>
     <div class="tools">
       <div class="search">${IC.search}<input id="q" type="search" placeholder="Find an entity or field…" aria-label="Find entity or field" autocomplete="off"><kbd>/</kbd></div>
       <div class="selwrap"><select id="walkSel" aria-label="Walkthrough"><option value="">Walk a data flow…</option></select>${IC.chev}</div>
