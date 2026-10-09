@@ -2,7 +2,7 @@
 // Full entities draw their attribute table; "~NAME" is defined in another diagram and appears name-only.
 export const DIAGRAMS = [
   { id: "1a", title: "Configuration — project, parties, receiver groups and wallet screening", nodes: [
-      "PROJECT", "INTRODUCER", "RATE_SOURCE", "CASH_LOCATION", "SENDER", "RECEIVER_GROUP", "OWN_WALLET", "THRESHOLD", "CURRENCY_PAIR",
+      "PROJECT", "INTRODUCER", "RATE_SOURCE", "SENDER", "RECEIVER_GROUP", "OWN_WALLET", "THRESHOLD", "CURRENCY_PAIR",
       "COLLECTION_SENDING_ENTITY", "SENDER_RECEIVER_ALLOW", "RECEIVER", "PAIR_RATE_SOURCE", "REFERRAL_RULE", "RECEIVING_ENTITY", "RECEIVING_ENTITY_ACCOUNT", "WALLET_SCREENING",
       "~PARTNER_CONFIG", "~PARTNER_PAIR", "~SETTLEMENT_REGISTRATION", "~FEE_STRUCTURE"] },
   { id: "1b", title: "Configuration — partner configuration block, fees and tiers", nodes: [
