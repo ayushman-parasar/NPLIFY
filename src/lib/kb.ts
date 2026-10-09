@@ -6,7 +6,7 @@ type Relation = [string, string, string, string, string, string, string?];
 type OpenQuestion = { q: string; blocks: string; status: string; a: string; impl: string; ents: string[] };
 type Scenario = { id: string; name: string; story: string; trace: [string, string, string[]][]; verdict: string; fix: string };
 type Walk = { name: string; steps: [string, string][] };
-type ScenarioCatalogue = { intro: string; projects: { client: string; projects: string; lead: string; scenarios: [string, string, string, string][] }[]; flows: [string, string, string, string][]; open_questions: string[] };
+type ScenarioCatalogue = { intro: string; projects: { client: string; projects: string; lead: string; scenarios: [string, string, string, string][] }[]; flows: [string, string, string, string][]; open_questions: string[]; answered_questions: [string, string][] };
 type FeePractice = { intro: string; projects: { project: string; category: string; context: string }[]; payment_methods: { partner: string; method: string; process: string }[]; fee_table: Record<string, string>[]; answers: string[]; proposals: [string, string, string][]; documents: [string, string][] };
 
 export type ErdData = {
@@ -88,7 +88,8 @@ export function buildKnowledgeBase(d: ErdData = data): string {
     L.push("");
   }
   L.push("SHARED OPERATIONAL FLOWS (referenced as F1–F10 above):", ...sc.flows.map((f) => `${f[0]} ${f[1]} — ${f[2]} — ERD path: ${f[3]}`), "");
-  L.push("STILL TO CONFIRM WITH NPL (operational and fee points):", ...sc.open_questions.map((q) => "- " + q), "");
+  L.push("OPERATIONAL QUESTIONS AND NPL’S ANSWERS (9 October 2026):", ...sc.answered_questions.map((q) => `- ${q[0]}: ${q[1]}`), "");
+  if (sc.open_questions.length) L.push("STILL TO CONFIRM WITH NPL:", ...sc.open_questions.map((q) => "- " + q), "");
   return L.join("\n");
 }
 

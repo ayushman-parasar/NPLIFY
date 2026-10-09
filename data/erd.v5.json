@@ -7496,7 +7496,8 @@
    "Narratives on payouts are often the customer’s own entity (Seven Investments N.V., Bplay) or NPL’s own entity (New Pinnacle Ltd for GDC, NPL for 66 Group, occasionally as declared sender for YN Remit). For Ali the executing vehicle is PT Sukses or PT Global; Jeton and Aquanow both offer TRC-20 and ERC-20 collection wallets.",
    "JTN-JPY cash: JTN sends USDT to Ali, converted to JPY cash and handed to the same party; Ali’s rate is compared and quoted with a variable markup of 0.2–0.5 % (maximum 0.5 %), total fee 1–1.8 %. YN Remit: third-party invoice payments on a quote-first basis at partner rate + 0.5 %; USDT → USD, EUR, GBP. 66 Group: like YN Remit, sometimes INR cash. Peru: bank transfer to Ali’s receiving entity (PT Silver Lining Production), USD → USDT, Ali 3 % + NPL 1 %.",
    "Same-currency pass-through (Evolution bank transfers) stays in scope: the fee is still applied because the currency is collected and then settled separately.",
-   "Bank cutoff (NPL, 9 October): the cutoff is per partner and applies to the currencies that rely on bank transfer. Two events depend on it — getting / locking the rate from the partner, and initiating the outgoing settlement bank transfer. For urgent requests the partner may agree to extend it by 30–60 minutes; on Fridays or before a holiday the partner may close an hour early."
+   "Bank cutoff (NPL, 9 October): the cutoff is per partner and applies to the currencies that rely on bank transfer. Two events depend on it — getting / locking the rate from the partner, and initiating the outgoing settlement bank transfer. For urgent requests the partner may agree to extend it by 30–60 minutes; on Fridays or before a holiday the partner may close an hour early.",
+   "Operational answers (NPL, 9 October, evening): partners have designated wallets for senders who cannot be screened up front (not only Evo); where a partner lacks a network (Ali: no ERC-20) NPL collects on its own alternate wallet and forwards to the partner on a supported network. The bank cutoff exists only for Ali and other Asian partners, not Jeton or Aquanow, and binds only pairs with a bank side. For a cash payout the receiver provides the token up front and the agent photographs it after handing over the cash. A cash deposit by the agent into the receiver's bank account is a local bank payment, no token. Covering a bank fee: Finance recommends, Management approves. Jeton has no cash or local methods; a partner's methods are configuration. GDC's threshold counts the client as a whole. A THB rate below the limit warns and never refuses; raising the fee cap is Finance's recommendation and Management's decision. After a cutoff the next day's rate applies unless the rate was locked within it. AED cash rounds to 100, USD cash in Dubai to 10. Raeen's 1 % with 0.2 % split 75/25 is the direct-collection arrangement, not the sub-accounts."
   ],
   "proposals": [
    [
@@ -7614,7 +7615,7 @@
   ]
  },
  "SCENARIO_CATALOGUE": {
-  "intro": "Every scenario in NPL's Fee Outlines workbook (Sud's answers of 8 October 2026, with the Project Context and Payment methods tabs) runs through ERD v5.4. Scenarios are grouped by client and project; the operational flows they share are defined once (F1–F10) and referenced by number. Source: 'NPLify Scenario Catalogue v1.0' (9 October 2026).",
+  "intro": "Every scenario in NPL's Fee Outlines workbook (Sud's answers of 8 October 2026, with the Project Context and Payment methods tabs) runs through ERD v5.4. Scenarios are grouped by client and project; the operational flows they share are defined once (F1–F10) and referenced by number. Source: 'NPLify Scenario Catalogue v1.0' (9 October 2026), with NPL's answers to the operational questions of the same day.",
   "projects": [
    {
     "client": "Betfair (BF)",
@@ -7641,9 +7642,15 @@
      ],
      [
       "BF Sub via Aquanow or Ali: markup shared with Raeen",
-      "Downlines fund a sub-account Raeen provides at 4 %; the 4 % less the partner fee (3.2 % via Aquanow, 3 % via Ali) is split equally with Raeen; the EUR lands in Raeen's own Aquanow account, Raeen keeps its share and pays NPL monthly; Aquanow's 0.3 % rebate is NPL's alone; direct downlines: 1 %, the 0.2 % left split 75/25",
+      "Downlines fund a sub-account Raeen provides at 4 %; the 4 % less the partner fee (3.2 % via Aquanow, 3 % via Ali) is split equally with Raeen; the EUR lands in Raeen's own Aquanow account, Raeen keeps its share and pays NPL monthly; Aquanow's 0.3 % rebate is NPL's alone",
       "Fixed 4 % with a share rule; F2 in, F10 out (Aquanow) or F5 under Raeen's name (Ali)",
       "MARKUP_SHARE_RULE basis share_of_net_markup, party_kind client_party, settlement_mode party_retains, scoped by fee structure; MARKUP_SHARE_ACCRUAL as a receivable in SHARE_RECEIVABLE (D26); rebate outside the base (D27); SETTLEMENT_SENDING_ENTITY Raeen on the Ali route"
+     ],
+     [
+      "Raeen direct collections via Aquanow (not sub-accounts)",
+      "Raeen collects from its downlines into its own BF account at 1 %; Aquanow's cost is 0.8 %; the 0.2 % left is split 75/25 — 0.15 % to Raeen, 0.05 % to NPL — plus Aquanow's 0.3 % rebate to NPL",
+      "Fixed 1 % with a 75/25 share rule; F2 in, F10 out",
+      "A second MARKUP_SHARE_RULE scoped to this fee structure (Raeen 75 %); same party, same settlement by Raeen monthly (D26)"
      ],
      [
       "BF Withdrawal via Jeton",
@@ -7672,9 +7679,9 @@
      ],
      [
       "Two receiver groups",
-      "Bplay (Babylon on an invoice reference, Bplay and Lex as self-transfers) and TBet; Ali pays Babylon and TBet, Jeton pays Bplay, Lex and TBet",
+      "Bplay group: Babylon, paid on an invoice reference; Bplay and Lex, self-transfers with an internal invoice or statement reference. TBet group: TBet, self-transfers with an internal invoice or statement reference. Ali pays Babylon and TBet; Jeton pays Bplay, Lex and TBet",
       "Configuration",
-      "RECEIVER_GROUP, SENDER_RECEIVER_ALLOW per sender, DESTINATION_APPROVAL per entity per partner; invariant 8"
+      "RECEIVER_GROUP, SENDER_RECEIVER_ALLOW per sender, DESTINATION_APPROVAL per entity per partner; SETTLEMENT_LINE.reference carries the invoice or statement reference; invariant 8"
      ],
      [
       "Collect-first and quote-first senders",
@@ -7814,10 +7821,10 @@
       "CURRENCY_PAIR with equal sides, CONVERSION at rate 1 (D33); FEE_STRUCTURE sender_pays_pct 1.4 / receiver_pays_pct 1.4"
      ],
      [
-      "CNY, PHP, THB, SGD, HKD, AED and USD cash in Dubai",
-      "Older products of the same client at 3.2-6.75 %; the cash rounding unit for Dubai is not yet given",
+      "CNY, PHP, THB, SGD, HKD; AED and USD cash in Dubai (older currency pairs)",
+      "Older currency pairs of the same client at 3.2-6.75 %; AED cash rounds to the nearest 100, USD cash in Dubai to the nearest 10",
       "F4 or F1 in",
-      "Standard pairs; cash_rounding_unit to be filled (D25)"
+      "Standard pairs; CURRENCY_PAIR.cash_rounding nearest_n with cash_rounding_unit 100 for AED and 10 for USD cash (D25)"
      ]
     ]
    }
@@ -7826,14 +7833,14 @@
    [
     "F1",
     "Cash by token (collection or settlement)",
-    "Rate shared by afternoon HK time; token number and the agent's contact shared; hand-over against the token; photo of the token as proof; the partner counts and confirms; rates differ by city. Settlement is the same with the roles switched",
-    "COLLECTION.token_ref, agent_contact_ref, evidence_ref, counted_at, states token_issued, handed_over, counted, verified; DEAL.cash_location; PARTNER_RATE_VERSION.location; SETTLEMENT_LINE.token_ref (D30)"
+    "Collection: the partner issues a token (a local-currency bill) and the agent's contact; the sender meets the agent, hands over the cash, keeps the token and shares its photo; the partner counts and confirms. The rate is the one locked at quote even if the hand-over or the count slips to the next day; the partner may replace the agent and the token before the meeting, and NPL passes the new details to the sender. Settlement: the receiver provides the token up front to NPL, NPL to the partner, the partner to the agent; the agent takes the token, hands over the cash, photographs the token for the partner, who passes it to NPL and NPL to the receiver. A cash-in deal paid out in USDT has no cutoff; one paid out by bank does",
+    "COLLECTION.token_ref (replaceable before hand-over), agent_contact_ref, evidence_ref (the photo), counted_at, states token_issued, handed_over, counted, verified; DEAL.cash_location; PARTNER_RATE_VERSION.location; SETTLEMENT_LINE.token_ref (the receiver's token) and the agent's photo as evidence (D30)"
    ],
    [
     "F2",
     "USDT collection with wallet screening",
-    "Sender declares a wallet; NPL screens it; standard or alternate receiving wallet by risk; sender shares the hash; NPL verifies on chain; partner confirms. Not every Evo sender is screened",
-    "WALLET_SCREENING (Operations); COLLECTION.sending_address, wallet_screening_id, screening_skipped; COLLECTION_RECEIVING_ENDPOINT.risk_band; invariant 30 (D31)"
+    "Sender declares a wallet; NPL screens it; standard or alternate receiving wallet by risk; sender shares the hash; NPL verifies on chain; partner confirms. Where a sender cannot share a wallet up front (Evo and other projects) NPL arranges an alternative address: each partner has designated wallets for such cases, and where the partner does not support the network (Ali has no ERC-20) NPL collects on its own alternate wallet on that network and forwards to the partner on a network it supports (TRC-20), without the risk exposure",
+    "WALLET_SCREENING (Operations); COLLECTION.sending_address, wallet_screening_id, screening_skipped; COLLECTION_RECEIVING_ENDPOINT.risk_band for the partner's designated wallets; OWN_WALLET as a bridge endpoint forwarded to the partner as a hop — a model amendment is proposed for this (invariant 30, D31)"
    ],
    [
     "F3",
@@ -7850,8 +7857,8 @@
    [
     "F5",
     "SWIFT settlement",
-    "Partner approves the destination and route before collection; transfer after collection; slip shared with the receiver; receiver confirms; a bank fee is occasionally covered; an unreceived transfer is chased through the banking channel",
-    "DESTINATION_APPROVAL (invariant 8); SETTLEMENT, SETTLEMENT_RAIL, SETTLEMENT_SENDING_ENTITY; CONFIRMATION; BANK_FEE_EVENT with FEE_DECISION"
+    "Partner approves the destination and route before collection; transfer after collection; slip shared with the receiver; receiver confirms; on special cases the client asks for the bank fee to be covered — Finance reviews and recommends, Management approves; an unreceived transfer is chased through the banking channel",
+    "DESTINATION_APPROVAL (invariant 8); SETTLEMENT, SETTLEMENT_RAIL, SETTLEMENT_SENDING_ENTITY; CONFIRMATION; BANK_FEE_EVENT with a FEE_DECISION recommended by Finance and approved by Management"
    ],
    [
     "F6",
@@ -7868,14 +7875,14 @@
    [
     "F8",
     "Local payouts for small amounts",
-    "Receiver gives a local account where the partner allows it (SG, HK, Indonesia, Thailand); the partner pays by cash deposit or local transfer and shares proof; receiver confirms; cash short at hand-over is adjusted later or paid separately",
+    "Receiver gives a local account where the partner allows it (SG, HK, Indonesia, Thailand); the partner pays by cash deposit into that account or by local transfer and shares proof; receiver confirms. A cash deposit by the agent into the receiver's bank account is a local bank payment, not a cash hand-over: no token. Cash short at hand-over is adjusted later or paid separately",
     "RECEIVING_ENTITY_ACCOUNT usage single_use (D32); SHORTFALL topped up next settlement or by its own SETTLEMENT; LOSS_EVENT if unrecoverable"
    ],
    [
     "F9",
     "Bank cutoff",
-    "Per partner, for currencies that rely on bank transfer; binds the rate lock and the outgoing settlement; locked before 14:30 GMT+8 is same day, after it next business day; extendable 30-60 minutes if the partner agrees; closed early on Fridays or before a holiday",
-    "PARTNER.bank_cutoff_time, PARTNER_CUTOFF_OVERRIDE, HOLIDAY; DEAL and SETTLEMENT cutoff_at and due dates; cutoff_timing variance (D29, D34)"
+    "Per partner where the partner has one — Ali and other Asian partners; Jeton and Aquanow have none, so their cutoff is empty and nothing is bound. For pairs with a bank side only: binds the rate lock and the outgoing settlement; locked before 14:30 GMT+8 is same day, after it next business day at that day's rate (unless locked within the previous day's cutoff); extendable 30-60 minutes if the partner agrees; closed early on Fridays or before a holiday",
+    "PARTNER.bank_cutoff_time (nullable: no cutoff for Jeton, Aquanow), PARTNER_CUTOFF_OVERRIDE, HOLIDAY; PARTNER_PAIR.needs_bank_lock; DEAL and SETTLEMENT cutoff_at and due dates; cutoff_timing variance (D29, D34)"
    ],
    [
     "F10",
@@ -7884,19 +7891,64 @@
     "RECEIVING_ENTITY_ACCOUNT.rail internal; no bank fee on the rail (D18)"
    ]
   ],
-  "open_questions": [
-   "F2 — the 'alternate receiving wallets' for higher-risk senders: other wallets of the same partner, a different partner, or NPL's own wallet?",
-   "F1 — cash settlement 'same process, roles switched': who provides the token for a payout, the receiver's side or the partner's agent, and who keeps the photo?",
-   "F1 — does the cutoff bind a cash-in deal only when the payout side is a bank transfer?",
-   "F1 — when the partner's count completes after the hand-over day, is the rate the morning's locked rate or the rate on the day of the count?",
-   "F5 — who approves covering a bank fee on special cases, Finance or Management?",
-   "F8 — is a partner's cash deposit into the receiver's bank account a local bank payout (no token) rather than a cash hand-over?",
-   "Jeton — confirm it offers no cash or local-deposit methods.",
-   "GDC — is the USD 500,000 counted for GDC as a whole? (assumed yes)",
-   "27 Group THB — refuse the quote or only warn Finance when Ali's rate is more than 1.5 % below market? Any forex limit beyond the 2 % buffer?",
-   "AK — after an overnight wait the rate used is the next morning's partner rate (to confirm).",
-   "Novi via Jeton — 0.3 % rebate confirmed; the Jeton route is inactive, so the configuration is dormant.",
-   "Cash — the rounding unit for AED and USD cash in Dubai."
+  "open_questions": [],
+  "answered_questions": [
+   [
+    "F2 — alternate receiving wallets",
+    "The partners have designated wallets for senders who cannot be screened up front; where a partner does not support a network (Ali has no ERC-20) NPL collects on its own alternate wallet and forwards to the partner on a supported network, without the risk exposure."
+   ],
+   [
+    "F1 — cash settlement token",
+    "The receiver provides the token up front; NPL passes it to the partner, the partner to the agent; the agent takes the token, hands over the cash and photographs the token; the photo goes partner → NPL → receiver to close the loop."
+   ],
+   [
+    "F1 — cutoff on cash deals",
+    "The cutoff binds only currency pairs with a bank side, and only partners that have one (Ali and other Asian partners; not Jeton or Aquanow)."
+   ],
+   [
+    "F1 — rate when the count completes later",
+    "The rate is the one locked at quote, even if the hand-over moves to the next day; the partner may change the agent and the token, and NPL passes the new details to the sender."
+   ],
+   [
+    "F5 — covering a bank fee",
+    "Finance reviews and recommends; Management approves."
+   ],
+   [
+    "F8 — cash deposit into the receiver's bank account",
+    "A local bank payment, since no cash is handed to the receiver: no token."
+   ],
+   [
+    "Jeton — methods",
+    "No cash and no local bank methods. A partner's methods must be configuration on the partner record, not hard-coded."
+   ],
+   [
+    "GDC — threshold scope",
+    "USD 500,000 counted for GDC as a whole, all receiving entities together."
+   ],
+   [
+    "27 Group THB — rate limit",
+    "The system warns, never refuses; NPL can go above the 2 % markup after discussing with the customer; Finance recommends and Management decides whether to raise the fee cap."
+   ],
+   [
+    "AK — overnight wait",
+    "Next day's rate for any collection past the previous day's cutoff, unless it was locked within that cutoff."
+   ],
+   [
+    "Novi via Jeton",
+    "0.3 % rebate confirmed; the Jeton route is inactive, so the configuration is dormant."
+   ],
+   [
+    "Dubai cash rounding",
+    "AED cash to the nearest 100; USD cash in Dubai to the nearest 10."
+   ],
+   [
+    "Evo narratives",
+    "Babylon is paid on an invoice reference; Bplay, Lex and TBet are self-transfers with an internal invoice or statement reference."
+   ],
+   [
+    "Raeen",
+    "The 1 % with 0.2 % split 75/25 is the direct-collection arrangement, not the sub-accounts; the sub-accounts are 4 % split equally after the partner fee."
+   ]
   ]
  }
 }
