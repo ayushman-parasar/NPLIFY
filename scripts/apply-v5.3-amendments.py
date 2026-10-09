@@ -77,7 +77,7 @@ ch("INTRODUCER", "v5.3 (D26): party_kind client_party on its rules")
 E["REFERRAL_ACCRUAL"]["desc"] = E["REFERRAL_ACCRUAL"]["desc"].replace("paid out of NPL’s earnings.", "paid out of NPL’s earnings — or, when the party holds the converted funds (settlement_mode party_retains), netted into a receivable from the party and reconciled monthly (D26).")
 for q in d["OPENQ"]:
     if q["q"].startswith("Reference workbooks per project archetype"):
-        q["status"] = "answered"; q["a"] = "Fee Outlines v0.2 (8 October 2026): every line of NPL’s fee table as a fill-in outline with a worked calculation per transaction pattern, answered by Sud with the Project Context and Payment methods tabs."; q["impl"] = "v5.3: decisions D20–D33 were built from it; the workbook is the acceptance reference for the fee engine."
+        q["status"] = "answered"; q["a"] = "Fee Outlines v0.2 (8 October 2026): every line of NPL’s fee table as a fill-in outline with a worked calculation per transaction pattern, answered by NPL with the Project Context and Payment methods tabs."; q["impl"] = "v5.3: decisions D20–D33 were built from it; the workbook is the acceptance reference for the fee engine."
     if q["q"].startswith("Whole-unit conversion rounding rule"):
         q["impl"] += " Superseded in v5.3 by D25: a rounding menu per pair, signed residual, EXP_ROUNDING for round-ups."
 d["DECISIONS"] += (

@@ -126,12 +126,12 @@
       "code": "SUD",
       "group": "DEFAULT",
       "kind": "counterparty",
-      "name": "Sud",
+      "name": "NPL",
       "status": "active",
       "entities": [
         {
-          "code": "NEWXP",
-          "name": "NewXP Entity",
+          "code": "ENTITY_X1",
+          "name": "Entity X1",
           "status": "active",
           "accounts": [
             {
@@ -144,8 +144,8 @@
           ]
         },
         {
-          "code": "REFERSCOUT",
-          "name": "ReferScout Entity",
+          "code": "ENTITY_X2",
+          "name": "Entity X2",
           "status": "active",
           "accounts": [
             {
@@ -163,7 +163,7 @@
       "code": "RAJ",
       "group": "DEFAULT",
       "kind": "counterparty",
-      "name": "Raj",
+      "name": "Receiver Y",
       "status": "active",
       "entities": [
         {
@@ -186,7 +186,7 @@
   "senders": [
     {
       "code": "AYUSH",
-      "name": "Ayush",
+      "name": "Sender A",
       "risk_tier": "standard",
       "status": "active",
       "sendable_to": [
@@ -201,7 +201,7 @@
     },
     {
       "code": "NAVEEN",
-      "name": "Naveen",
+      "name": "Sender B",
       "risk_tier": "standard",
       "status": "active",
       "sendable_to": [

@@ -88,17 +88,17 @@ const EX = {
     { code: "RETURNS", name: "Return group", is_default: false, kind: "return", status: "active" },
   ],
   receivers: [
-    { code: "SUD", group: "DEFAULT", kind: "counterparty", name: "Sud", status: "active", entities: [
-      { code: "NEWXP", name: "NewXP Entity", status: "active", accounts: [{ code: "NEWXP-EUR-SEPA", currency: "EUR", rail: "SEPA", details_ref: "bank-ref-001", status: "active" }] },
-      { code: "REFERSCOUT", name: "ReferScout Entity", status: "active", accounts: [{ code: "RS-EUR-SEPA", currency: "EUR", rail: "SEPA", details_ref: "bank-ref-002", status: "active" }] },
+    { code: "SUD", group: "DEFAULT", kind: "counterparty", name: "Receiver X", status: "active", entities: [
+      { code: "ENTITY_X1", name: "Entity X1", status: "active", accounts: [{ code: "NEWXP-EUR-SEPA", currency: "EUR", rail: "SEPA", details_ref: "bank-ref-001", status: "active" }] },
+      { code: "ENTITY_X2", name: "Entity X2", status: "active", accounts: [{ code: "RS-EUR-SEPA", currency: "EUR", rail: "SEPA", details_ref: "bank-ref-002", status: "active" }] },
     ] },
-    { code: "RAJ", group: "DEFAULT", kind: "counterparty", name: "Raj", status: "active", entities: [
+    { code: "RAJ", group: "DEFAULT", kind: "counterparty", name: "Receiver Y", status: "active", entities: [
       { code: "VOICEAI", name: "VoiceAIWrapper", status: "active", accounts: [{ code: "VAI-EUR-SWIFT", currency: "EUR", rail: "SWIFT", details_ref: "bank-ref-003", status: "active" }] },
     ] },
   ],
   senders: [
-    { code: "AYUSH", name: "Ayush", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-ayush-1" }] },
-    { code: "NAVEEN", name: "Naveen", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-naveen-1" }] },
+    { code: "AYUSH", name: "Sender A", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-ayush-1" }] },
+    { code: "NAVEEN", name: "Sender B", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-naveen-1" }] },
   ],
   partner_configs: [
     { code: "CLIENT1-ALI", partner: "ALI", applicable_for_reroute: false, status: "active",
@@ -284,7 +284,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="rule"></div>
 
 <h2>1 · How configuration is organised</h2>
-<p>Three ideas carry the whole model. <b>A project is a client.</b> Everything a client needs sits under its project: settings, currency pairs, senders, receiver groups, and one partner configuration block per partner the client uses. <b>Parties are partner-independent.</b> Senders, receiver groups and receiving entities belong to the project, so the same Ayush → Raj flow can run through Ali today and Jeton tomorrow. <b>How a partner is used is a block.</b> Fees, vehicles, collection endpoints, narratives, rails, destination approvals and rebate terms for one partner in one project all hang off a single PARTNER_CONFIG.</p>
+<p>Three ideas carry the whole model. <b>A project is a client.</b> Everything a client needs sits under its project: settings, currency pairs, senders, receiver groups, and one partner configuration block per partner the client uses. <b>Parties are partner-independent.</b> Senders, receiver groups and receiving entities belong to the project, so the same Sender A → Receiver Y flow can run through Ali today and Jeton tomorrow. <b>How a partner is used is a block.</b> Fees, vehicles, collection endpoints, narratives, rails, destination approvals and rebate terms for one partner in one project all hang off a single PARTNER_CONFIG.</p>
 ${tree}
 <div class="box"><b>Change control.</b> Configuration is versioned: thresholds, fee structures and policies are new rows with an effective date, never edits. Finance proposes, Management approves (approver ≠ proposer), and every change is audited. Deals keep the versions they were priced on.</div>
 
@@ -316,18 +316,18 @@ ${PARTNER_BLOCK.map(fieldTable).join("")}
 </ol>
 
 <h2 class="pb">7 · Worked example: the FRS project, end to end</h2>
-<p>The FRS describes one client flow: senders Ayush and Naveen pay USDT, partners Ali (through its PT vehicles) or Jeton convert to EUR, and receivers Sud (NewXP Entity, ReferScout Entity) and Raj (VoiceAIWrapper) are paid in euros. Below is that project expressed in the schema. Names, policies and the fee split come from NPL's documents; rates of fee, thresholds, addresses and reference numbers are <b>illustrative placeholders</b> to be replaced with NPL's values.</p>
+<p>The FRS describes one client flow: senders A and Sender B pay USDT, partners Ali (through its PT vehicles) or Jeton convert to EUR, and receivers X (Entity X1, Entity X2) and Receiver Y (VoiceAIWrapper) are paid in euros. Below is that project expressed in the schema. Names, policies and the fee split come from NPL's documents; rates of fee, thresholds, addresses and reference numbers are <b>illustrative placeholders</b> to be replaced with NPL's values.</p>
 <p>How to read it: one block per entity type, in the order of Sections 2 to 5. A code such as <code>DEFAULT</code> or <code>NEWXP-EUR-SEPA</code> is how one row refers to another; the system assigns the numeric ids.</p>
 <pre class="yaml">${esc(yamlText)}</pre>
 
 <h3>What each part does in one deal</h3>
 <table><thead><tr><th style="width:30%">Step of the deal</th><th>Configuration it reads</th></tr></thead><tbody>
-<tr><td>Ayush asks to send USDT for Raj</td><td>SENDER Ayush; his allow-list names the default group, so the deal is attributed to <code>DEFAULT</code>; Raj is a receiver in it.</td></tr>
+<tr><td>Sender A asks to send USDT for Receiver Y</td><td>SENDER Sender A; his allow-list names the default group, so the deal is attributed to <code>DEFAULT</code>; Receiver Y is a receiver in it.</td></tr>
 <tr><td>Operations picks Ali for USDT → EUR</td><td>PARTNER_CONFIG CLIENT1-ALI, PARTNER_PAIR USDT-EUR (disclosed rate: Ali's margin is inside its rate), its current FEE_STRUCTURE: basis market (the FRS prices on Kraken), fixed 1.00 % (0.40 % sender, 0.60 % receiver). Jeton, the alternative, states market + 0.50 % instead.</td></tr>
 <tr><td>Market rate</td><td>CURRENCY_PAIR USDT-EUR, source chain Kraken then CMC, 5 decimals; a snapshot older than 120 s is not used.</td></tr>
 <tr><td>Quote clocks</td><td>PROJECT: freshness 5 min, validity 60 min, grace 15 min if drift ≤ 0.10 %; beyond grace the policy is re-quote.</td></tr>
-<tr><td>Can the quote leave Inquiry?</td><td>SETTLEMENT_REGISTRATION: Raj's account VAI-EUR-SWIFT is approved with Ali, so yes. In the FRS project every destination is approved with both partners; a project where a registration is still pending_partner could not quote that group through that partner.</td></tr>
-<tr><td>Where does Ayush pay?</td><td>FACILITATING_ENTITY PT-tour, its TRC-20 USDT WALLET. Provenance recorded against his COLLECTION_SENDING_ENTITY.</td></tr>
+<tr><td>Can the quote leave Inquiry?</td><td>SETTLEMENT_REGISTRATION: Receiver Y’s account VAI-EUR-SWIFT is approved with Ali, so yes. In the FRS project every destination is approved with both partners; a project where a registration is still pending_partner could not quote that group through that partner.</td></tr>
+<tr><td>Where does Sender A pay?</td><td>FACILITATING_ENTITY PT-tour, its TRC-20 USDT WALLET. Provenance recorded against his COLLECTION_SENDING_ENTITY.</td></tr>
 <tr><td>Conversion</td><td>Receiver fee taken at conversion (receiver_fee_timing); amounts truncated to whole euros (amount_rounding); variance tolerance 0.20 % (THRESHOLD rate_variation_rel).</td></tr>
 <tr><td>Payout</td><td>DISBURSEMENT from Ali through SETTLEMENT_RAIL "Ali's EU bank / EMI" under the narrative "PT Global Inc" to VAI-EUR-SWIFT; whole euros; disburse_policy to_zero; expected bank fee 25 EUR, treatment carry_forward; Management approval above 50,000 EUR or for a third same-day slot.</td></tr>
 <tr><td>If Ali is unavailable</td><td>REROUTE to Jeton (applicable_for_reroute = true) via the OWN_WALLET at Aquanow, custody limit 48 hours.</td></tr>

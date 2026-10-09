@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bring the web app to ERD v5.3: adds NPL's fee-practice material (fee table, Sud's answers of 8 October,
+"""Bring the web app to ERD v5.3: adds NPL's fee-practice material (fee table, NPL’s answers of 8 October,
 the Project Context and Payment methods tabs, proposals A–M) to data/erd.v5.json as FEE_PRACTICE, and
 updates the knowledge-base builder, the map header and the README. Idempotent.
    python3 scripts/apply-v5.3-webapp.py"""
@@ -79,11 +79,11 @@ documents = [
     ["ERD Reading Guide", "v1.0, 8 October 2026 — plain-language companion to the diagrams of v5.2; v1.1 pending"],
     ["Calculation Specification", "v1.0 — v1.1 pending"],
     ["Configuration Schema", "v1.0 — v1.1 pending"],
-    ["Project Understanding", "v1.1 (with Sud’s comments)"],
+    ["Project Understanding", "v1.1 (with NPL’s review comments)"],
 ]
 
 d["FEE_PRACTICE"] = {
-    "intro": "NPL’s fee practice as given to New XP: the ‘Table of Remittance Customers Fees’ (October 2026), Sud’s answers in the Fee Outlines workbook (8 October 2026) and his two tabs ‘Project Context’ and ‘Payment methods’, and Ayush’s clarifications of 8–9 October. This is business fact, in NPL’s own words where quoted; the ERD v5.3 decisions D20–D33 were made from it.",
+    "intro": "NPL’s fee practice as given to New XP: the ‘Table of Remittance Customers Fees’ (October 2026), NPL’s answers in the Fee Outlines workbook (8 October 2026) and his two tabs ‘Project Context’ and ‘Payment methods’, and New XP’s clarifications of 8–9 October. This is business fact, in NPL’s own words where quoted; the ERD v5.3 decisions D20–D33 were made from it.",
     "projects": projects, "payment_methods": methods, "fee_table": fee_table, "answers": answers, "proposals": proposals, "documents": documents,
 }
 P.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n")
@@ -100,10 +100,10 @@ s = re.sub(r"`THIS IS ERD DRAFT v\$\{d\.version\} \(8 October 2026\).*?with inva
            "`THIS IS ERD DRAFT v${d.version} (9 October 2026), which supersedes v5.2, v5.1, v5.0, v4.0 and v3.0. It carries the review decisions of 6–8 October 2026 — D13 (no return group; return and hop legs inherit the parent leg’s attribution), D14 (explicit wallet fields on receiving-entity accounts), D15 (FACILITATING_ENTITY renamed PARTNER_ENTITY, pending NPL confirmation; the partner’s collection endpoints merged into COLLECTION_RECEIVING_ENDPOINT), D16 (registration payout details follow the account’s kind), D17 (DISBURSEMENT_LINE.deal_id), D18 (nullable rail on collection endpoints), D19 (endpoint kind matches the leg’s collection method) — and applies the fee-practice decisions of 8–9 October 2026, D20–D33: FEE_OVERRIDE with its own split (D20), FEE_TIER volume tiers per calendar month with DEAL_FEE_TIER portions (D21), the displayed fee on FEE_STRUCTURE and DEAL_GROUP (D22), NPL-GR as an own-desk project with invariant 3 restated (D23), INVOICE and per-line discharge with the INVOICE_BALANCE view (D24), a rounding menu per pair with a signed residual (D25), REFERRAL_RULE as a share of the net markup settled by the party (D26), rebates as their own stream EARN_REBATE with a rule basis and scope (D27), partner rates stored as quoted with direction (D28), bank cutoff, rate lock and conversion due date with a pending converted value in CLIENT_BALANCE (D29), cash by token with rates per city (D30), WALLET_SCREENING as an Operations action with endpoint risk bands (D31), single-use endpoints and accounts and LOSS_EVENT with a shared, possibly partial loss (D32), and same-currency pass-through converted at rate 1 (D33). 59 tables, 6 views, invariants 1–32.`", s, flags=re.S)
 s = sub('L.push("", "=== SECOND SOURCE: ERD REVIEW DECISION RECORD (6–7 October 2026) ===", d.DECISIONS);',
         'L.push("", "=== SECOND SOURCE: ERD REVIEW DECISION RECORD (6–9 October 2026, D1–D33) ===", d.DECISIONS);', s)
-s = sub('  L.push("", "=== THIRD SOURCE: NPLify — Project Understanding v1.0 (Sud’s comments) ===", d.UNDERSTANDING);\n  return L.join("\\n");',
-        '''  L.push("", "=== THIRD SOURCE: NPLify — Project Understanding v1.0 (Sud’s comments) ===", d.UNDERSTANDING);
+s = sub('  L.push("", "=== THIRD SOURCE: NPLify — Project Understanding v1.0 (NPL’s review comments) ===", d.UNDERSTANDING);\n  return L.join("\\n");',
+        '''  L.push("", "=== THIRD SOURCE: NPLify — Project Understanding v1.0 (NPL’s review comments) ===", d.UNDERSTANDING);
   const fp = d.FEE_PRACTICE;
-  L.push("", "=== FOURTH SOURCE: NPL’S FEE PRACTICE (fee table of October 2026; Sud’s answers and tabs of 8 October 2026; clarifications of 8–9 October) ===", fp.intro, "");
+  L.push("", "=== FOURTH SOURCE: NPL’S FEE PRACTICE (fee table of October 2026; NPL’s answers and tabs of 8 October 2026; clarifications of 8–9 October) ===", fp.intro, "");
   L.push("PROJECTS AS NPL RUNS THEM TODAY (NPL’s own words, ‘Project Context’ tab):", ...fp.projects.map((p) => `* ${p.project} [${p.category}]: ${p.context}`), "");
   L.push("PAYMENT METHODS AND THEIR PROCESS (NPL’s own words, ‘Payment methods’ tab):", ...fp.payment_methods.map((m) => `* ${m.partner} — ${m.method}: ${m.process}`), "");
   L.push("FEE TABLE (one line per client / product; fee, partner cost and margin are NPL’s figures; derived economics — Finance and Management only):", ...fp.fee_table.map((r, i) => `${i + 1}. ${r.client} — partner ${r.partner}; total fee ${r.total_fee}; partner cost ${r.partner_cost}; NPL margin ${r.npl_margin}; pair ${r.pair}; earnings share ${r.earnings_share || "none"}${r.note ? "; note: " + r.note : ""}; customer-facing calculation: ${r.customer_facing_calculation}; internal: ${r.internal_calculation}`), "");
@@ -111,8 +111,8 @@ s = sub('  L.push("", "=== THIRD SOURCE: NPLify — Project Understanding v1.0 (
   L.push("THE THIRTEEN GAPS (proposals A–M of ‘Model Gaps & Proposals v1.0’) AND THE v5.3 DECISION THAT APPLIED EACH:", ...fp.proposals.map((p) => `- ${p[0]}: ${p[1]} → ${p[2]}`), "");
   L.push("DOCUMENTS OF THE P0 PACK AND THEIR CURRENT VERSION:", ...fp.documents.map((x) => `- ${x[0]}: ${x[1]}`), "");
   return L.join("\\n");''', s)
-s = sub("Your knowledge base is exactly three sources reproduced below: (1) the ERD & Data Model Draft v5.2 as shown on the map; (2) the ERD review decision record of 6–8 October 2026 (decisions D1–D19), which records the scenarios reviewed, the decisions taken and their reasons; and (3) the Project Understanding v1.0 with Sud’s comments, the business understanding the ERD was built from.",
-        "Your knowledge base is exactly four sources reproduced below: (1) the ERD & Data Model Draft v5.3 as shown on the map; (2) the ERD review decision record of 6–9 October 2026 (decisions D1–D33), which records the scenarios reviewed, the decisions taken and their reasons; (3) the Project Understanding v1.0 with Sud’s comments, the business understanding the ERD was built from; and (4) NPL’s fee practice — the fee table, Sud’s answers and his Project Context and Payment methods notes of 8 October 2026 — which is business fact in NPL’s own words and the basis of decisions D20–D33.", s)
+s = sub("Your knowledge base is exactly three sources reproduced below: (1) the ERD & Data Model Draft v5.2 as shown on the map; (2) the ERD review decision record of 6–8 October 2026 (decisions D1–D19), which records the scenarios reviewed, the decisions taken and their reasons; and (3) the Project Understanding v1.0 with NPL’s review comments, the business understanding the ERD was built from.",
+        "Your knowledge base is exactly four sources reproduced below: (1) the ERD & Data Model Draft v5.3 as shown on the map; (2) the ERD review decision record of 6–9 October 2026 (decisions D1–D33), which records the scenarios reviewed, the decisions taken and their reasons; (3) the Project Understanding v1.0 with NPL’s review comments, the business understanding the ERD was built from; and (4) NPL’s fee practice — the fee table, NPL’s answers and his Project Context and Payment methods notes of 8 October 2026 — which is business fact in NPL’s own words and the basis of decisions D20–D33.", s)
 s = sub("If sources disagree, say which says what; the decision record is the newest.", "If sources disagree, say which says what; the decision record and the fee-practice source are the newest. Figures in the fee table (partner costs, NPL margins, rebates, shares) are derived economics: give them when asked, but say they are Finance-level figures.", s)
 k.write_text(s)
 

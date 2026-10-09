@@ -120,7 +120,7 @@ function breach({ Rm, Rp, avg2w, varianceThresholdRel }) {
 
 // ------------------------------------------------------------------ worked example parameters
 const EX = {
-  project: "Evo", sender: "Ayush", group: "Group A (default)", receiver: "Sud", entity: "NewXP Entity · EUR via SEPA",
+  project: "Evo", sender: "Sender A", group: "Group A (default)", receiver: "Receiver X", entity: "Entity X1 · EUR via SEPA",
   pt: { code: "PT", name: "Ali (PT Sukses)", pricing: "disclosed rate (markup inside the rate)" },
   jt: { code: "JETON", name: "Jeton", pricing: "market + 0.50 % (markup stated separately)", markup: 0.005 },
   Rm: 0.9000, Rp: 0.8950, s: 0.004, r: 0.006,
@@ -176,12 +176,12 @@ const dueTotal = D1.payable + D1.residual + D2.payable + D2.residual; // client 
 const dueWhole = trunc(dueTotal);
 const dust = r2(dueTotal - dueWhole);
 const line1 = 9000, line2 = dueWhole - 9000;
-L.tx(`T6 · Disbursement from PT: ${fmt(dueWhole)} EUR in two lines (NewXP Entity ${fmt(line1)}, ReferScout Entity ${fmt(line2)})`, "Disbursement", [
+L.tx(`T6 · Disbursement from PT: ${fmt(dueWhole)} EUR in two lines (Entity X1 ${fmt(line1)}, Entity X2 ${fmt(line2)})`, "Disbursement", [
   [`CL.PT.EUR.INTRANSIT`, "Dr", line1, EUR, CLIENT, "principal", "line 1 released by PT"],
   [`CL.PT.EUR.INTRANSIT`, "Dr", line2, EUR, CLIENT, "principal", "line 2 released by PT"],
   [`CL.PT.EUR.DUE`, "Cr", dueWhole, EUR, CLIENT, "principal", `whole euros leave DUE; ${fmt(dust)} EUR of rounding dust stays`],
 ], `Disburse to less than one unit: the client balance at PT drops from ${fmt(dueTotal)} to ${fmt(dust)} EUR. Both lines pay entities of the same receiver and each line names the leg it settles in deal_id (deals 1 and 2), so no offset arises.`);
-L.tx(`T7 · Confirmation, line 1 full: NewXP Entity received ${fmt(line1)} EUR`, "Confirmation", [
+L.tx(`T7 · Confirmation, line 1 full: Entity X1 received ${fmt(line1)} EUR`, "Confirmation", [
   [`CL.PROJECT.EUR.PAYABLE`, "Dr", line1, EUR, CLIENT, "principal", "the obligation is discharged"],
   [`CL.PT.EUR.INTRANSIT`, "Cr", line1, EUR, CLIENT, "principal", "the money reached the receiver"],
 ]);
@@ -424,7 +424,7 @@ ${PURPOSES.map(([o, p, k, h, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY
 <p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. All purposes and holder types above are in ERD v5.2 (LEDGER_ACCOUNT); <code>ADVANCE</code> does not exist because NPL never advances money. Rebates are credited to <code>EXP_PARTNER</code> and referral commissions debited to <code>EARN_GROSS</code>, so no extra income or expense accounts are needed.</p>
 
 <h2>4 · Reading a posting table</h2>
-<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example uses project Evo, sender Ayush, receiver Sud (receiver group A, the default group) with entities NewXP Entity and ReferScout Entity, partner PT (Ali, a disclosed-rate partner whose margin is inside its rate) and partner Jeton (a market + 0.50 % partner that states its fee separately). Rates: market 0.9000 EUR per USDT, PT 0.8950 EUR per USDT. Fee structure: basis partner, fixed, 1.00 % in total, 0.40 % sender share and 0.60 % receiver share. The arithmetic behind the amounts is in the Calculation Specification; the headline figures for deal 1 are:</p>
+<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts; <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example uses project Evo, sender A, receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2, partner PT (Ali, a disclosed-rate partner whose margin is inside its rate) and partner Jeton (a market + 0.50 % partner that states its fee separately). Rates: market 0.9000 EUR per USDT, PT 0.8950 EUR per USDT. Fee structure: basis partner, fixed, 1.00 % in total, 0.40 % sender share and 0.60 % receiver share. The arithmetic behind the amounts is in the Calculation Specification; the headline figures for deal 1 are:</p>
 <table><thead><tr><th>Figure</th><th class="n">Deal 1 (10,000 USDT at PT)</th><th>How</th></tr></thead><tbody>
 <tr><td>Sender rate</td><td class="n">${D1.Rs.toFixed(5)}</td><td>0.8950 × (1 − 0.40 %)</td></tr>
 <tr><td>Gross out</td><td class="n">${fmt(D1.grossOut)} EUR</td><td>10,000 × sender rate</td></tr>

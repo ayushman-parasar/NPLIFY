@@ -280,7 +280,7 @@ d["FRS_VOCAB"] += [
     ["Reversal of collection; cash short", "LOSS_EVENT with its split; SHORTFALL for recoverable cash shortages (D32)"],
 ]
 d["OPENQ"].append({
-    "q": "Review point (v5.3): can the model express NPL’s fee practice as described in the fee table, Sud’s workbook answers and the Project Context / Payment methods tabs (gaps A–M)?",
+    "q": "Review point (v5.3): can the model express NPL’s fee practice as described in the fee table, NPL’s workbook answers and the Project Context / Payment methods tabs (gaps A–M)?",
     "blocks": "Fees, rebates, shared markup, own desk, invoices, rounding, rates, cutoff, cash, screening, losses",
     "status": "answered",
     "a": "NPL (8–9 Oct): all thirteen confirmed with parameters — receiver part fixed (A); calendar-month tiers, a crossing deal split across tiers (B); displayed 1 % is a BF-only rule (C); run NPL-GR inside NPLify as an own desk (D); invoice tracking wanted (E); rounding menu, round up to 1,000 for Asian currencies (F); markup shared = fee − partner fee, several parties, party holds the funds, rebate NPL’s alone (G); rebates reported apart, statement covers NPLify deals only (H); Ali quotes inverted (I); NPL absorbs the next-day rate difference, pending converted value shown from the lock (J); cash by token, rates by city (K); screening is an Operations action (L); losses partial and shared, both sides, any method (M); same-currency pass-through stays in scope.",

@@ -70,7 +70,7 @@ QUESTIONS_NPL = [
  "Novi via Jeton — 0.3 % rebate confirmed; the Jeton route is inactive, so the configuration is dormant.",
  "Cash — the rounding unit for AED and USD cash in Dubai.",
 ]
-d["SCENARIO_CATALOGUE"] = {"intro": "Every scenario in NPL's Fee Outlines workbook (Sud's answers of 8 October 2026, with the Project Context and Payment methods tabs) runs through ERD v5.4. Scenarios are grouped by client and project; the operational flows they share are defined once (F1–F10) and referenced by number. Source: 'NPLify Scenario Catalogue v1.0' (9 October 2026).",
+d["SCENARIO_CATALOGUE"] = {"intro": "Every scenario in NPL's Fee Outlines workbook (NPL’s answers of 8 October 2026, with the Project Context and Payment methods tabs) runs through ERD v5.4. Scenarios are grouped by client and project; the operational flows they share are defined once (F1–F10) and referenced by number. Source: 'NPLify Scenario Catalogue v1.0' (9 October 2026).",
     "projects": PROJECTS, "flows": FLOWS, "open_questions": QUESTIONS_NPL}
 P.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n")
 print("scenario catalogue:", sum(len(p["scenarios"]) for p in PROJECTS), "scenarios,", len(FLOWS), "flows,", len(QUESTIONS_NPL), "open questions")
