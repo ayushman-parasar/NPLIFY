@@ -37,10 +37,10 @@ export const DOCS: Doc[] = [
   {
     slug: "ledger",
     title: "Ledger Posting Design",
-    version: "v1.1",
-    blurb: "How every deal, collection, conversion, settlement, fee and rebate becomes append-only postings, and how balances and positions are derived from them.",
+    version: "v1.2",
+    blurb: "The chart of accounts and how every deal, collection, conversion, settlement, fee, share, rebate, variance, loss and reseller invoice becomes append-only postings, with the balances and reports derived from them.",
     audience: "client",
-    files: { html: "NPLify-Ledger-Posting-Design-v1.1.html", pdf: "NPLify-Ledger-Posting-Design-v1.1.pdf" },
+    files: { html: "NPLify-Ledger-Posting-Design-v1.2.html", pdf: "NPLify-Ledger-Posting-Design-v1.2.pdf" },
     group: "design",
   },
   {
