@@ -1,6 +1,6 @@
 # NPLify ERD
 
-Interactive map of the NPLify P0 data model (draft v5.5) with an assistant that answers only from the model, the ERD review decision record (D1–D44), the Project Understanding document and NPL’s fee-practice notes. Built for NPL staff; every question, answer, pinned entity, walkthrough and flag is recorded for New XP's review.
+Interactive map of the NPLify P0 data model (draft v5.5) with an assistant that answers only from the model, the ERD review decision record (D1–D45), the Project Understanding document and NPL’s fee-practice notes. Built for NPL staff; every question, answer, pinned entity, walkthrough and flag is recorded for New XP's review.
 
 ## Stack
 
