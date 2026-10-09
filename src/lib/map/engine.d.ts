@@ -11,4 +11,11 @@ export function mountErdMap(
     sessionId?: string;
     onEvent?: ((type: string, payload: Record<string, unknown>) => void) | null;
   },
-): { destroy(): void; select(name: string): void; fit(): void };
+): {
+  destroy(): void;
+  select(name: string): void;
+  fit(): void;
+  setTab(tab: string): void;
+  ask(text: string, send?: boolean): void;
+  startWalk(index: number): void;
+};

@@ -561,5 +561,6 @@ chatIn.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&!ev.shiftKey){ev.pre
 chatStop.addEventListener('click',()=>{if(ctl)ctl.abort()});
 $('chatClear').addEventListener('click',()=>{if(ctl)ctl.abort();turns=[];chatLog.innerHTML='';chatSug.hidden=false;sessionId=crypto.randomUUID?crypto.randomUUID():String(Date.now())});
 
-return {destroy(){stopTween();cleanups.forEach(f=>{try{f()}catch(e){}});root.innerHTML='';}, select, fit};
+return {destroy(){stopTween();cleanups.forEach(f=>{try{f()}catch(e){}});root.innerHTML='';}, select:(n)=>{if(E[n])select(n,null,{force:true})}, fit, setTab:(t)=>{if(['details','ask','oq'].includes(t)&&(t!=='oq'||!cfg.visitor))setTab(t)},
+  ask:(text,send)=>{setTab('ask');chatIn.value=text;if(send)ask();else chatIn.focus()}, startWalk:(i)=>{if(WALKS[i]){walkSel.value=String(i);startWalk(i)}}};
 }

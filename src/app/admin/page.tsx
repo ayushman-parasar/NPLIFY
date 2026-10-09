@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
-import Brand from "@/components/Brand";
-import ThemeToggle from "@/components/ThemeToggle";
+import TopBar from "@/components/TopBar";
 import { currentViewer } from "@/lib/auth";
 import { getDb, schema } from "@/lib/db";
 
@@ -70,14 +68,7 @@ export default async function AdminPage() {
 
   return (
     <>
-      <div className="topbar">
-        <Brand sub="Activity log" />
-        <span className="grow" />
-        <div className="acct">
-          <Link href="/">← Back to the map</Link>
-          <ThemeToggle />
-        </div>
-      </div>
+      <TopBar viewer={viewer} active="admin" sub="Activity log" />
       <main className="admin">
         <div className="head">
           <h1>
