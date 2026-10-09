@@ -7,6 +7,7 @@ export function mountErdMap(
     flagsUrl?: string;
     feedbackUrl?: string;
     flaggingEnabled?: boolean;
+    visitor?: boolean;
     sessionId?: string;
     onEvent?: ((type: string, payload: Record<string, unknown>) => void) | null;
   },

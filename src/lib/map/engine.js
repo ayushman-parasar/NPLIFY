@@ -130,8 +130,11 @@ export const SKELETON = `
 
 export function mountErdMap(root, DATA, cfg) {
 const {DOMS,COLS,E,ORDER,R,INV,WALKS,OPENQ,SCENARIOS,SCENARIO_V4}=DATA;
-cfg=Object.assign({askUrl:'/api/ask',flagsUrl:'/api/flags',feedbackUrl:'/api/feedback',flaggingEnabled:false,onEvent:null},cfg||{});
+cfg=Object.assign({askUrl:'/api/ask',flagsUrl:'/api/flags',feedbackUrl:'/api/feedback',flaggingEnabled:false,visitor:false,onEvent:null},cfg||{});
 root.innerHTML=SKELETON;
+if(cfg.visitor){root.querySelector('#app').classList.add('visitor');const t=root.querySelector('.ptab[data-tab=oq]');if(t)t.remove();
+  root.querySelector('#chatNote').textContent='Answers come only from the data model and its supporting documents. Conversations are recorded.';
+  root.querySelector('header h1 small').textContent='P0 data model'}
 const RM=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cleanups=[];
 /* ------------------------------------------------------------------ layout */
@@ -507,7 +510,7 @@ function openFlag(name){const box=$('flagbox');if(!box)return;box.hidden=false;
 /* ------------------------------------------------------------------ chat (server-backed) */
 const chatLog=$('chatLog'),chatIn=$('chatIn'),chatForm=$('chatForm'),chatSend=$('chatSend'),chatStop=$('chatStop'),chatSug=$('chatSug'),chatNote=$('chatNote');
 const SUGGEST=['How does a BF Sub deal via Aquanow work end to end, and where does the Aquanow rebate go?','Which projects belong to the Betfair client, and how do I see the client-level balance?','How does a GDC transaction that crosses USD 500,000 in a month get priced?','What happens when a one-time local deposit account is frozen after the deposit?','How does the 14:30 cutoff change a deal collected in the evening?','What changed in v5.3 and v5.4, and which NPL fee practice does each decision come from?','How does money flow from a collection to the receiver’s confirmation?','What must exist before a quote-first deal can leave Inquiry?','What is a receiver group and when do offsets arise?','How is a rejected payout handled?','How does a two-leg route across two partners work?','Which figures are never stored, and how is each computed?','What changes on a reroute, and what stays fixed?','When is a partner rate version breached, and what happens then?','List every entity that hangs off PARTNER_CONFIG.','Which open questions are still unresolved?'];
-SUGGEST.forEach((q,i)=>{const b=document.createElement('button');b.type='button';b.textContent=q;b.style.animationDelay=(i*25)+'ms';b.addEventListener('click',()=>{chatIn.value=q;ask()});chatSug.appendChild(b)});
+(cfg.visitor?SUGGEST.filter(q=>!/v5\.|open question/i.test(q)):SUGGEST).forEach((q,i)=>{const b=document.createElement('button');b.type='button';b.textContent=q;b.style.animationDelay=(i*25)+'ms';b.addEventListener('click',()=>{chatIn.value=q;ask()});chatSug.appendChild(b)});
 let turns=[],ctl=null,busy=false,sessionId=cfg.sessionId||(crypto.randomUUID?crypto.randomUUID():String(Date.now()));
 const ENT_RE=new RegExp('\\b('+Object.keys(E).sort((a,b)=>b.length-a.length).join('|')+')\\b','g');
 function md(t){

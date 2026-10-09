@@ -60,8 +60,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .topbar,header,.tools,.erd-root main,#stage{min-width:0;max-width:100%}
 
 /* ------------------------------------------------------------------ brand bar (React) */
-.topbar{display:flex;align-items:center;gap:14px;padding:0 18px;height:52px;color:var(--top-fg);
-  background:linear-gradient(90deg,var(--top) 0%,var(--top-2) 60%,var(--top) 100%);border-bottom:1px solid var(--top-line);position:relative;overflow:hidden;flex:none}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:0 18px;height:52px;color:var(--top-fg);
+  background:linear-gradient(90deg,var(--top) 0%,var(--top-2) 60%,var(--top) 100%);border-bottom:1px solid var(--top-line);overflow:hidden;flex:none}
 .topbar::before{content:"";position:absolute;inset:-40% -10% auto;height:200%;pointer-events:none;
   background:radial-gradient(60% 50% at 20% 50%,rgba(99,102,241,.35),transparent 70%),radial-gradient(40% 50% at 70% 40%,rgba(6,182,212,.22),transparent 70%);
   animation:aurora 14s ease-in-out infinite alternate}

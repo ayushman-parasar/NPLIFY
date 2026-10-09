@@ -3,7 +3,8 @@
 //   DATABASE_URL=postgres://... node scripts/seed-users.mjs seed/users.json
 //   DATABASE_URL=postgres://... SEED_USERS='[{"email":"a@b.c","password":"...","name":"A","role":"admin"}]' node scripts/seed-users.mjs
 //
-// Each entry: { email, password, name?, role?: "user" | "admin", active?: true }.
+// Each entry: { email, password, name?, role?: "user" | "admin" | "visitor", active?: true }.
+// visitor: a client guest who sees the model but not the open questions, version labels or activity log.
 // Existing emails are updated (password, name, role, active); new ones are inserted.
 // Passwords are stored as scrypt hashes in the same format src/lib/password.ts verifies.
 import fs from "node:fs";
@@ -31,7 +32,7 @@ for (const u of users) {
   const email = String(u.email ?? "").trim().toLowerCase();
   const password = String(u.password ?? "");
   if (!email.includes("@") || password.length < 8) { console.error(`skip ${email || "(no email)"}: need an email and a password of at least 8 characters`); continue; }
-  const role = u.role === "admin" ? "admin" : "user";
+  const role = ["admin", "visitor"].includes(u.role) ? u.role : "user";
   const active = u.active !== false;
   const rows = await sql`
     INSERT INTO "user" (id, email, name, password_hash, role, active)

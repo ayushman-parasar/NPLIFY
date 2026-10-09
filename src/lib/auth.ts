@@ -6,9 +6,15 @@ import { verifyPassword } from "@/lib/password";
 
 declare module "next-auth" {
   interface Session {
-    user: { id: string; isAdmin: boolean } & DefaultSession["user"];
+    user: { id: string; role: Role } & DefaultSession["user"];
   }
 }
+
+/** admin: NPL/New XP staff with the activity log; user: NPL staff; visitor: client guests, who see the model
+ *  without the review apparatus (no open questions, no draft or version labels, no activity log). */
+export type Role = "admin" | "user" | "visitor";
+export const ROLES: Role[] = ["admin", "user", "visitor"];
+export const asRole = (r: unknown): Role => (ROLES.includes(r as Role) ? (r as Role) : "user");
 
 /** Local development escape hatch. Never honoured in production builds. */
 export const authDisabled =
@@ -43,18 +49,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session({ session, token }) {
       session.user.id = token.sub ?? "";
-      session.user.isAdmin = token.role === "admin";
+      session.user.role = asRole(token.role);
       return session;
     },
   },
 });
 
-export type Viewer = { id: string; email: string; isAdmin: boolean };
+export type Viewer = { id: string; email: string; role: Role; isAdmin: boolean; isVisitor: boolean };
 
-/** The signed-in viewer, or null. In local dev with AUTH_DISABLED a fixed viewer is returned. */
+const viewerOf = (id: string, email: string, role: Role): Viewer => ({ id, email, role, isAdmin: role === "admin", isVisitor: role === "visitor" });
+
+/** The signed-in viewer, or null. In local dev with AUTH_DISABLED a fixed viewer is returned; its role comes
+ *  from AUTH_DEV_ROLE or a `dev-role` cookie (admin by default) so every role can be previewed without a database. */
 export async function currentViewer(): Promise<Viewer | null> {
-  if (authDisabled) return { id: "dev-user", email: "dev@localhost", isAdmin: true };
+  if (authDisabled) {
+    const { cookies } = await import("next/headers");
+    const fromCookie = (await cookies()).get("dev-role")?.value;
+    return viewerOf("dev-user", "dev@localhost", asRole(fromCookie ?? process.env.AUTH_DEV_ROLE ?? "admin"));
+  }
   const session = await auth();
   if (!session?.user?.email || !session.user.id) return null;
-  return { id: session.user.id, email: session.user.email, isAdmin: session.user.isAdmin };
+  return viewerOf(session.user.id, session.user.email, session.user.role);
 }

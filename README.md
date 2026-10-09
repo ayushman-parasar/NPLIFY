@@ -34,7 +34,7 @@ npm install
 npm run dev
 ```
 
-Without `DATABASE_URL` nothing is recorded and, with `AUTH_DISABLED=true`, sign-in is skipped (development builds only). With a database:
+Without `DATABASE_URL` nothing is recorded and, with `AUTH_DISABLED=true`, sign-in is skipped (development builds only); set `AUTH_DEV_ROLE=visitor` (or a `dev-role` cookie) to preview the visitor experience. With a database:
 
 ```bash
 npm run db:push                 # creates or updates the tables
@@ -44,7 +44,7 @@ npm run seed -- seed/users.json              # inserts or updates the sign-in us
 
 ## Users and seeding
 
-There is no self sign-up. Sign-in users are rows in the `user` table with a scrypt password hash and a role (`user` or `admin`; admins can open `/admin`). `scripts/seed-users.mjs` inserts new emails and updates existing ones, so re-running it with a changed password resets that password. Passwords must be at least 8 characters.
+There is no self sign-up. Sign-in users are rows in the `user` table with a scrypt password hash and a role: `user` (NPL staff), `admin` (also opens `/admin`) or `visitor` (client guests: the map and the assistant, but no Open questions tab, no draft or version labels, no activity log, and the assistant is told not to discuss draft status, version numbers or open questions). `scripts/seed-users.mjs` inserts new emails and updates existing ones, so re-running it with a changed password resets that password. Passwords must be at least 8 characters.
 
 To seed **production**, run the same script from your machine against the production database:
 

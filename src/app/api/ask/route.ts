@@ -23,6 +23,10 @@ const Body = z.object({
 
 const client = new Anthropic();
 
+// Appended after the cached knowledge base for visitor accounts (client guests), so the cache prefix is unchanged.
+const VISITOR_NOTE =
+  "The person asking is a client guest, not NPL or New XP staff. Present the model as the data model, not as a draft under review: do not mention draft status, edition or version numbers (v3.0 … v5.x), decision numbers (D1 …), open questions, review dates or who decided what. If asked about them, say that review history is available to NPL staff. Everything else in your rules still applies.";
+
 export async function POST(req: Request) {
   const viewer = await currentViewer();
   if (!viewer) return new Response("Unauthorized", { status: 401 });
@@ -53,7 +57,10 @@ export async function POST(req: Request) {
   const stream = client.beta.messages.stream({
     model: MODEL,
     max_tokens: 8000,
-    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } }],
+    system: [
+      { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } },
+      ...(viewer.isVisitor ? [{ type: "text" as const, text: VISITOR_NOTE }] : []),
+    ],
     messages: messages.map((m) => ({ role: m.role, content: m.content }) as Anthropic.Beta.BetaMessageParam),
     output_config: { effort: EFFORT },
     // Safety-classifier declines are re-run on a fallback model inside the same call.

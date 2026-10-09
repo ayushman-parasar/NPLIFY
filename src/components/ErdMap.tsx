@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import erd from "@data/erd.v5.json";
 
-export type ErdMapConfig = { flaggingEnabled: boolean };
+export type ErdMapConfig = { flaggingEnabled: boolean; visitor?: boolean };
 
 /**
  * Mounts the vanilla map engine (src/lib/map/engine.js) into a div.
@@ -37,7 +37,7 @@ export default function ErdMap({ config }: { config: ErdMapConfig }) {
       handle?.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- config is static for the page lifetime
-  }, [config.flaggingEnabled]);
+  }, [config.flaggingEnabled, config.visitor]);
 
   return <div ref={ref} className="erd-root" />;
 }

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 const entities = Object.values(erd.E as Record<string, { d: string }>);
 const tables = entities.filter((e) => e.d !== "view").length;
 const links = (erd.R as unknown[]).length;
-const decisions = 38; // D1–D38, the review decision record the assistant answers from
+const walks = (erd.WALKS as unknown[]).length;
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if (await currentViewer()) redirect("/");
@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <LoginArt />
 
       <div className="card">
-        <Brand sub={`P0 data model · draft v${erd.version}`} />
+        <Brand sub="P0 data model" />
         <h1>Sign in</h1>
         <p className="lead">The interactive data model and its assistant, for NPL staff.</p>
 
@@ -39,8 +39,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <span>links</span>
           </div>
           <div>
-            <b data-count={decisions}>{decisions}</b>
-            <span>decisions</span>
+            <b data-count={walks}>{walks}</b>
+            <span>data flows</span>
           </div>
         </div>
 

@@ -21,10 +21,12 @@ export default async function Page() {
   return (
     <div className="erd-page">
       <div className="topbar">
-        <Brand sub={`P0 data model · draft v${erd.version} · ${tables} tables + ${views} views`} />
-        <span className="pill" title="Knowledge base version used by the assistant">
-          <i /> ERD v{erd.version}
-        </span>
+        <Brand sub={viewer.isVisitor ? `P0 data model · ${tables} tables + ${views} views` : `P0 data model · draft v${erd.version} · ${tables} tables + ${views} views`} />
+        {!viewer.isVisitor && (
+          <span className="pill" title="Knowledge base version used by the assistant">
+            <i /> ERD v{erd.version}
+          </span>
+        )}
         <span className="grow" />
         <div className="acct">
           <span className="who" title={viewer.email}>
@@ -47,7 +49,7 @@ export default async function Page() {
           <ThemeToggle />
         </div>
       </div>
-      <ErdMap config={{ flaggingEnabled }} />
+      <ErdMap config={{ flaggingEnabled: flaggingEnabled && !viewer.isVisitor, visitor: viewer.isVisitor }} />
     </div>
   );
 }
