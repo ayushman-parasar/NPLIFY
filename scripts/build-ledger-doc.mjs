@@ -119,8 +119,8 @@ function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding
   const Rb = basis === "market" ? Rm : Rp;                   // market or agent_rate basis
   const Rs = Rb * (1 - s);                                   // sender rate: embeds the sender's part
   const grossOut = rd(amountIn * Rs);
-  const feeReceiver = rd(grossOut * r);
-  const clientNet = rd(grossOut - feeReceiver);               // the receiver group's entitlement
+  const feeReceiver = rd(amountIn * Rb * r);                 // on the principal at the basis rate, not on gross out (NPL, 11 October)
+  const clientNet = rd(grossOut - feeReceiver);               // = amount × basis rate × (1 − s − r): the receiver group's entitlement
   const feeSender = rd(amountIn * Rb - grossOut);
   const grossConverted = rd(amountIn * (partnerFee ? Rm : Rp));   // fee_on_market partners convert at market, then charge
   const partnerCost = partnerFee ? rd(grossConverted * partnerFee) : 0;
@@ -679,7 +679,7 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <table><thead><tr><th>Figure</th><th class="n">Deal 1 (10,000 USDT at Ali)</th><th>How</th></tr></thead><tbody>
 <tr><td>Sender rate</td><td class="n">${D1.Rs.toFixed(5)}</td><td>market ${EX.Rm.toFixed(4)} × (1 − ${pct(EX.s)}): the sender's part is taken off the rate</td></tr>
 <tr><td>Gross out</td><td class="n">${fmt(D1.grossOut)} EUR</td><td>10,000 × sender rate</td></tr>
-<tr><td>Receiver pays</td><td class="n">${fmt(D1.feeReceiver)} EUR</td><td>gross out × ${pct(EX.r)}</td></tr>
+<tr><td>Receiver pays</td><td class="n">${fmt(D1.feeReceiver)} EUR</td><td>10,000 × market × ${pct(EX.r)}: both parts are on the principal, so client net = 10,000 × market × (1 − ${pct(EX.s + EX.r)})</td></tr>
 <tr><td>Client net (entitlement)</td><td class="n">${fmt(D1.clientNet)} EUR</td><td>gross out − receiver part</td></tr>
 <tr><td>Converted at Ali</td><td class="n">${fmt(D1.actualOut)} EUR</td><td>10,000 × ${EX.Rp} (Ali's own rate; its spread against market is ${fmt(D1.inferredPartnerCost)} EUR)</td></tr>
 <tr><td>NPL earnings</td><td class="n">${fmt(D1.earnings)} EUR</td><td>converted − client net = fee parts ${fmt(r2(D1.feeSender + D1.feeReceiver))} (sender ${fmt(D1.feeSender)} + receiver ${fmt(D1.feeReceiver)}) − Ali's spread ${fmt(D1.inferredPartnerCost)}</td></tr>
@@ -751,8 +751,8 @@ ${L.balancesHtml([["CO.NONE.EUR.RESELL_REVENUE", EUR, "resale invoice, untouched
 <tr><td>Market rate</td><td class="n">${EX.Rm.toFixed(4)}</td><td class="n">${EX.Rm.toFixed(4)}</td><td>EUR per USDT, the rate the sender is priced on</td></tr>
 <tr><td>Sender rate</td><td class="n">${DN_J.Rs.toFixed(4)}</td><td class="n">${DN_A.Rs.toFixed(4)}</td><td>market × (1 − ${pct(EX.s)} sender pays)</td></tr>
 <tr><td>Gross out</td><td class="n">${fmt(DN_J.grossOut)}</td><td class="n">${fmt(DN_A.grossOut)}</td><td>amount × sender rate</td></tr>
-<tr><td>Receiver pays</td><td class="n">${fmt(DN_J.feeReceiver)}</td><td class="n">${fmt(DN_A.feeReceiver)}</td><td>${pct(EX.r)} of gross out</td></tr>
-<tr><td>Client net → DUE and PAYABLE</td><td class="n">${fmt(DN_J.clientNet)}</td><td class="n">${fmt(DN_A.clientNet)}</td><td>gross out − receiver part: the client's entitlement, write-once</td></tr>
+<tr><td>Receiver pays</td><td class="n">${fmt(DN_J.feeReceiver)}</td><td class="n">${fmt(DN_A.feeReceiver)}</td><td>${pct(EX.r)} of amount × market</td></tr>
+<tr><td>Client net → DUE and PAYABLE</td><td class="n">${fmt(DN_J.clientNet)}</td><td class="n">${fmt(DN_A.clientNet)}</td><td>amount × market × (1 − ${pct(EX.s + EX.r)}): the client's entitlement, write-once</td></tr>
 <tr><td>Partner rate used</td><td class="n">${EX.Rm.toFixed(4)}</td><td class="n">${EX.Rp.toFixed(4)}</td><td>Jeton converts at market and charges separately; Ali's 1 % is inside its rate</td></tr>
 <tr><td>Converted (gross)</td><td class="n">${fmt(DN_J.grossConverted)}</td><td class="n">${fmt(DN_A.actualOut)}</td><td>amount × partner rate</td></tr>
 <tr><td>Partner cost → EXP_PARTNER</td><td class="n">${fmt(DN_J.partnerCost)}</td><td class="n">0.00 (${fmt(DN_A.inferredPartnerCost)} inside the rate)</td><td>Jeton ${pct(JET)} of converted, booked; Ali's is never posted</td></tr>
