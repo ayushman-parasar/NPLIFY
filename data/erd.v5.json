@@ -8768,8 +8768,8 @@
    },
    {
     "client": "Evo",
-    "projects": "Evo",
-    "lead": "Evo's customers pay their invoices to Evo through NPL; everything converts into EUR; two receiver groups with senders designated per group; Ali and Jeton can each pay only some entities.",
+    "projects": "Evo — the USDT → EUR invoice flow, plus Evo's bank-transfer and older currency products (dormant: not run for years, kept in scope by NPL)",
+    "lead": "Evo's customers pay their invoices to Evo through NPL; everything converts into EUR; two receiver groups with senders designated per group; Ali and Jeton can each pay only some entities. Evo's bank-transfer and older currency products have not run for years but stay in scope: the fee still applies because the currency is collected and then settled separately.",
     "scenarios": [
      [
       "Standard USDT collection",
@@ -8812,6 +8812,18 @@
       "A bank rejects the transfer",
       "F6",
       "SETTLEMENT_RETURN, reversing posting, return leg to the sender_return receiver (D13)"
+     ],
+     [
+      "Same-currency pass-through (USD, EUR, GBP) — dormant",
+      "A bank transfer in and the same currency out; 1.4 % from the sender and 1.4 % from Evolution",
+      "2.8 %; F4 in, F5 out, F9",
+      "CURRENCY_PAIR with equal sides, CONVERSION at rate 1 (D33); FEE_STRUCTURE sender_pays_pct 1.4 / receiver_pays_pct 1.4"
+     ],
+     [
+      "CNY, PHP, THB, SGD, HKD; AED and USD cash in Dubai (older currency pairs) — dormant",
+      "Older currency pairs of the same client at 3.2-6.75 %; AED cash rounds to the nearest 100, USD cash in Dubai to the nearest 10",
+      "F4 or F1 in",
+      "Standard pairs; CURRENCY_PAIR.cash_rounding nearest_n with cash_rounding_unit 100 for AED and 10 for USD cash (D25)"
      ]
     ]
    },
@@ -8912,25 +8924,6 @@
       "Local bank payment, SWIFT, USDT or cash",
       "F8 (local), F5 (SWIFT), F3 then wallet, F1 (cash)",
       "SETTLEMENT with the matching rail; SETTLEMENT_LINE.token_ref for cash; RECEIVING_ENTITY_ACCOUNT single_use for a one-time local account (D30, D32)"
-     ]
-    ]
-   },
-   {
-    "client": "Evolution (dormant)",
-    "projects": "Evolution bank transfers and older currency products",
-    "lead": "Not run for years but kept in scope by NPL: the fee still applies because the currency is collected and then settled separately.",
-    "scenarios": [
-     [
-      "Same-currency pass-through (USD, EUR, GBP)",
-      "A bank transfer in and the same currency out; 1.4 % from the sender and 1.4 % from Evolution",
-      "2.8 %; F4 in, F5 out, F9",
-      "CURRENCY_PAIR with equal sides, CONVERSION at rate 1 (D33); FEE_STRUCTURE sender_pays_pct 1.4 / receiver_pays_pct 1.4"
-     ],
-     [
-      "CNY, PHP, THB, SGD, HKD; AED and USD cash in Dubai (older currency pairs)",
-      "Older currency pairs of the same client at 3.2-6.75 %; AED cash rounds to the nearest 100, USD cash in Dubai to the nearest 10",
-      "F4 or F1 in",
-      "Standard pairs; CURRENCY_PAIR.cash_rounding nearest_n with cash_rounding_unit 100 for AED and 10 for USD cash (D25)"
      ]
     ]
    }
