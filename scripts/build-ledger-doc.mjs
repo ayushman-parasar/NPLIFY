@@ -257,7 +257,7 @@ L.tx(`T14 · Conversion of deal 3 at Jeton (fee_on_market, ${pct(JET)}): 10,000 
   ["CO.NONE.EUR.EARN_GROSS", "Cr", DJ.grossMargin, EUR, CO, "earnings", "gross margin before partner cost"],
 ], `Total cost to the client = partner cost ${fmt(DJ.partnerCost)} + NPL earnings ${fmt(DJ.earnings)} = ${fmt(DJ.grossMargin)} EUR. For a fee_in_rate partner (T2) the partner cost is inside the rate and no EXP_PARTNER line exists.`);
 const snapDeal3 = L.snapshot();
-const gas = 2;   // network fee in USDT when one applies; zero (no lines) when it does not
+const gas = 4.2;   // network fee in USDT when one applies; zero (no lines) when it does not
 L.tx("T15 · Deal 4 (D40): the sender can only pay on ERC-20, which Ali does not accept; 10,000 USDT arrive on NPL's bridge wallet", "Collection", [
   ["CL.OWN.USDT.HELD", "Dr", 10000, USDT, CL, "principal", "client money on the bridge (OWN_WALLET.role collection_bridge), to be forwarded within custody_max_hours"],
   ["CL.PROJECT.USDT.PAYABLE", "Cr", 10000, USDT, CL, "principal", ""],
