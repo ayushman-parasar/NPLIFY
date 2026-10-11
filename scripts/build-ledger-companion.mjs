@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as M from "./build-ledger-doc.mjs";
 
-const { L, fmt, pct, esc, EX, JET, D1, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas } = M;
+const { L, fmt, pct, esc, r2, EX, JET, D1, D2, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas } = M;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(path.resolve(here, ".."), "docs");
 const VERSION = M.ERD_VERSION, DATE = "11 October 2026";
@@ -77,6 +77,54 @@ const X = {
   T55: `The next day Ali converts, but only ${u(convertUsdt)} USDT: NPL also leaves its own margin on this deal, ${u(retainUsdt)} USDT, unconverted and takes it into its USDT pool (earned in USDT this time). The client receives ${e(eurOut)} EUR at Ali, which together with the ${e(offsetEur)} it already holds at Jeton is exactly the ${e(DN_A.clientNet)} it was quoted. End state: Jeton's euros are all the client's; Ali's USDT are all NPL's; Ali's euros are all the client's.`,
 };
 
+
+// ------------------------------------------------------------------ the arithmetic behind each table (omitted where a table is only a collection or a transfer)
+const conv = (a, D, partner, Rpart, feeOn) => [
+  `${u(a)} USDT × market ${EX.Rm.toFixed(4)} = ${e(a * EX.Rm)} EUR at market`,
+  `fee ${pct(EX.s + EX.r)} of that = ${e(D.feeSender + D.feeReceiver)} (sender pays ${pct(EX.s)} = ${e(D.feeSender)}, receiver pays ${pct(EX.r)} = ${e(D.feeReceiver)})`,
+  `client net = ${e(a * EX.Rm)} − ${e(D.feeSender + D.feeReceiver)} = ${e(D.clientNet)} EUR → the client's jar and promise`,
+  feeOn ? `${partner} converts at market: ${e(D.grossConverted)}, then charges ${pct(feeOn)} = ${e(D.partnerCost)} → NPL's cost jar; delivered ${e(D.actualOut)}` : `${partner} converts at its own rate ${Rpart}: ${u(a)} × ${Rpart} = ${e(D.actualOut)} EUR delivered (its ${pct(1 - Rpart / EX.Rm)} cost is inside the rate, never a line)`,
+  `NPL's margin = delivered ${e(D.actualOut)} − client net ${e(D.clientNet)} = ${e(D.earnings)} → NPL's pool at ${partner}` + (feeOn ? `; fee charged ${e(D.grossMargin)} − partner cost ${e(D.partnerCost)} = ${e(D.earnings)}` : ""),
+];
+const N = {
+  T2: conv(10000, D1, "Ali", EX.Rp),
+  T3: [`5,000 EUR × rate 1 = 5,000 at market`, `fee ${pct(EX.s + EX.r)} = ${e(DS.feeSender + DS.feeReceiver)} (sender ${e(DS.feeSender)}, receiver ${e(DS.feeReceiver)})`, `client net = ${e(DS.clientNet)} → client's jar and promise; NPL's margin ${e(DS.earnings)} → pool`],
+  T6: conv(5000, D2, "Ali", EX.Rp),
+  T7: [`client euros at Ali: deal 1 ${e(D1.clientNet)} + deal 2 ${e(D2.clientNet)} + pass-through ${e(DS.clientNet)} = ${e(dueWhole + dust)}`, `whole euros paid out: ${e(dueWhole)}, as ${e(line1)} + ${e(line2)}; ${e(dust)} of cents stays`],
+  T9: [`line 2 was ${e(line2)}; received ${e(line2 - bankFee)}; bank fee ${e(bankFee)} → shortfall jar`],
+  T10: [`${e(bankFee)} from NPL's pool at Ali → NPL's cost jar; the same ${e(bankFee)} into the client's jar, shortfall cleared`],
+  T11: [`3,000 USDT × market ${DT.Rb.toFixed(2)} = ${fmt(3000 * DT.Rb, "THB")} THB; fee ${pct(EX.s + EX.r)} = ${fmt(DT.feeSender + DT.feeReceiver, "THB")}; client net ${fmt(DT.clientNet, "THB")}`, `Ali converts at ${(3000 ? DT.actualOut / 3000 : 0).toFixed(2)}: ${fmt(DT.actualOut, "THB")} delivered; margin ${fmt(DT.earnings, "THB")}`, `round up to the next 1,000: payout ${fmt(DT.payable, "THB")}; the extra ${fmt(-DT.residual, "THB")} comes out of NPL's margin → rounding cost; pool gets ${fmt(DT.earnings + DT.residual, "THB")}`],
+  T13: [`client amount credited at Jeton 10,000; NPL sends ${u(10000 - recover)} and keeps ${u(recover)}, which Jeton owed NPL from earlier deals`],
+  T14: conv(10000, DJ, "Jeton", EX.Rm, JET),
+  T21: [`refund ${u(3000)}: ${u(3000 - netFee)} to the sender, ${u(netFee)} network fee charged to the sender`],
+  T22: [`2,000 USDT × market 0.7800 = ${fmt(2000 * 0.78, "GBP")} GBP; fee ${pct(EX.s + EX.r)} = ${fmt(D4.feeSender + D4.feeReceiver, "GBP")}; client net ${fmt(D4.clientNet, "GBP")}`, `Ali converts at 0.7722: ${fmt(D4.actualOut, "GBP")} delivered; margin ${fmt(D4.earnings, "GBP")} → pool`],
+  T24: [`sent ${fmt(D4.payable, "GBP")}; came back ${fmt(D4.payable - bounce, "GBP")}; bank kept ${fmt(bounce, "GBP")} → NPL's cost; NPL puts ${fmt(bounce, "GBP")} from its pool into the client's jar so the client has ${fmt(D4.payable, "GBP")} again`],
+  T25: [`${fmt(D4.payable, "GBP")} GBP × 1.2850 = ${u(retOut)} USDT; no fee (waived), so the whole amount is the client's`],
+  T27: [`5,000 SGD × 0.7400 = ${u(bcOut)} USDT; no fee; whole units ${u(Math.floor(bcOut))}, dust ${u(bcOut - Math.floor(bcOut))}`],
+  T28: [`received 10,050; deal 10,000; credit to the sender 50`],
+  T29: [`new deal 5,000 = 4,950 received + 50 credit used`],
+  T30: [`NPL's margin on deal 3 (T14) ${e(DJ.earnings)} × 25 % = ${e(referral)} → owed to the party, off NPL's earned jar`],
+  T32: [`10,000 USDT × market ${EX.Rm.toFixed(4)} = ${e(10000 * EX.Rm)}; sender pays 4 % = ${e(DR.feeSender)}; client net ${e(DR.clientNet)}`, `Aquanow converts at market and charges ${pct(0.008)} = ${e(DR.partnerCost)}; delivered ${e(DR.actualOut)}`, `share base = fee ${e(DR.grossMargin)} − partner cost ${e(DR.partnerCost)} = ${e(shareBase)}; Raeen 50 % = ${e(raeenShare)}; NPL 50 % = ${e(nplRemainder)} (owed by Raeen, who holds the money)`],
+  T33: [`rebate ${pct(0.003, 1)} × 10,000 USDT = ${u(rebateAqn)} USDT, NPL's alone`],
+  T34: [`expected ${u(rebateAqn)}; statement ${u(stmtRebate)}; difference ${u(rebateAqn - stmtRebate)} written off the rebate income`],
+  T36: [`3,000 USDT; client net at market ${e(M.V1.priced.clientNet)} (fixed at quote)`, `expected from Ali at 0.8910: ${e(M.V1.expected)}; Ali actually booked at 0.8905: ${e(M.V1.actual)}`, `margin as quoted ${e(M.V1.expected - M.V1.priced.clientNet)}; variance ${e(M.V1.variance)} → "partner did something different" jar; pool gets ${e(M.V1.actual - M.V1.priced.clientNet)}`],
+  T37: [`expected at the locked 0.8910: ${e(M.V2.expected)}; converted next day at 0.8890: ${e(M.V2.actual)}; difference ${e(M.V2.variance)} → cutoff-timing jar`],
+  T38: [`honoured rate 0.8910: ${e(M.V3.expected)}; today's rate 0.8860: ${e(M.V3.actual)}; difference ${e(M.V3.variance)} → honoured-rate jar`],
+  T40: [`lost ${u(lossAmt)} → NPL's loss jar; replaced from NPL's pool at Ali ${u(poolPart)} + NPL's wallet ${u(walletPart)}`],
+  T41: [`split: Ali ${u(shares.partner)} + sender ${u(shares.sender)} + client ${u(shares.client)} + NPL ${u(shares.npl)} = ${u(lossAmt)}`, `loss jar: ${u(lossAmt)} − ${u(shares.partner + shares.sender + shares.client)} recovered = ${u(shares.npl)} left, NPL's own share`],
+  T44: [`vendor invoice ${e(VENDOR_INV)} EUR → cost and promise to the vendor`],
+  T45: [`resale invoice ${e(RESALE_INV)} EUR → revenue and the customer's promise; reseller profit ${e(RESALE_INV)} − ${e(VENDOR_INV)} = ${e(marginEur)}, fixed now`],
+  T46: [`USDT needed for ${e(RESALE_INV)} EUR at ${Rq} = ${u(RESALE_INV / Rq)}`, `THB to collect = ${u(RESALE_INV / Rq)} ÷ (market 32.50 USDT per THB) ÷ (1 − 2 %) = ${fmt(thbIn, "THB")} THB`],
+  T47: [`${fmt(thbIn, "THB")} THB at market = ${u(thbIn / 32.50)} USDT; 2 % fee = ${u(DM.feeSender)}; client net ${u(DM.clientNet)} (= ${e(RESALE_INV)} EUR at ${Rq})`, `Ali converts at ${(32.50 / 0.99).toFixed(2)}: ${u(DM.actualOut)} delivered; NPL's margin ${u(DM.earnings)} (2 % less Ali's 1 %) → pool`],
+  T48: [`${e(inst1Eur)} EUR ÷ ${Rq} = ${u(paid1)} USDT paid, same rate as the quote day, so no difference`],
+  T49: [`client USDT left at Ali: ${u(DM.clientNet)} − ${u(paid1)} = ${u(hop)} → moved to the own desk`],
+  T50: [`${e(inst2Eur)} EUR at the quote-day rate ${Rq} would be ${u(paid2 + fx2)} USDT; at today's ${Rd2} it is ${u(paid2)}; gain ${u(fx2)} → from the client's jar to NPL's pool, recorded as fx timing`],
+  T51: [`profit line ${e(marginEur)} EUR at ${Rd2} = ${u(paid3)} USDT; set aside at ${Rq} was ${u(paid3 + fx3)}; gain ${u(fx3)}`, `clearing pair: ${e(marginEur)} EUR out of NPL-GR's claim, ${u(paid3)} USDT into NPL's wallet`],
+  T52: conv(300000, DN_J, "Jeton", EX.Rm, JET),
+  T54: [`NPL's margin at Jeton ${e(offsetEur)} EUR ÷ Ali's rate ${EX.Rp} = ${u(offsetUsdt)} USDT: that much of the client's USDT at Ali becomes NPL's, and ${e(offsetEur)} EUR at Jeton becomes the client's`],
+  T55: [`Ali deal: 100,000 × ${EX.Rm.toFixed(4)} = ${e(100000 * EX.Rm)}; fee 2 % = ${e(DN_A.feeSender + DN_A.feeReceiver)}; client net ${e(DN_A.clientNet)}; Ali at ${EX.Rp} delivers ${e(DN_A.actualOut)}; margin ${e(DN_A.earnings)} EUR`, `margin kept in USDT: ${e(DN_A.earnings)} ÷ ${EX.Rp} = ${u(retainUsdt)}`, `USDT converted = 100,000 − ${u(offsetUsdt)} (offset) − ${u(retainUsdt)} (kept) = ${u(convertUsdt)}; × ${EX.Rp} = ${e(eurOut)} EUR to the client at Ali`, `client total: ${e(eurOut)} at Ali + ${e(offsetEur)} at Jeton = ${e(DN_A.clientNet)}, as quoted; NPL's USDT at Ali: ${u(offsetUsdt)} + ${u(retainUsdt)} = ${u(offsetUsdt + retainUsdt)}`],
+};
+
 // ------------------------------------------------------------------ patterns: intro + transactions
 const PATTERNS = [
   ["A", "Direct collection, conversion and accumulation", `The everyday deal. A sender pays a partner, the partner converts the money, and the converted money waits at the partner until it is paid out. The fee is taken at the moment of conversion, and that is the only moment when some of the client's money becomes NPL's.`, ["T1", "T2", "T3a", "T3"]],
@@ -94,13 +142,14 @@ const PATTERNS = [
   ["N", "Earnings kept in the unconverted balance and offset between partners", `Partners convert everything they receive, so NPL's fee normally ends up converted along with the client's money. NPL prefers to keep its fees in USDT, taken out of money that has not been converted yet, even when the fee was earned at a different partner. The ledger records that as a swap between NPL and the client at the day's rate.`, ["T52a", "T52", "T53", "T54", "T55"]],
 ];
 
-const STACK_AT = 7; // tables with this many lines or more get the explanation on top
+const STACK_AT = 6; // tables with this many lines or more get the explanation on top
 const pair = (key) => {
   const t = L.txs[L.find(key)];
   const stacked = t.rows.length >= STACK_AT;
   const expl = X[key]; if (!expl) throw new Error("no explanation for " + key);
   const table = L.html(key).replace(/<p class="txnote">[\s\S]*?<\/p>/, "");
-  return `<div class="pair${stacked ? " stack" : ""}"><div class="left">${table}</div><div class="right"><div class="guide"><div class="gh">What is happening</div>${expl}</div></div></div>`;
+  const nums = N[key] ? `<div class="gh" style="margin-top:5pt">The arithmetic</div><ul class="nums">${N[key].map((l) => `<li>${l}</li>`).join("")}</ul>` : "";
+  return `<div class="pair${stacked ? " stack" : ""}"><div class="left">${table}</div><div class="right"><div class="guide"><div class="gh">What is happening</div>${expl}${nums}</div></div></div>`;
 };
 
 const CSS = `
@@ -129,6 +178,7 @@ table.post{table-layout:fixed} table.post td,table.post th{font-size:8pt;padding
 .guide{background:#f3f6fb;border-left:3px solid #2f5d9e;padding:5pt 8pt;font-size:9.2pt;line-height:1.4}
 .howto{grid-template-columns:50% 1fr}
 .howto .guide table{font-size:8.2pt} .howto .guide td{padding:1.5pt 3pt}
+ul.nums{margin:0 0 2pt 14pt;font-size:8.8pt;font-variant-numeric:tabular-nums} ul.nums li{margin:0 0 2pt}
 .gh{font:700 8.6pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3pt}
 .intro{background:#fbfbf6;border:1px solid #e0dcc8;padding:5pt 9pt;margin:0 0 8pt;font-size:9.8pt}
 .jars td:first-child{white-space:nowrap;font-weight:600}
