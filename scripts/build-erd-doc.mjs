@@ -427,7 +427,7 @@ ${table(["#", "Question", "Answer", "In the model"], openDone.map((q) => [D.OPEN
 ${table(["FRS term", "Model entity"], frsVocab.map(([a, b]) => [esc(a), `<span class="mono">${esc(b)}</span>`]), ["30%"])}
 <h3>A.2 Deviations from the FRS (classified)</h3>
 ${table(["FRS statement", "Model", "Classification"], frsDev.map(([a, b, c]) => [esc(a), esc(b), esc(c)]), ["28%", "", "24%"])}
-<p class="small"><i>Draft v${V} — internal baseline. Dependent documents (ledger design, calculation spec, state machines, roles matrix, configuration schema, reading guide, fee outlines) are still at their v5.2 editions and are to be regenerated against this version per §6.</i></p>
+<p class="small"><i>Draft v${V} — internal baseline. The Ledger Posting Design and its Reading Companion are at v5.7 with this draft; the calculation spec, state machines, roles matrix, configuration schema, reading guide and fee outlines are still at their earlier editions and are to be regenerated against this version per §6.</i></p>
 
 <h2 class="pb">Appendix B · Data dictionary (field annotations)</h2>
 <p class="small">Every table also carries ${code("created_at")} and ${code("created_by")}. Types: int, string, bool, decimal, datetime, date. Rows changed in a revision are marked with the revision and decision that changed them.</p>
