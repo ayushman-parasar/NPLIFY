@@ -660,7 +660,7 @@ function buildKB(){
   L.push('INVARIANTS (enforced at write time):',...INV.map((i,k)=>`${k+1}. ${i[1]}`),'');
   for(const d in NOTES){L.push(`NOTES — ${d}:`,...NOTES[d].map(x=>'- '+x),'')}
   L.push('OPEN QUESTIONS carried from the Understanding document, with the answers recorded in "NPLify — Project Understanding v1.0 (NPL’s review comments)" (# · question · blocks · status · answer · implication for the ERD as interpreted by this map):',...OPENQ.map((q,i)=>`${i+1}. ${q.q} — blocks: ${q.blocks} — status: ${q.status==='answered'?'ANSWERED':q.status==='pending'?'PENDING (material to come)':'STILL OPEN (to be discussed)'} — answer: ${q.a} — implication: ${q.impl}${q.ents.length?' — entities: '+q.ents.join(', '):''}`),'');
-  L.push('NEW FACTS FROM SUD’S COMMENTS ON THE UNDERSTANDING DOCUMENT (not yet reflected in ERD v3.0):',...UND_NEW.map(x=>'- '+x),'');
+  L.push('NEW FACTS FROM NPL’S REVIEW COMMENTS ON THE UNDERSTANDING DOCUMENT:',...UND_NEW.map(x=>'- '+x),'');
   L.push('APPENDIX A.1 FRS VOCABULARY (FRS term → model entity):',...FRS_VOCAB.map(v=>`- ${v[0]} → ${v[1]}`),'');
   L.push('APPENDIX A.2 DEVIATIONS FROM THE FRS (FRS statement | model | classification):',...FRS_DEV.map(v=>`- ${v[0]} | ${v[1]} | ${v[2]}`),'');
   L.push('TYPICAL FLOWS (ordered walkthroughs):');WALKS.forEach(w=>{L.push(`* ${w.name}: `+w.steps.map((st,i)=>`${i+1}) ${st[0]}: ${st[1]}`).join(' '))});

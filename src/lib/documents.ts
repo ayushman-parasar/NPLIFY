@@ -110,7 +110,7 @@ export const DOCS: Doc[] = [
     slug: "understanding",
     title: "Project Understanding",
     version: "v1.1",
-    blurb: "The business understanding the model was built from, with Sud's comments.",
+    blurb: "The business understanding the model was built from, with NPL's review comments.",
     audience: "staff",
     files: { docx: "NPLify-Project-Understanding-v1.1.docx" },
     group: "working",

@@ -123,7 +123,7 @@
   ],
   "receivers": [
     {
-      "code": "SUD",
+      "code": "RCV_X",
       "group": "DEFAULT",
       "kind": "counterparty",
       "name": "NPL",
@@ -160,7 +160,7 @@
       ]
     },
     {
-      "code": "RAJ",
+      "code": "RCV_Y",
       "group": "DEFAULT",
       "kind": "counterparty",
       "name": "Receiver Y",
@@ -185,7 +185,7 @@
   ],
   "senders": [
     {
-      "code": "AYUSH",
+      "code": "SND_A",
       "name": "Sender A",
       "risk_tier": "standard",
       "status": "active",
@@ -195,12 +195,12 @@
       "provenance": [
         {
           "label": "own account",
-          "account_ref": "wallet-ayush-1"
+          "account_ref": "wallet-snd-a-1"
         }
       ]
     },
     {
-      "code": "NAVEEN",
+      "code": "SND_B",
       "name": "Sender B",
       "risk_tier": "standard",
       "status": "active",
@@ -210,7 +210,7 @@
       "provenance": [
         {
           "label": "own account",
-          "account_ref": "wallet-naveen-1"
+          "account_ref": "wallet-snd-b-1"
         }
       ]
     }

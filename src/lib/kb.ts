@@ -63,7 +63,7 @@ export function buildKnowledgeBase(d: ErdData = data): string {
   L.push("INVARIANTS (enforced at write time):", ...d.INV.map((i, k) => `${k + 1}. ${i[1]}`), "");
   for (const dom of Object.keys(d.NOTES)) L.push(`NOTES — ${dom}:`, ...d.NOTES[dom].map((x) => "- " + x), "");
   L.push("OPEN QUESTIONS AND REVIEW POINTS (question · blocks · status · recorded answer · how the current draft reflects it):", ...d.OPENQ.map((q, i) => `${i + 1}. ${q.q} — blocks: ${q.blocks} — status: ${q.status === "answered" ? "ANSWERED" : q.status === "pending" ? "PENDING (material to come)" : "STILL OPEN (to be discussed)"} — answer: ${q.a} — in the model: ${q.impl}${q.ents.length ? " — entities: " + q.ents.join(", ") : ""}`), "");
-  L.push("NEW FACTS FROM SUD’S COMMENTS ON THE UNDERSTANDING DOCUMENT:", ...d.UND_NEW.map((x) => "- " + x), "");
+  L.push("NEW FACTS FROM NPL’S REVIEW COMMENTS ON THE UNDERSTANDING DOCUMENT:", ...d.UND_NEW.map((x) => "- " + x), "");
   L.push("APPENDIX A.1 FRS VOCABULARY (FRS term → model entity):", ...d.FRS_VOCAB.map((v) => `- ${v[0]} → ${v[1]}`), "");
   L.push("APPENDIX A.2 DEVIATIONS FROM THE FRS (FRS statement | model | classification):", ...d.FRS_DEV.map((v) => `- ${v[0]} | ${v[1]} | ${v[2]}`), "");
   L.push("TYPICAL FLOWS (ordered walkthroughs):");

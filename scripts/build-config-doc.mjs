@@ -88,17 +88,17 @@ const EX = {
     { code: "RETURNS", name: "Return group", is_default: false, kind: "return", status: "active" },
   ],
   receivers: [
-    { code: "SUD", group: "DEFAULT", kind: "counterparty", name: "Receiver X", status: "active", entities: [
+    { code: "RCV_X", group: "DEFAULT", kind: "counterparty", name: "Receiver X", status: "active", entities: [
       { code: "ENTITY_X1", name: "Entity X1", status: "active", accounts: [{ code: "NEWXP-EUR-SEPA", currency: "EUR", rail: "SEPA", details_ref: "bank-ref-001", status: "active" }] },
       { code: "ENTITY_X2", name: "Entity X2", status: "active", accounts: [{ code: "RS-EUR-SEPA", currency: "EUR", rail: "SEPA", details_ref: "bank-ref-002", status: "active" }] },
     ] },
-    { code: "RAJ", group: "DEFAULT", kind: "counterparty", name: "Receiver Y", status: "active", entities: [
+    { code: "RCV_Y", group: "DEFAULT", kind: "counterparty", name: "Receiver Y", status: "active", entities: [
       { code: "VOICEAI", name: "VoiceAIWrapper", status: "active", accounts: [{ code: "VAI-EUR-SWIFT", currency: "EUR", rail: "SWIFT", details_ref: "bank-ref-003", status: "active" }] },
     ] },
   ],
   senders: [
-    { code: "AYUSH", name: "Sender A", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-ayush-1" }] },
-    { code: "NAVEEN", name: "Sender B", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-naveen-1" }] },
+    { code: "SND_A", name: "Sender A", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-snd-a-1" }] },
+    { code: "SND_B", name: "Sender B", risk_tier: "standard", status: "active", sendable_to: ["DEFAULT"], provenance: [{ label: "own account", account_ref: "wallet-snd-b-1" }] },
   ],
   partner_configs: [
     { code: "CLIENT1-ALI", partner: "ALI", applicable_for_reroute: false, status: "active",

@@ -189,14 +189,14 @@ L.tx(`T7 · Confirmation, line 1 full: Entity X1 received ${fmt(line1)} EUR`, "C
 const bankFee = 50;
 L.tx(`T8 · Confirmation, line 2 short: ReferScout received ${fmt(line2 - bankFee)} EUR, bank took ${fmt(bankFee)} (treatment carry_forward)`, "Confirmation", [
   [`CL.PROJECT.EUR.PAYABLE`, "Dr", line2 - bankFee, EUR, CLIENT, "principal", "delivered part"],
-  [`CL.SUD.EUR.SHORTFALL`, "Dr", bankFee, EUR, CLIENT, "bank_fee", "still owed to the receiver, topped up next settlement"],
+  [`CL.RECEIVER_X.EUR.SHORTFALL`, "Dr", bankFee, EUR, CLIENT, "bank_fee", "still owed to the receiver, topped up next settlement"],
   [`CL.PT.EUR.INTRANSIT`, "Cr", line2, EUR, CLIENT, "principal", "nothing is left in transit"],
 ], "With treatment <i>waived</i> the second line would instead be <code>Dr CL.PROJECT.EUR.PAYABLE 50</code> (the client bears the fee and its claim falls by 50). With <i>absorbed</i> the fee is expected up front: see T9.");
 L.tx("T9 · Shortfall top-up funded from NPL's pool at PT (BANK_FEE_EVENT applied to the next disbursement)", "BankFeeEvent", [
   [`CO.NONE.EUR.EXP_BANKFEE`, "Dr", bankFee, EUR, CO, "bank_fee", "NPL bears the cost"],
   [`CO.PT.EUR.POOL`, "Cr", bankFee, EUR, CO, "bank_fee", "paid out of NPL's earnings resting at PT"],
   [`CL.PT.EUR.DUE`, "Dr", bankFee, EUR, CLIENT, "bank_fee", "the 50 EUR is client money again, in balance at PT"],
-  [`CL.SUD.EUR.SHORTFALL`, "Cr", bankFee, EUR, CLIENT, "bank_fee", "the shortfall is cleared"],
+  [`CL.RECEIVER_X.EUR.SHORTFALL`, "Cr", bankFee, EUR, CLIENT, "bank_fee", "the shortfall is cleared"],
 ], "The 50 EUR now sits in DUE and goes out with the next disbursement like any other balance. Company → client transfers like this one are the only way company money becomes client money.");
 
 const snapSettled = L.snapshot();
@@ -314,7 +314,7 @@ L.tx(`T22 · Partner rebate on deal 3: Jeton returns 32 % of its fee = ${fmt(reb
 L.tx("T23 · Overpayment: a sender sends 10,050 USDT against a 10,000 USDT deal; 50 USDT becomes sender credit", "Collection", [
   [`CL.PT.USDT.COLLECTED`, "Dr", 10050, USDT, CLIENT, "principal", "all of it is client money at PT"],
   [`CL.PROJECT.USDT.PAYABLE`, "Cr", 10000, USDT, CLIENT, "principal", "the deal"],
-  [`CL.AYUSH.USDT.CREDIT`, "Cr", 50, USDT, CLIENT, "principal", "owed back to the sender, or applied to the next deal"],
+  [`CL.SENDER_A.USDT.CREDIT`, "Cr", 50, USDT, CLIENT, "principal", "owed back to the sender, or applied to the next deal"],
 ]);
 
 // Variance: partner_calculates
@@ -447,7 +447,7 @@ ${L.html('T3')}${L.html('T4')}${L.html('T5')}
 <h2>7 · Pattern C — accumulated and instant settlement, bank fees, shortfalls</h2>
 <p>There is one settlement model. "Instant" simply means the balance is disbursed as soon as one deal has accumulated; "accumulated" means several deals first. The postings are the same. Disbursements pay whole units; the cents below one unit stay in the client balance and go out when they add up to a unit.</p>
 ${L.html('T6')}${L.html('T7')}${L.html('T8')}${L.html('T9')}
-${L.balancesHtml([["CL.PT.EUR.DUE", EUR, "rounding dust, plus the 50 EUR top-up waiting for the next disbursement"], ["CL.PT.EUR.INTRANSIT", EUR, "nothing in transit"], ["CL.PROJECT.EUR.PAYABLE", EUR, "still owed to receivers: the dust and the top-up"], ["CL.SUD.EUR.SHORTFALL", EUR, "cleared"], ["CO.PT.EUR.POOL", EUR, "NPL's earnings at PT after funding the top-up"], ["CO.NONE.EUR.EXP_BANKFEE", EUR, "bank fees NPL has borne"]], "Balances after settlement of deals 1 and 2", snapSettled)}
+${L.balancesHtml([["CL.PT.EUR.DUE", EUR, "rounding dust, plus the 50 EUR top-up waiting for the next disbursement"], ["CL.PT.EUR.INTRANSIT", EUR, "nothing in transit"], ["CL.PROJECT.EUR.PAYABLE", EUR, "still owed to receivers: the dust and the top-up"], ["CL.RECEIVER_X.EUR.SHORTFALL", EUR, "cleared"], ["CO.PT.EUR.POOL", EUR, "NPL's earnings at PT after funding the top-up"], ["CO.NONE.EUR.EXP_BANKFEE", EUR, "bank fees NPL has borne"]], "Balances after settlement of deals 1 and 2", snapSettled)}
 <div class="box"><b>The three bank-fee treatments on a 50 EUR fee.</b> <i>Waived</i>: the client bears it; the confirmation debits <code>CL.PROJECT.EUR.PAYABLE</code> for the full released amount and the client's claim simply ends 50 lower. <i>Carry-forward</i>: T8 and T9, the fee becomes a shortfall that NPL funds from its pool and adds to the next disbursement. <i>Absorbed</i> (gross-up): NPL releases 50 more than the client net so the receiver nets the right amount; at release <code>Dr CO.NONE.EUR.EXP_BANKFEE 50 / Cr CO.PT.EUR.POOL 50</code> is posted alongside the client's in-transit line, and a <code>BANK_FEE_EVENT</code> later trues up expected against actual. The project sets the default; one settlement can override it with an approved <code>FEE_DECISION</code>.</div>
 
 <h2 class="pb">8 · Pattern D — reroute through NPL's own wallet, with dues recovered</h2>
