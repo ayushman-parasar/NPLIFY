@@ -28,5 +28,7 @@ assert seen == set(NAMES), set(NAMES) - seen
 h = "\n".join(lines)
 tables = sum(1 for e in d["E"].values() if e["d"] != "view"); views = len(d["E"]) - tables
 h = re.sub(r"draft v[\d.]+ · \d+ tables \+ \d+ views", f"draft v{d['version']} · {tables} tables + {views} views", h)
+last_decision = max(int(n) for n in re.findall(r"\bD(\d+)\b", d["DECISIONS"]))
+h = re.sub(r"Answers from ERD v[\d.]+, the Understanding document, the decision record \(D1–D\d+\)", f"Answers from ERD v{d['version']}, the Understanding document, the decision record (D1–D{last_decision})", h)
 T.write_text(h)
 print("refreshed", T, f"v{d['version']}", tables, "tables", views, "views", len(h), "bytes")
