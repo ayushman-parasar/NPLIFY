@@ -1,5 +1,5 @@
 // Build the client deliverable
-//   docs/NPLify-Ledger-Posting-Design-v1.2.{html,pdf}   (chart of accounts + worked postings, ERD v5.6)
+//   docs/NPLify-Ledger-Posting-Design-v5.6.{html,pdf}   (chart of accounts + worked postings; numbered with the ERD edition it is built against)
 // Every number in the worked examples is computed here; every transaction is checked to balance
 // per currency and per owner before the document is written.   node scripts/build-ledger-doc.mjs
 import fs from "node:fs";
@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const outDir = path.join(root, "docs");
-const DOC_VERSION = "1.2", ERD_VERSION = "5.6", DATE = "10 October 2026";
+const DOC_VERSION = "5.6", ERD_VERSION = "5.6", DATE = "11 October 2026";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 // ------------------------------------------------------------------ money helpers (exact to a millionth)
@@ -24,7 +24,7 @@ const trunc = (x) => Math.floor(x + 1e-9);
 const roundUpN = (x, n) => Math.ceil(x / n - 1e-9) * n;
 
 // ------------------------------------------------------------------ chart of accounts: OWNER.HOLDER.CCY.PURPOSE
-// [owner, purpose, kind, holder pattern, since, meaning]; since = ERD edition that has the purpose, or "v1.2" for a purpose this document asks the ERD to add
+// [owner, purpose, kind, holder pattern, since, meaning]; since = ERD edition that has the purpose, or "D46" for a purpose this document asks the ERD to add
 const PURPOSES = [
   ["CL", "COLLECTED", "asset", "<PARTNER>", "v5.2", "Client money received at this partner and not yet converted (in the collection currency). In a reseller project the same purpose exists under CO."],
   ["CL", "HELD", "asset", "OWN", "v5.2", "Client money in one of NPL's own wallets: an approved reroute, or a collection bridge waiting to be forwarded (D40). Zero otherwise (invariant 3)."],
@@ -33,31 +33,31 @@ const PURPOSES = [
   ["CL", "SHORTFALL", "asset", "<RECEIVER>", "v5.2", "Client money delivered short to a receiver and still to be made good at the next settlement."],
   ["CL", "PAYABLE", "liability", "PROJECT", "v5.2", "What NPL must deliver to the project's receivers, in total per currency. The split by receiver group is the GROUP_ENTITLEMENT view, not an account."],
   ["CL", "CREDIT", "liability", "<SENDER>", "v5.2", "Owed back to a sender: an overpayment waiting to be refunded or applied to the next deal (SENDER_CREDIT)."],
-  ["CL", "MAKEGOOD", "asset", "PROJECT", "v1.2", "Client money NPL has undertaken to replace after a loss but has not yet placed at a partner. Appears only when NPL's pool at the partner cannot fund the make-good at once; cleared when NPL's funds land (Pattern L)."],
+  ["CL", "MAKEGOOD", "asset", "PROJECT", "D46", "Client money NPL has undertaken to replace after a loss but has not yet placed at a partner. Appears only when NPL's pool at the partner cannot fund the make-good at once; cleared when NPL's funds land (Pattern L)."],
   ["CO", "POOL", "asset", "<PARTNER>", "v5.2", "NPL's own money resting at this partner: margin captured at conversion (EARNINGS_RECEIVABLE), plus anything NPL transferred there. Settled on the partner's fee cycle or netted on a reroute."],
   ["CO", "WALLET", "asset", "OWN", "v5.2", "NPL's own money in its own wallets: recovered dues, rebates and shares received, gas reserves."],
   ["CO", "REBATE_RECEIVABLE", "asset", "<PARTNER>", "v5.2", "Rebate a partner owes NPL on NPLify deals, accrued at conversion and reconciled against the partner's monthly statement (D27)."],
   ["CO", "SHARE_RECEIVABLE", "asset", "<PARTY>", "v5.3", "NPL's remainder of the markup owed by a party that holds the converted funds (settlement_mode party_retains, D26); reconciled monthly."],
   ["CO", "SHARE_PAYABLE", "liability", "<PARTY>", "v5.2", "Markup share owed by NPL to a markup-share party (settlement_mode npl_pays, D26)."],
-  ["CO", "LOSS_RECEIVABLE", "asset", "<PARTNER> / <SENDER>", "v1.2", "The partner's or the sender's agreed share of a loss event, owed to NPL after NPL booked the whole loss first (Pattern L)."],
-  ["CO", "LOSS_PAYABLE", "liability", "NONE", "v1.2", "The unfunded part of a make-good: what NPL still has to put in after a loss. Mirrors CL.PROJECT.<CCY>.MAKEGOOD and is cleared by the same transfer."],
-  ["CO", "VENDOR_PAYABLE", "liability", "<VENDOR>", "v1.2", "NPL-GR's reseller books: what NPL-GR owes a vendor on a vendor invoice, in the invoice currency; cleared as the remittance side's payout lines discharge the invoice (Pattern M)."],
-  ["CO", "RESALE_RECEIVABLE", "asset", "<CUSTOMER>", "v1.2", "NPL-GR's reseller books: what a reseller customer owes on a resale invoice, in the invoice currency; cleared when the customer pays the remittance side (Pattern M)."],
-  ["CO", "REMIT_CLAIM", "asset", "PROJECT", "v1.2", "NPL-GR's reseller books: what the remittance side holds for NPL-GR, in the invoice currency — the mirror, in EUR, of the remittance project's PAYABLE to its client NPL-GR (Pattern M)."],
+  ["CO", "LOSS_RECEIVABLE", "asset", "<PARTNER> / <SENDER>", "D46", "The partner's or the sender's agreed share of a loss event, owed to NPL after NPL booked the whole loss first (Pattern L)."],
+  ["CO", "LOSS_PAYABLE", "liability", "NONE", "D46", "The unfunded part of a make-good: what NPL still has to put in after a loss. Mirrors CL.PROJECT.<CCY>.MAKEGOOD and is cleared by the same transfer."],
+  ["CO", "VENDOR_PAYABLE", "liability", "<VENDOR>", "D46", "NPL-GR's reseller books: what NPL-GR owes a vendor on a vendor invoice, in the invoice currency; cleared as the remittance side's payout lines discharge the invoice (Pattern M)."],
+  ["CO", "RESALE_RECEIVABLE", "asset", "<CUSTOMER>", "D46", "NPL-GR's reseller books: what a reseller customer owes on a resale invoice, in the invoice currency; cleared when the customer pays the remittance side (Pattern M)."],
+  ["CO", "REMIT_CLAIM", "asset", "PROJECT", "D46", "NPL-GR's reseller books: what the remittance side holds for NPL-GR, in the invoice currency — the mirror, in EUR, of the remittance project's PAYABLE to its client NPL-GR (Pattern M)."],
   ["CO", "EARN_GROSS", "income", "NONE", "v5.2", "Margin recognised at conversion (sender and receiver fee parts), before partner cost. Markup shares are debited here, so the balance is NPL's margin after shares."],
   ["CO", "EARN_REBATE", "income", "NONE", "v5.3", "Rebate income, kept apart from EARN_GROSS and never in a markup-share base (D27)."],
-  ["CO", "RESELL_REVENUE", "income", "NONE", "v1.2", "NPL-GR's reseller books: the resale invoice to the customer at retail price, in the invoice currency, recognised when issued (Pattern M)."],
-  ["CO", "RESELL_COST", "expense", "NONE", "v1.2", "NPL-GR's reseller books: the vendor invoice at NPL's preferential price, in the invoice currency, recognised when received. Revenue − cost is the game reseller revenue, fixed on issue and never touched afterwards (Pattern M)."],
+  ["CO", "RESELL_REVENUE", "income", "NONE", "D46", "NPL-GR's reseller books: the resale invoice to the customer at retail price, in the invoice currency, recognised when issued (Pattern M)."],
+  ["CO", "RESELL_COST", "expense", "NONE", "D46", "NPL-GR's reseller books: the vendor invoice at NPL's preferential price, in the invoice currency, recognised when received. Revenue − cost is the game reseller revenue, fixed on issue and never touched afterwards (Pattern M)."],
   ["CO", "EXP_PARTNER", "expense", "NONE", "v5.2", "Partner cost where the partner states it separately (fee_on_market). Zero by construction for fee_in_rate partners and the own desk."],
   ["CO", "EXP_BANKFEE", "expense", "NONE", "v5.2", "Bank and payout fees NPL absorbs: gross-ups, shortfall top-ups, bounce fees, covered fees (D41)."],
   ["CO", "EXP_NETWORK", "expense", "NONE", "v5.2", "Crypto network fees NPL absorbs: a refund, a bridge hop, a forwarded reroute."],
   ["CO", "EXP_ROUNDING", "expense", "NONE", "v5.3", "The amount added when a payout is rounded up to the pair's unit (D25)."],
   ["CO", "EXP_LOSS", "expense", "NONE", "v5.3", "Loss events. The whole loss is booked here first; each recovered share is credited back as it is agreed (Pattern L)."],
-  ["CO", "VAR_CONVERSION", "expense", "NONE", "v1.2", "Partner converted differently from the engine's expectation (partner_calculates), and basis variance on a reroute. Gain or loss. Was VARIANCE."],
-  ["CO", "VAR_CUTOFF", "expense", "NONE", "v1.2", "Rate stamped at lock versus the rate actually used when the conversion ran after the partner's cutoff; NPL absorbs it (D29)."],
-  ["CO", "VAR_RATE_HONOUR", "expense", "NONE", "v1.2", "An expired quote's rate honoured by an approved override versus the partner's rate on the day of conversion; NPL's cost, chosen (D45)."],
-  ["CO", "VAR_FX_TIMING", "expense", "NONE", "v1.2", "The forex result of discharging an obligation stated in one currency with money held in another: each vendor instalment and the margin line of a resale invoice (D24). Gain or loss, always on the remittance margin, never on the reseller revenue."],
-  ["CO", "FX_CLEARING", "asset", "NONE", "v1.2", "Used only when a company balance in one currency is settled in another: a EUR share receivable paid in USDT, or NPL-GR's EUR claim paid out to its own wallet in USDT. The balance clears in its own currency, the receipt lands in its own, and the two legs meet here. Its balances are NPL's open currency position, valued through REPORTING_VALUE."],
+  ["CO", "VAR_CONVERSION", "expense", "NONE", "D46", "Partner converted differently from the engine's expectation (partner_calculates), and basis variance on a reroute. Gain or loss. Was VARIANCE."],
+  ["CO", "VAR_CUTOFF", "expense", "NONE", "D46", "Rate stamped at lock versus the rate actually used when the conversion ran after the partner's cutoff; NPL absorbs it (D29)."],
+  ["CO", "VAR_RATE_HONOUR", "expense", "NONE", "D46", "An expired quote's rate honoured by an approved override versus the partner's rate on the day of conversion; NPL's cost, chosen (D45)."],
+  ["CO", "VAR_FX_TIMING", "expense", "NONE", "D46", "The forex result of discharging an obligation stated in one currency with money held in another: each vendor instalment and the margin line of a resale invoice (D24). Gain or loss, always on the remittance margin, never on the reseller revenue."],
+  ["CO", "FX_CLEARING", "asset", "NONE", "D46", "Used only when a company balance in one currency is settled in another: a EUR share receivable paid in USDT, or NPL-GR's EUR claim paid out to its own wallet in USDT. The balance clears in its own currency, the receipt lands in its own, and the two legs meet here. Its balances are NPL's open currency position, valued through REPORTING_VALUE."],
 ];
 const KIND = {};
 for (const p of PURPOSES) for (const name of p[1].split(" / ")) KIND[name] = p[2];
@@ -624,8 +624,8 @@ table.bal caption{text-align:left;font:700 9.5pt Helvetica,Arial,sans-serif;marg
 const code = (s) => `<code>${esc(s)}</code>`;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Ledger Posting Design &amp; Chart of Accounts v${DOC_VERSION}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Posting Design &amp; Chart of Accounts · Draft v${DOC_VERSION}</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${ERD_VERSION} (decisions D1–D45) and NPL's answers of 10 October on accrual timing, loss events, the reseller project and variance accounts. Every worked example was produced by a small posting engine that refuses any transaction whose debits and credits do not match per currency and per owner, so the figures add up by construction. Supersedes Draft v1.1 (ERD v5.2).<br>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Posting Design &amp; Chart of Accounts · Draft v${DOC_VERSION}</p><p class="small">Numbered with the ERD edition it is built against (was Draft v1.2)</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${ERD_VERSION} (decisions D1–D45) and NPL's answers of 10 October on accrual timing, loss events, the reseller project and variance accounts. Every worked example was produced by a small posting engine that refuses any transaction whose debits and credits do not match per currency and per owner, so the figures add up by construction. Supersedes Draft v1.1 (ERD v5.2); the document is now numbered with the ERD edition it is built against.<br>
 <b>Audience:</b> NPL Finance and Management, and the New XP engineering team. Written in plain language; the account codes and field names are the ones in the ERD, with NPL's vocabulary (settlement, partner entity, markup share, sender pays / receiver pays, fee on market / fee in rate, agent rate).</p>
 <div class="box"><b>What changed since v1.1.</b> The chart of accounts grows with the v5.3–v5.6 purposes (EARN_REBATE, SHARE_RECEIVABLE, EXP_ROUNDING, EXP_LOSS) and with the purposes this draft proposes (Section 22): four variance accounts in place of one, loss receivables and the unfunded make-good pair, the reseller revenue and cost accounts, and a clearing account for company balances settled in another currency. Rebates and markup shares are accrued at conversion. A loss is booked to NPL in full and recovered share by share. NPL's earnings may be kept in the unconverted balance and offset between partners (Pattern N). The NPL-GR project keeps a full reseller P&amp;L inside NPLify: the vendor and resale invoices are posted in the invoice currency, the remittance deal posts like any client project with NPL-GR as the client, and the forex result of instalments lands on the remittance margin. New worked patterns: same-currency pass-through, round-up rounding, bridge-wallet hop, party-retains share with rebate, cutoff and honoured-rate variances, loss event with recoveries, the reseller deal with its two invoices and instalments.</div>
 <div class="rule"></div>
@@ -650,9 +650,9 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 </ol>
 
 <h2>3 · Chart of accounts</h2>
-<p>Account codes read <code>OWNER.HOLDER.CURRENCY.PURPOSE</code>. The owner is <code>CL</code> for client funds or <code>CO</code> for company. The holder says where the money is or whom it concerns: a partner code such as <code>ALI</code>, <code>JETON</code> or <code>AQN</code> (a ${code("PARTNER_CONFIG")}, so always within one project), <code>OWNDESK</code> for the own-desk configuration of the reseller project, <code>OWN</code> for NPL's own wallets, a receiver, a sender, a markup-share party, <code>PROJECT</code> for the project as a whole, or <code>NONE</code> for income, expense and clearing accounts. One account exists per combination actually used; accounts are created on first posting (${code("LEDGER_ACCOUNT")}: code, ownership, holder_type, holder_id, currency, purpose, kind). Purposes marked <span class="new">v1.2</span> are proposed by this draft and listed in Section 24.</p>
+<p>Account codes read <code>OWNER.HOLDER.CURRENCY.PURPOSE</code>. The owner is <code>CL</code> for client funds or <code>CO</code> for company. The holder says where the money is or whom it concerns: a partner code such as <code>ALI</code>, <code>JETON</code> or <code>AQN</code> (a ${code("PARTNER_CONFIG")}, so always within one project), <code>OWNDESK</code> for the own-desk configuration of the reseller project, <code>OWN</code> for NPL's own wallets, a receiver, a sender, a markup-share party, <code>PROJECT</code> for the project as a whole, or <code>NONE</code> for income, expense and clearing accounts. One account exists per combination actually used; accounts are created on first posting (${code("LEDGER_ACCOUNT")}: code, ownership, holder_type, holder_id, currency, purpose, kind). Purposes marked <span class="new">proposed (D46)</span> are asked of the ERD by this draft and listed in Section 24.</p>
 <table><thead><tr><th>Code</th><th>Kind</th><th>Since</th><th>What the balance means</th></tr></thead><tbody>
-${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${esc(p)}</td><td>${k}</td><td>${since === "v1.2" ? '<span class="new">v1.2</span>' : since}</td><td>${esc(w)}</td></tr>`).join("")}
+${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${esc(p)}</td><td>${k}</td><td>${since === "D46" ? '<span class="new">proposed (D46)</span>' : since}</td><td>${esc(w)}</td></tr>`).join("")}
 </tbody></table>
 <p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. A variance account with a credit balance is a gain. <code>ADVANCE</code> does not exist because NPL never advances money to a receiver (invariant 16). The former single <code>VARIANCE</code> purpose is replaced by the four VAR_ accounts; the former referral payable is <code>SHARE_PAYABLE</code> (D37).</p>
 
