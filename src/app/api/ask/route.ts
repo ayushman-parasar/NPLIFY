@@ -8,7 +8,7 @@ import { KB_VERSION, SYSTEM_PROMPT } from "@/lib/kb";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5";
+const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5-5";
 const EFFORT = (process.env.ANTHROPIC_EFFORT ?? "medium") as "low" | "medium" | "high";
 const DAILY_LIMIT = Number(process.env.ASK_DAILY_LIMIT ?? 200);
 
