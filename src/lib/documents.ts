@@ -55,19 +55,19 @@ export const DOCS: Doc[] = [
   {
     slug: "lifecycle",
     title: "Lifecycle & Approvals",
-    version: "v1.1",
-    blurb: "The states a deal moves through from inquiry to confirmation, the controlled actions along the way, and who may initiate or approve each.",
+    version: "v5.9",
+    blurb: "The states a deal, a settlement, a conversion, a reroute, a loss event and an earnings offset move through, the 35 controlled actions along the way, and who may initiate, approve or escalate each.",
     audience: "client",
-    files: { html: "NPLify-Lifecycle-and-Approvals-v1.1.html", pdf: "NPLify-Lifecycle-and-Approvals-v1.1.pdf" },
+    files: { html: "NPLify-Lifecycle-and-Approvals-v5.9.html", pdf: "NPLify-Lifecycle-and-Approvals-v5.9.pdf" },
     group: "design",
   },
   {
     slug: "roles",
     title: "Roles & Visibility Matrix",
-    version: "v1.0",
-    blurb: "Which role sees which figures and may take which action, across Operations, Finance, Management and client users.",
+    version: "v5.9",
+    blurb: "Which role sees which figures and may take which action: Operations, Finance and Management as nested rings, the approval rights per controlled action, and every field of the model classified.",
     audience: "client",
-    files: { html: "NPLify-Roles-and-Visibility-Matrix-v1.0.html", pdf: "NPLify-Roles-and-Visibility-Matrix-v1.0.pdf" },
+    files: { html: "NPLify-Roles-and-Visibility-Matrix-v5.9.html", pdf: "NPLify-Roles-and-Visibility-Matrix-v5.9.pdf" },
     group: "design",
   },
   {
@@ -82,10 +82,28 @@ export const DOCS: Doc[] = [
   {
     slug: "configuration",
     title: "Configuration Schema",
-    version: "v1.0",
-    blurb: "What a client, project and partner configuration contains, with an example configuration for one client.",
+    version: "v5.9",
+    blurb: "Every configuration table — client, system settings, project, parties, the partner block — with its fields, allowed values, defaults and the rules checked on save, and one client's configuration as a validated example.",
     audience: "client",
-    files: { html: "NPLify-Configuration-Schema-v1.0.html", pdf: "NPLify-Configuration-Schema-v1.0.pdf", json: "config-example-client1.json" },
+    files: { html: "NPLify-Configuration-Schema-v5.9.html", pdf: "NPLify-Configuration-Schema-v5.9.pdf", json: "config-example-client1.json" },
+    group: "design",
+  },
+  {
+    slug: "architecture",
+    title: "Architecture & Stack Note",
+    version: "v5.9",
+    blurb: "One app, one database and one bucket in NPL's AWS account, expanded against the model: the background jobs, the insert-only ledger enforced in the database, the visibility filter, outside services, environments, backups and cost.",
+    audience: "client",
+    files: { html: "NPLify-Architecture-and-Stack-v5.9.html", pdf: "NPLify-Architecture-and-Stack-v5.9.pdf" },
+    group: "design",
+  },
+  {
+    slug: "cutover",
+    title: "Cutover & Opening Entries",
+    version: "v5.9",
+    blurb: "From the spreadsheets to NPLify: the parallel run on a staging instance, the backfill, the opening entries that give the ledger its starting balances, the daily reconciliation, the exit criteria and the Sunday go-live.",
+    audience: "client",
+    files: { html: "NPLify-Cutover-and-Opening-Entries-v5.9.html", pdf: "NPLify-Cutover-and-Opening-Entries-v5.9.pdf" },
     group: "design",
   },
   {
@@ -119,7 +137,7 @@ export const DOCS: Doc[] = [
 
 export const GROUPS: { id: Doc["group"]; title: string; blurb: string }[] = [
   { id: "model", title: "The model", blurb: "Start here: the diagram itself and how to read it." },
-  { id: "design", title: "Design specifications", blurb: "How the model behaves: postings, lifecycle, roles, arithmetic and configuration." },
+  { id: "design", title: "Design specifications", blurb: "How the model behaves and how it is built: postings, lifecycle, roles, arithmetic, configuration, architecture and cutover." },
   { id: "working", title: "Working papers", blurb: "Internal material behind the decisions. Staff only." },
 ];
 

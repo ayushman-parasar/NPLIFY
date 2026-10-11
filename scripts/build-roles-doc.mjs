@@ -1,7 +1,8 @@
-// Build docs/NPLify-Roles-and-Visibility-Matrix-v1.0.pdf: the cumulative-visibility model
+// Build docs/NPLify-Roles-and-Visibility-Matrix-v5.9.{html,pdf}: the cumulative-visibility model
 // (Operations ⊂ Finance ⊂ Management) as a per-module, per-field-group table of view and approval
-// rights, the approval rights per controlled action, the enforcement rules, acceptance tests, and a
-// field-by-field appendix generated from data/erd.v5.json.   node scripts/build-roles-doc.mjs
+// rights, the approval rights per controlled action (ROLE_RIGHT rows, D44), the enforcement rules,
+// acceptance tests, and a field-by-field appendix generated from data/erd.v5.json (every one of the
+// model's tables and views must be mapped; the build refuses otherwise).   node scripts/build-roles-doc.mjs
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -14,119 +15,143 @@ const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"
 const outDir = path.join(root, "docs");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const c = (s) => `<code>${esc(s)}</code>`;
-const V = "1.0", DATE = "8 October 2026";
+const V = D.version, DATE = "11 October 2026";
 
 // ------------------------------------------------------------------ field groups
 // Every field of every table belongs to exactly one group; the group decides who may see it.
 const GROUPS = {
-  OPS: { name: "Operational", who: "Operations · Finance · Management", desc: "Identities, states, references, timestamps, instructions, parties, accounts, endpoints, the amounts that physically move (collected, released, confirmed, returned). Everything Operations needs to run a deal." },
-  PRICE: { name: "Sender-facing prices", who: "Operations · Finance · Management", desc: "What the sender is quoted and pays: the sender rate, the fee percentages applied to the sender and receiver, the gross and net amounts promised. Visible to Operations because they are what the customer sees." },
-  PRATE: { name: "Partner rates as entered", who: "Operations · Finance · Management", desc: "The rate a partner offered, as Operations typed it in; the partner's pricing style; what the partner actually delivered. Entered by Operations, so visible to Operations." },
+  OPS: { name: "Operational", who: "Operations · Finance · Management", desc: "Identities, states, references, timestamps, instructions, parties, accounts, endpoints, screenings, quote packages, invoices and the amounts that physically move (collected, released, confirmed, returned, discharged). Everything Operations needs to run a deal." },
+  PRICE: { name: "Sender-facing prices", who: "Operations · Finance · Management", desc: "What the sender is quoted and pays: the sender rate, the fee percentages applied to the sender and receiver, the tier that applied, the customer-facing fee and rate the quote prints, the gross and net amounts promised. Visible to Operations because they are what the customer sees." },
+  PRATE: { name: "Partner rates as entered", who: "Operations · Finance · Management", desc: "The rate a partner quoted, as Operations typed it in (with its direction and, for cash, its city); the partner's pricing style; what the partner actually delivered; the rate a payout line was discharged at. Entered by Operations, so visible to Operations." },
   REF: { name: "Reference rate and comparison", who: "Finance · Management", desc: "The market snapshot at capture, the day's comparison, spreads, rolling averages, breach thresholds. Operations sees only whether a partner × pair is usable or frozen." },
-  ECON: { name: "Margin, pool, cost breakdown", who: "Finance · Management", desc: "NPL's margin and earnings, the expected conversion the engine computed, variances, rounding residuals, partner markups, minimum margins, earnings resting at partners, rebates and referral commissions, bank and network fees as costs." },
-  LEDGER: { name: "Ledger and balances", who: "Finance · Management", desc: "Accounts, transactions, postings, and every balance derived from them: client balance per partner, group entitlement, offsets, custody. Operations sees one figure only: the amount available to pay out at a partner." },
-  CONFIG: { name: "Configuration and master data", who: "view: all · propose: Finance · approve: Management", desc: "Project settings, pairs, thresholds, partner configuration, fee structures, registrations. Visible to everyone who operates them; changed only through Finance's proposal and Management's approval." },
-  CTRL: { name: "Approvals, audit, users", who: "own requests: Operations · all: Finance · Management", desc: "Approval records, the audit log, record locks and user administration." },
+  ECON: { name: "Margin, pool, cost breakdown", who: "Finance · Management", desc: "NPL's margin and earnings, the expected conversion the engine computed, the four variances by cause, rounding residuals, partner fees, minimum margins, earnings resting at partners and offset between them, rebates, markup shares, bank and network fees as costs, loss shares and recoveries, FX_RESULT, the reseller and remittance margins and NPL's profit, and every figure converted into the reporting currency." },
+  LEDGER: { name: "Ledger and balances", who: "Finance · Management", desc: "Accounts, transactions, postings, and every balance derived from them: client balance per partner, group entitlement, offsets, custody, the client-level roll-up. Operations sees one figure only: the amount available to pay out at a partner." },
+  CONFIG: { name: "Configuration and master data", who: "view: all · propose: Finance · approve: Management", desc: "Clients, project settings, pairs and rounding, thresholds, partner configuration, cutoffs and holidays, fee structures and tiers, destination approvals, templates, system settings. Visible to everyone who operates them; changed only through Finance's proposal and Management's approval." },
+  CTRL: { name: "Approvals, audit, users, roles", who: "own requests: Operations · all: Finance · Management", desc: "Approval records, the audit log, record locks, users, roles and the rights per controlled action." },
 };
 // Entities whose every field belongs to one group
 const ENTITY_GROUP = {
-  MARKET_RATE: "REF", RATE_COMPARISON: "REF", PARTNER_RATE_VERSION: "PRATE",
-  LEDGER_TRANSACTION: "LEDGER", LEDGER_POSTING: "LEDGER", LEDGER_ACCOUNT: "LEDGER", CLIENT_BALANCE: "LEDGER", GROUP_ENTITLEMENT: "LEDGER", OFFSET: "LEDGER", CUSTODY: "LEDGER",
-  EARNINGS_RECEIVABLE: "ECON", REFERRAL_RULE: "ECON", REFERRAL_ACCRUAL: "ECON", PARTNER_REBATE_RULE: "ECON", PARTNER_REBATE_ACCRUAL: "ECON", INTRODUCER: "CONFIG",
-  USER: "CTRL", APPROVAL: "CTRL", AUDIT_LOG: "CTRL", RECORD_LOCK: "CTRL",
-  PROJECT: "CONFIG", PARTNER: "CONFIG", RATE_SOURCE: "CONFIG", THRESHOLD: "CONFIG", CURRENCY_PAIR: "CONFIG", PAIR_RATE_SOURCE: "CONFIG", OWN_WALLET: "CONFIG",
-  SENDER: "CONFIG", SENDER_RECEIVER_ALLOW: "CONFIG", COLLECTION_SENDING_ENTITY: "CONFIG", RECEIVER_GROUP: "CONFIG", RECEIVER: "CONFIG", RECEIVING_ENTITY: "CONFIG", RECEIVING_ENTITY_ACCOUNT: "CONFIG",
-  PARTNER_CONFIG: "CONFIG", PARTNER_ENTITY: "CONFIG", COLLECTION_RECEIVING_ENDPOINT: "CONFIG", SETTLEMENT_SENDING_ENTITY: "CONFIG", SETTLEMENT_RAIL: "CONFIG", SETTLEMENT_REGISTRATION: "CONFIG", FEE_OVERRIDE: "CONFIG",
+  // configuration
+  PROJECT: "CONFIG", PARTNER: "CONFIG", RATE_SOURCE: "CONFIG", MARKUP_SHARE_PARTY: "CONFIG", SENDER: "CONFIG", RECEIVER_GROUP: "CONFIG", RECEIVER: "CONFIG", OWN_WALLET: "CONFIG", THRESHOLD: "CONFIG",
+  CURRENCY_PAIR: "CONFIG", PARTNER_CONFIG: "CONFIG", COLLECTION_SENDING_ENTITY: "CONFIG", SENDER_RECEIVER_ALLOW: "CONFIG", RECEIVING_ENTITY: "CONFIG", PAIR_RATE_SOURCE: "CONFIG", SETTLEMENT_SENDING_ENTITY: "CONFIG",
+  FEE_OVERRIDE: "CONFIG", RECEIVING_ENTITY_ACCOUNT: "CONFIG", DESTINATION_APPROVAL: "CONFIG", PARTNER_ENTITY: "CONFIG", COLLECTION_RECEIVING_ENDPOINT: "CONFIG", FEE_TIER: "CONFIG", PARTNER_CUTOFF_OVERRIDE: "CONFIG",
+  HOLIDAY: "CONFIG", MESSAGE_TEMPLATE: "CONFIG", CLIENT: "CONFIG", SYSTEM_SETTING: "CONFIG", WALLET_SCREENING: "OPS",
+  MARKUP_SHARE_RULE: "ECON", PARTNER_REBATE_RULE: "ECON",
+  // rates
+  MARKET_RATE: "REF",
+  // deal
+  COLLECTION: "OPS", SENDER_CREDIT: "OPS", EARNINGS_RECEIVABLE: "ECON", ENTITLEMENT_REATTRIBUTION: "LEDGER", DEAL_FEE_TIER: "PRICE", INVOICE: "OPS", QUOTE_VALIDITY_EXTENSION: "OPS", EARNINGS_OFFSET: "ECON",
+  // settlement
+  SETTLEMENT: "OPS", SETTLEMENT_RETURN: "OPS", CONFIRMATION: "OPS", SHORTFALL: "OPS", MARKUP_SHARE_ACCRUAL: "ECON", PARTNER_REBATE_ACCRUAL: "ECON", LOSS_RECOVERY: "ECON",
+  // ledger and controls
+  LEDGER_TRANSACTION: "LEDGER", LEDGER_POSTING: "LEDGER", LEDGER_ACCOUNT: "LEDGER", USER: "CTRL", APPROVAL: "CTRL", AUDIT_LOG: "CTRL", RECORD_LOCK: "CTRL", ROLE: "CTRL", ROLE_RIGHT: "CTRL",
+  // views
+  PROJECT_BALANCE: "LEDGER", GROUP_ENTITLEMENT: "LEDGER", OFFSET: "LEDGER", CUSTODY: "LEDGER", INVOICE_BALANCE: "OPS", PROJECT_MONTH_VOLUME: "PRICE", CLIENT_POSITION: "LEDGER", WALLET_REGISTRY: "OPS",
+  REPORTING_VALUE: "ECON", RESELLER_MARGIN: "ECON", REMITTANCE_MARGIN: "ECON", NPL_PROFIT: "ECON",
 };
-// Field-level exceptions: entity -> field -> group
+// Field-level exceptions: entity -> field -> group ("*" is the entity's default)
 const FIELD_GROUP = {
-  PARTNER_PAIR: { "*": "CONFIG", partner_markup_pct: "ECON" },
-  FEE_STRUCTURE: { "*": "CONFIG", min_margin_pct: "ECON", variance_threshold_rel: "REF" },
-  RATE_COMPARISON: { "*": "REF", id: "OPS", partner_pair_id: "OPS", rate_date: "OPS" },
-  PARTNER_RATE_VERSION: { "*": "PRATE", spread: "REF", breach_status: "REF", breached: "REF", approved_by: "CTRL" },
-  DEAL_GROUP: { "*": "OPS", sender_rate: "PRICE", fee_structure_id: "PRICE", amount_in: "PRICE", target_out: "PRICE" },
-  DEAL: { "*": "OPS", market_rate_id: "REF", partner_rate_version_id: "PRATE", fee_structure_id: "PRICE", sender_rate: "PRICE", amount_in: "PRICE", gross_out: "PRICE", client_net: "PRICE", fee_sender_part: "PRICE", fee_receiver_part: "PRICE" },
+  PARTNER_PAIR: { "*": "CONFIG", partner_fee_pct: "ECON" },
+  FEE_STRUCTURE: { "*": "CONFIG", min_margin_pct: "ECON", variance_threshold_rel: "REF", customer_facing_fee_basis: "PRICE", customer_facing_fee_pct: "PRICE" },
+  SETTLEMENT_RAIL: { "*": "CONFIG", expected_bank_fee: "ECON" },
+  RATE_COMPARISON: { "*": "REF", id: "OPS", partner_pair_id: "OPS", rate_date: "OPS", status: "OPS" },
+  PARTNER_RATE_VERSION: { "*": "PRATE", spread_pct: "REF", market_rate_id: "REF", status: "OPS", approval_reason: "CTRL" },
+  DEAL_GROUP: { "*": "OPS", sender_rate: "PRICE", fee_structure_id: "PRICE", amount_in: "PRICE", target_out: "PRICE", customer_facing_fee_pct: "PRICE", customer_facing_rate: "PRICE", invoice_rate: "PRICE" },
+  DEAL: { "*": "OPS", market_rate_id: "REF", partner_rate_version_id: "PRATE", fee_structure_id: "PRICE", sender_rate: "PRICE", amount_in: "PRICE", gross_out: "PRICE", client_net: "PRICE", fee_sender_part: "PRICE", fee_receiver_part: "PRICE", fee_override_id: "PRICE", fee_tier_id: "PRICE", tier_volume_basis: "PRICE" },
   CONVERSION: { "*": "OPS", partner_rate_version_id: "PRATE", actual_out: "PRATE", expected_out: "ECON", variance: "ECON", basis_variance: "ECON", residual_in: "ECON", rounding_residual: "ECON", fee_receiver_part: "PRICE" },
   BALANCE_CONVERSION: { "*": "OPS", market_rate_id: "REF", partner_rate_version_id: "PRATE", actual_out: "PRATE", expected_out: "ECON", variance: "ECON", rounding_residual: "ECON" },
   REROUTE: { "*": "OPS", forwarding_policy: "ECON", recovered_amount: "ECON", partner_agreement_ref: "ECON" },
+  QUOTE_PACKAGE: { "*": "OPS", printed_source_rate: "PRICE", printed_fee_pct: "PRICE", printed_amount_out: "PRICE" },
+  SETTLEMENT_LINE: { "*": "OPS", discharge_rate: "PRATE", discharge_market_rate_id: "REF" },
   BANK_FEE_EVENT: { "*": "OPS", expected_amount: "ECON", actual_amount: "ECON" },
-  FEE_DECISION: { "*": "OPS", pct: "ECON", decision: "OPS" },
-  SETTLEMENT_RAIL: { "*": "CONFIG", expected_bank_fee: "ECON" },
-  DISBURSEMENT: { "*": "OPS", bank_fee_treatment: "OPS" },
+  FEE_DECISION: { "*": "OPS", pct: "ECON" },
+  LOSS_EVENT: { "*": "OPS", sender_share: "ECON", npl_share: "ECON", partner_share: "ECON", client_share: "ECON", pool_funded: "ECON", wallet_funded: "ECON", funding_reference: "ECON" },
+  CLIENT: { "*": "CONFIG", exposure_ceiling: "ECON" },
+  PROJECT: { "*": "CONFIG", exposure_ceiling: "ECON" },
 };
-const ACTOR_FIELDS = new Set(["approved_by", "requested_by", "verified_by", "confirmed_by", "posted_by", "prepared_by", "escalated_to", "locked_by", "actor_id"]);
+const ACTOR_FIELDS = new Set(["approved_by", "requested_by", "verified_by", "confirmed_by", "posted_by", "prepared_by", "escalated_to", "locked_by", "actor_id", "screened_by", "recorded_by", "sent_by", "rate_override_approved_by", "recommended_by", "relationship_owner"]);
+for (const n of Object.keys(D.E)) if (!ENTITY_GROUP[n] && !(FIELD_GROUP[n] && FIELD_GROUP[n]["*"])) throw new Error(`entity ${n} has no field group`);
+for (const n of Object.keys(ENTITY_GROUP)) if (!D.E[n]) throw new Error(`mapped entity ${n} is not in the model`);
+for (const n of Object.keys(FIELD_GROUP)) { if (!D.E[n]) throw new Error(`mapped entity ${n} is not in the model`); for (const f of Object.keys(FIELD_GROUP[n])) if (f !== "*" && !D.E[n].f.some((x) => x[0] === f)) throw new Error(`${n}.${f} is not in the model`); }
 function groupOf(entity, field) {
   if (ACTOR_FIELDS.has(field)) return "CTRL";
   const fg = FIELD_GROUP[entity];
   if (fg) return fg[field] || fg["*"] || ENTITY_GROUP[entity] || "OPS";
-  return ENTITY_GROUP[entity] || "OPS";
+  return ENTITY_GROUP[entity];
 }
 const RIGHTS = { // group -> [Operations, Finance, Management]
   OPS: ["view · enter", "view", "view"], PRICE: ["view (quotes)", "view", "view"], PRATE: ["view · enter", "view · confirm", "view"],
   REF: ["usable / frozen only", "view · approve breach", "view"], ECON: ["—", "view", "view"], LEDGER: ["available-to-pay figure only", "view · reconcile", "view"],
-  CONFIG: ["view", "view · propose", "view · approve"], CTRL: ["own requests", "view all · approve own scope", "view all · approve · users"],
+  CONFIG: ["view", "view · propose", "view · approve"], CTRL: ["own requests", "view all · approve own scope", "view all · approve · users and roles"],
 };
 
 // ------------------------------------------------------------------ the matrix by module
 const MATRIX = [
+  ["Clients and system", [
+    ["Clients, their projects, system settings and the reporting currency", "CONFIG", "CLIENT, PROJECT.client_id, SYSTEM_SETTING, platform-scope CURRENCY_PAIRs (D38, D43, D44)"],
+    ["Exposure ceilings (project and client)", "ECON", "PROJECT.exposure_ceiling, CLIENT.exposure_ceiling — compared through REPORTING_VALUE; Operations sees that a release is blocked, not the figure"]]],
   ["Configuration", [
-    ["Project, pairs, thresholds, policies", "CONFIG", "PROJECT, CURRENCY_PAIR, PAIR_RATE_SOURCE, THRESHOLD, OWN_WALLET"],
-    ["Parties: senders, groups, receivers, entities, accounts", "CONFIG", "SENDER, SENDER_RECEIVER_ALLOW, COLLECTION_SENDING_ENTITY, RECEIVER_GROUP, RECEIVER, RECEIVING_ENTITY, RECEIVING_ENTITY_ACCOUNT"],
-    ["Partner block: pairs, vehicles, endpoints, rails, narratives, registrations", "CONFIG", "PARTNER, PARTNER_CONFIG, PARTNER_PAIR, PARTNER_ENTITY, COLLECTION_RECEIVING_ENDPOINT, SETTLEMENT_SENDING_ENTITY, SETTLEMENT_RAIL, SETTLEMENT_REGISTRATION"],
-    ["Fee structures and overrides (the percentages applied to the sender and receiver)", "CONFIG", "FEE_STRUCTURE (pct, shares, floor, cap, basis, mode), FEE_OVERRIDE"],
-    ["Minimum margin, partner markup, variance thresholds, expected bank fees", "ECON", "FEE_STRUCTURE.min_margin_pct, PARTNER_PAIR.partner_markup_pct, FEE_STRUCTURE.variance_threshold_rel, SETTLEMENT_RAIL.expected_bank_fee"],
-    ["Referral and rebate terms", "ECON", "INTRODUCER, REFERRAL_RULE, PARTNER_REBATE_RULE"]]],
+    ["Project, pairs and rounding, rate-source chains, thresholds, own wallets, templates", "CONFIG", "PROJECT, CURRENCY_PAIR (amount_rounding, cash_rounding), PAIR_RATE_SOURCE, THRESHOLD, OWN_WALLET (role), MESSAGE_TEMPLATE"],
+    ["Parties: senders, groups, receivers, entities, accounts, allow-lists", "CONFIG", "SENDER, SENDER_RECEIVER_ALLOW, COLLECTION_SENDING_ENTITY, RECEIVER_GROUP, RECEIVER, RECEIVING_ENTITY, RECEIVING_ENTITY_ACCOUNT (single_use)"],
+    ["Partner block: methods, cutoff and holidays, pairs, vehicles, endpoints, rails, narratives, destination approvals", "CONFIG", "PARTNER (supported_methods, bank_cutoff_time), PARTNER_CUTOFF_OVERRIDE, HOLIDAY, PARTNER_CONFIG (is_own_desk), PARTNER_PAIR (needs_bank_lock), PARTNER_ENTITY, COLLECTION_RECEIVING_ENDPOINT (risk_band, single_use), SETTLEMENT_SENDING_ENTITY, SETTLEMENT_RAIL, DESTINATION_APPROVAL"],
+    ["Fee structures, tiers and overrides (the percentages applied to the sender and receiver; what the quote prints)", "CONFIG", "FEE_STRUCTURE (pct, sender_pays_pct, receiver_pays_pct, min_markup_pct, max_markup_pct, rate_basis, mode, customer_facing_*), FEE_TIER, FEE_OVERRIDE"],
+    ["Minimum margin, partner fee, variance thresholds, expected bank fees", "ECON", "FEE_STRUCTURE.min_margin_pct, PARTNER_PAIR.partner_fee_pct, FEE_STRUCTURE.variance_threshold_rel, SETTLEMENT_RAIL.expected_bank_fee"],
+    ["Markup-share and rebate terms", "ECON", "MARKUP_SHARE_PARTY (name only is configuration), MARKUP_SHARE_RULE (basis, pct, settlement_mode), PARTNER_REBATE_RULE (basis, pct, payout_currency)"]]],
   ["Rates", [
-    ["Partner rate of the day, as entered", "PRATE", "PARTNER_RATE_VERSION.rate, given_at, version, status (usable / frozen)"],
-    ["Market snapshots, day comparison, spread, averages, breach", "REF", "MARKET_RATE, RATE_COMPARISON, PARTNER_RATE_VERSION.spread / breach"]]],
+    ["Partner rate of the day, as quoted (rate, direction, city), its version and whether it is usable", "PRATE", "PARTNER_RATE_VERSION.quoted_rate, quoted_direction, rate, location, version_no, expires_at, status (usable / frozen)"],
+    ["Market snapshots, day comparison, spread, averages, breach", "REF", "MARKET_RATE, RATE_COMPARISON, PARTNER_RATE_VERSION.spread_pct and the breach decision"]]],
   ["Quoting", [
-    ["Deal group and legs: parties, states, references, clocks", "OPS", "DEAL_GROUP, DEAL (identities, leg_type, funding_source, states, sent_at, valid_until, grace_until)"],
-    ["Sender-facing price: sender rate, fee applied, amounts promised", "PRICE", "DEAL_GROUP.sender_rate, DEAL.sender_rate, amount_in, gross_out, client_net, fee_sender_part, fee_receiver_part"],
+    ["Deal group and legs: parties, states, references, clocks, extensions, packages", "OPS", "DEAL_GROUP, DEAL (identities, leg_type, funding_source, states, sent_at, effective_valid_until, grace_until, rate_locked_at, cutoff_at, conversion_due_date), QUOTE_PACKAGE, QUOTE_VALIDITY_EXTENSION, the invoice a group collects"],
+    ["Sender-facing price: sender rate, fee applied, tier, customer-facing figures, amounts promised", "PRICE", "DEAL_GROUP.sender_rate, customer_facing_fee_pct, customer_facing_rate, invoice_rate; DEAL.sender_rate, amount_in, gross_out, client_net, fee_sender_part, fee_receiver_part, fee_override_id, fee_tier_id; DEAL_FEE_TIER; PROJECT_MONTH_VOLUME; the printed figures of a QUOTE_PACKAGE"],
     ["Reference rate stamped on the leg", "REF", "DEAL.market_rate_id"]]],
   ["Collection", [
-    ["Parts, endpoints, evidence, verification", "OPS", "COLLECTION (amount, endpoint, evidence_ref, state, verified)"],
+    ["Parts, endpoints, evidence, verification; cash tokens and counts; wallet screening", "OPS", "COLLECTION (amount, endpoint, evidence_ref, state, token_ref, counted_at, sending_address), WALLET_SCREENING, WALLET_REGISTRY"],
     ["Overpayment credit", "OPS", "SENDER_CREDIT"]]],
   ["Conversion", [
-    ["Instruction, partner rate used, what the partner delivered", "PRATE", "CONVERSION.partner_rate_version_id, actual_out, state"],
-    ["Expected conversion, variance, residuals, margin recognised", "ECON", "CONVERSION.expected_out, variance, basis_variance, residual_in, rounding_residual; EARN_GROSS postings"]]],
+    ["Instruction, partner rate used, what the partner delivered", "PRATE", "CONVERSION.partner_rate_version_id, actual_out, calc_mode, state"],
+    ["Expected conversion, variances by cause, residuals, margin retained, margin recognised", "ECON", "CONVERSION.expected_out, variance, basis_variance, residual_in, rounding_residual; EARN_GROSS, VAR_CONVERSION, VAR_CUTOFF, VAR_RATE_HONOUR postings"]]],
   ["Settlement", [
-    ["Runs, lines, destinations, confirmations, shortfalls", "OPS", "DISBURSEMENT, DISBURSEMENT_LINE (incl. deal_id), CONFIRMATION, SHORTFALL (amount owed to the receiver)"],
-    ["Amount available to pay out at a partner", "LEDGER", "CLIENT_BALANCE due figure (one number per partner × currency, no postings)"],
-    ["Bank fee expected vs actual, treatment override", "ECON", "BANK_FEE_EVENT.expected_amount, actual_amount; FEE_DECISION.pct"]]],
-  ["Returns and exceptions", [
-    ["Returned lines, reasons, bounce fee as a fact", "OPS", "DISBURSEMENT_RETURN (returned_amount, reason); bank_fee as recorded"],
-    ["Variance exceptions, offsets, custody aging, breached versions", "ECON", "variance exception records; OFFSET view; CUSTODY view; RATE_COMPARISON breach — Operations sees that an item is blocked, not the figures"]]],
-  ["Balance conversions and reroutes", [
-    ["Request, phase, outcome, custody wallet, alternate partner", "OPS", "BALANCE_CONVERSION (request fields), REROUTE (trigger, phase, outcome, own_wallet_id, alternate partner)"],
-    ["Expected out, variance, dues recovered, forwarding policy", "ECON", "BALANCE_CONVERSION.expected_out / variance; REROUTE.forwarding_policy, recovered_amount, partner_agreement_ref; ENTITLEMENT_REATTRIBUTION"]]],
-  ["Referrals and rebates", [
-    ["Accruals, reconciliation, payment", "ECON", "REFERRAL_ACCRUAL, PARTNER_REBATE_ACCRUAL, EARNINGS_RECEIVABLE"]]],
+    ["Runs, lines, destinations, confirmations, shortfalls, returns; invoice lines discharged", "OPS", "SETTLEMENT (incl. cutoff_at, execution_due_date), SETTLEMENT_LINE (deal_id, outcome, invoice_id, obligation_discharged, token_ref, evidence_ref), CONFIRMATION, SHORTFALL, SETTLEMENT_RETURN, INVOICE_BALANCE"],
+    ["Amount available to pay out at a partner", "LEDGER", "PROJECT_BALANCE due figure (one number per partner × currency, no postings)"],
+    ["Bank fee expected vs actual, covered fees, fee decisions", "ECON", "BANK_FEE_EVENT.expected_amount, actual_amount; FEE_DECISION.pct"]]],
+  ["Losses, reroutes and balance conversions", [
+    ["Request, phase, outcome, custody wallet, alternate partner; the loss event as a fact (side, amount, reason)", "OPS", "REROUTE (trigger, phase, outcome, own_wallet_id, alternate partner), BALANCE_CONVERSION (request fields), LOSS_EVENT (side, amount, reason, state)"],
+    ["Loss split and recoveries, how the make-good was funded; dues recovered, forwarding policy; expected out and variance of a balance conversion", "ECON", "LOSS_EVENT shares, pool_funded, wallet_funded; LOSS_RECOVERY; REROUTE.forwarding_policy, recovered_amount, partner_agreement_ref; BALANCE_CONVERSION.expected_out / variance; ENTITLEMENT_REATTRIBUTION"]]],
+  ["Earnings, shares and rebates", [
+    ["Earnings resting at partners, offsets between partners, accruals, reconciliation, payment", "ECON", "EARNINGS_RECEIVABLE, EARNINGS_OFFSET, MARKUP_SHARE_ACCRUAL, PARTNER_REBATE_ACCRUAL, FX_RESULT postings"]]],
+  ["Reseller project (NPL-GR)", [
+    ["The two invoices as obligations: amounts, parties, what each line discharged", "OPS", "INVOICE (kind, amount, currency, vendor_invoice_id), INVOICE_BALANCE, DEAL_GROUP.invoice_amount"],
+    ["Reseller and remittance margins, forex true-ups, NPL's profit", "ECON", "RESELLER_MARGIN, REMITTANCE_MARGIN, NPL_PROFIT, VAR_FX_TIMING and RESELL_* postings"]]],
   ["Ledger and reconciliation", [
-    ["Accounts, transactions, postings, balances, identities", "LEDGER", "LEDGER_ACCOUNT, LEDGER_TRANSACTION, LEDGER_POSTING, CLIENT_BALANCE, GROUP_ENTITLEMENT, OFFSET, CUSTODY"]]],
+    ["Accounts, transactions, postings, balances, identities, the client roll-up", "LEDGER", "LEDGER_ACCOUNT, LEDGER_TRANSACTION, LEDGER_POSTING, PROJECT_BALANCE, GROUP_ENTITLEMENT, OFFSET, CUSTODY, CLIENT_POSITION"],
+    ["Figures in the reporting currency", "ECON", "REPORTING_VALUE (any per-currency figure converted at the latest platform-pair rate, D43)"]]],
   ["Reports, exports and messages", [
-    ["Operational reports and sender-facing documents", "OPS", "deal lists, collection and settlement reports, quote packages, partner instructions"],
-    ["Economic reports: margin, pool, cost breakdown, variances, earnings, Finance Log", "ECON", "every report, export, message or notification that carries a value from groups REF, ECON or LEDGER"]]],
+    ["Operational reports and sender-facing documents", "OPS", "deal lists, collection and settlement reports, quote packages rendered from MESSAGE_TEMPLATE (sender-facing fields only, D36), partner instructions, the client journal"],
+    ["Economic reports: margin, pool, cost breakdown, variances, earnings, offsets, losses, reseller margins, Finance Log", "ECON", "every report, export, message or notification that carries a value from groups REF, ECON or LEDGER"]]],
   ["Administration", [
     ["Approvals: request, approve, reject, escalate", "CTRL", "APPROVAL"],
     ["Audit log and record locks", "CTRL", "AUDIT_LOG, RECORD_LOCK"],
-    ["Users and roles", "CTRL", "USER"]]],
+    ["Users, roles and rights per controlled action", "CTRL", "USER (role_id), ROLE (sees_economics), ROLE_RIGHT (may_initiate, may_approve, escalates_to_role_id)"]]],
 ];
 
 // ------------------------------------------------------------------ acceptance tests
 const TESTS = [
-  ["Field stripping on read", "An Operations user requests any deal, conversion, balance conversion or reroute through the API or the screen.", "The response contains no field of groups REF, ECON or LEDGER (Appendix A lists them by table); the same request by Finance contains them all."],
-  ["Field stripping on export", "Operations exports a deal list, a settlement report or a quote package to CSV, PDF or a message.", "No column, footnote or total derived from groups REF, ECON or LEDGER appears; Finance's export of the same report carries them."],
-  ["Notifications", "A variance exception, a breached rate version or an open offset is raised while an Operations user is on shift.", "Operations is told the item is blocked and why in operational terms (\"rate version frozen — awaiting Finance\"); the spread, variance or offset amount is not in the notification."],
-  ["Available-to-pay figure", "Operations prepares a disbursement at a partner.", "The screen shows one figure per partner × currency (amount available to pay out) and no posting, pool or entitlement detail."],
-  ["Maker-checker", "A user approves an APPROVAL they requested themselves, or Operations approves anything.", "The server refuses with a reason; nothing changes; the attempt is in the audit log."],
-  ["Escalation adds, never replaces", "A disbursement above the settlement limit is approved by Finance only.", "It stays Approved-pending-Management; release is refused until a Management approval exists in addition to Finance's."],
+  ["Field stripping on read", "An Operations user requests any deal, conversion, balance conversion, reroute, loss event or offset through the API or the screen.", "The response contains no field of groups REF, ECON or LEDGER (Appendix A lists them by table); the same request by Finance contains them all."],
+  ["Field stripping on export", "Operations exports a deal list, a settlement report, a quote package or the client journal.", "No column, footnote or total derived from groups REF, ECON or LEDGER appears; Finance's export of the same report carries them."],
+  ["Customer-facing figures", "Operations opens a quote-first deal.", "The sender rate, the customer-facing fee and rate, the tier and the amounts promised are shown (group Sender-facing prices); the market snapshot, the spread and NPL's margin are not."],
+  ["Notifications", "A variance exception, a breached rate version, an open offset, a negative pool or an unfunded make-good is raised while an Operations user is on shift.", "Operations is told the item is blocked and why in operational terms (\"rate version frozen — awaiting Finance\"); the spread, variance, offset amount or shortfall of funds is not in the notification."],
+  ["Available-to-pay figure", "Operations prepares a settlement at a partner.", "The screen shows one figure per partner × currency (amount available to pay out) and no posting, pool or entitlement detail."],
+  ["Loss events", "Operations records a loss event and later views it.", "Side, amount, reason and state are visible; the split across partner, sender, client and NPL, how the make-good was funded and the recoveries are not (group Margin, pool, cost breakdown)."],
+  ["Maker-checker from rows", "A user approves an APPROVAL they requested themselves, or a user whose ROLE has no ROLE_RIGHT row with may_approve for the action approves it.", "The server refuses with a reason; nothing changes; the attempt is in the audit log."],
+  ["Escalation adds, never replaces", "A settlement above the settlement limit is approved by Finance only.", "It stays Approved-pending-Management; release is refused until a Management approval exists in addition to Finance's (ROLE_RIGHT.escalates_to_role_id)."],
   ["Countersign", "Only one Finance user is on shift and a release needs a second Finance approval.", "A Management countersignature is accepted in place of the second Finance user, and recorded as such."],
-  ["Configuration path", "Finance edits a threshold, fee structure or partner configuration directly.", "Refused: configuration changes are proposals by Finance that become effective only on Management approval, as a new version with an effective date."],
+  ["Configuration path", "Finance edits a threshold, fee structure, tier, holiday, template or partner configuration directly.", "Refused: configuration changes are proposals by Finance that become effective only on Management approval, as a new version with an effective date."],
   ["Own requests only", "Operations lists approvals.", "Only approvals Operations initiated are returned; Finance and Management see all."],
-  ["Users and roles", "A Management user creates, changes or removes a user or role.", "A second Management user must approve; one Management user alone cannot."],
+  ["Users and roles", "A Management user creates, changes or removes a user, a role or a ROLE_RIGHT row.", "A second Management user must approve; one Management user alone cannot."],
   ["Rejection reason", "Any approval is rejected.", "The reason is mandatory, is shown to the initiator, and any economic figure inside it is stripped for Operations."],
   ["Audit", "Any controlled action is taken.", "AUDIT_LOG holds actor, time, reason and record version; APPROVAL holds requester, approver and state; neither can be edited or deleted."],
   ["No client-side leakage", "Any screen shown to Operations is inspected (page source, network responses, cached data).", "No value of groups REF, ECON or LEDGER is present, even hidden: the filtering happens on the server, not in the user interface."],
+  ["Template fields", "A quote template is saved with a field outside the sender-facing set, or a message is rendered for a sender.", "The template is refused (MESSAGE_TEMPLATE.printed_fields); a rendered message never carries a partner rate, a margin or a cost (D36)."],
 ];
 
 // ------------------------------------------------------------------ appendix: every field, its group, its rights
@@ -143,6 +168,7 @@ ${rows.map((r) => `<tr><td class="mono">${esc(r[0])}</td><td>${esc(r[1])}</td><t
 const counts = {}; for (const n of Object.keys(D.E)) for (const f of D.E[n].f) { const g = groupOf(n, f[0]); counts[g] = (counts[g] || 0) + 1; }
 const hiddenFromOps = (counts.REF || 0) + (counts.ECON || 0) + (counts.LEDGER || 0);
 const totalFields = Object.values(counts).reduce((a, b) => a + b, 0);
+const withCode = ACTIONS.filter((a) => a[5] !== "—");
 
 // ------------------------------------------------------------------ HTML
 const CSS = `
@@ -172,17 +198,23 @@ td.mod{font-weight:700;background:#f7f7f7}
 figure.chart{margin:8pt 0 12pt;break-inside:avoid} figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
 `;
 
-const nest = `<figure class="chart"><svg viewBox="0 0 760 230" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cumulative visibility: Operations inside Finance inside Management">
-<style>.t{font:700 10px Helvetica,Arial,sans-serif;fill:#111}.s{font:8.6px Helvetica,Arial,sans-serif;fill:#333}.h{font:700 10.5px Helvetica,Arial,sans-serif}</style>
-<rect x="10" y="12" width="740" height="206" rx="10" fill="#eaf3ea" stroke="#2f7d3c" stroke-width="1.4"/><text x="24" y="32" class="h" fill="#2f7d3c">MANAGEMENT sees everything</text>
-<text x="24" y="48" class="s">+ approves escalations, configuration, users, own-wallet transfers, balance conversions, dues recovery, post-money voids, cross-group payouts</text>
-<rect x="24" y="60" width="712" height="146" rx="9" fill="#eaf0f8" stroke="#1f4e8c" stroke-width="1.4"/><text x="38" y="80" class="h" fill="#1f4e8c">FINANCE sees all of Operations' view plus the economics</text>
-<text x="38" y="96" class="s">reference rate at capture · spread and averages · margin and earnings · pool · cost breakdown · ledger balances · variances · referral and rebate accruals</text>
-<text x="38" y="110" class="s">+ approves quotes, rate versions, conversions, settlements, exceptions; proposes configuration; owns reconciliation and the Finance Log</text>
-<rect x="38" y="122" width="684" height="72" rx="8" fill="#fbf1e6" stroke="#8a3a00" stroke-width="1.4"/><text x="52" y="142" class="h" fill="#8a3a00">OPERATIONS sees the operational view</text>
-<text x="52" y="158" class="s">parties · states · references · instructions · amounts moved · sender-facing prices · partner rates as entered · one available-to-pay figure per partner</text>
-<text x="52" y="172" class="s">never: reference rate at capture, spread, margin, pool, cost breakdown, ledger balances, variances, earnings — on any screen, export, message or report</text>
-<text x="52" y="186" class="s">initiates: quotes, verifications, conversions, disbursements, reroute and endpoint requests, registrations, FEE_DECISION proposals</text>
+const nest = `<figure class="chart"><svg viewBox="0 0 760 290" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cumulative visibility: Operations inside Finance inside Management">
+<style>.s{font:8.4px Helvetica,Arial,sans-serif;fill:#333}.h{font:700 10.5px Helvetica,Arial,sans-serif}</style>
+<rect x="10" y="12" width="740" height="266" rx="10" fill="#eaf3ea" stroke="#2f7d3c" stroke-width="1.4"/><text x="24" y="32" class="h" fill="#2f7d3c">MANAGEMENT sees everything</text>
+<text x="24" y="47" class="s">+ approves escalations, configuration and system settings, users and roles, own-wallet transfers, balance conversions, dues recovery,</text>
+<text x="24" y="59" class="s">earnings offsets, loss splits, covered fees, own desks, post-money voids, cross-group payouts</text>
+<rect x="24" y="70" width="712" height="196" rx="9" fill="#eaf0f8" stroke="#1f4e8c" stroke-width="1.4"/><text x="38" y="90" class="h" fill="#1f4e8c">FINANCE sees all of Operations' view plus the economics</text>
+<text x="38" y="105" class="s">reference rate at capture · spread and averages · margin and earnings · pool · cost breakdown · ledger balances · the four variances · FX_RESULT</text>
+<text x="38" y="117" class="s">loss shares and recoveries · offsets · shares and rebates · reseller margins</text>
+<text x="38" y="131" class="s">+ approves quotes, extensions, rate versions, conversions, settlements, exceptions; recommends covered fees; proposes configuration;</text>
+<text x="38" y="143" class="s">owns reconciliation, true-ups and adjustments</text>
+<rect x="38" y="154" width="684" height="100" rx="8" fill="#fbf1e6" stroke="#8a3a00" stroke-width="1.4"/><text x="52" y="174" class="h" fill="#8a3a00">OPERATIONS sees the operational view (ROLE.sees_economics = false)</text>
+<text x="52" y="189" class="s">parties · states · references · instructions · amounts moved · sender-facing prices and the customer-facing figures · partner rates as entered</text>
+<text x="52" y="201" class="s">one available-to-pay figure per partner</text>
+<text x="52" y="215" class="s">never: reference rate at capture, spread, margin, pool, cost breakdown, ledger balances, variances, earnings, loss shares, offsets —</text>
+<text x="52" y="227" class="s">on any screen, export, message or report</text>
+<text x="52" y="241" class="s">initiates: quotes, extensions, screenings, verifications, conversions, settlements, reroute and endpoint requests, destination approvals,</text>
+<text x="52" y="253" class="s">loss records, FEE_DECISION proposals</text>
 </svg><figcaption>Figure 1 — Cumulative visibility. Each ring sees everything inside it. Rights to approve grow outward; rights to see never shrink.</figcaption></figure>`;
 
 const matrixRows = MATRIX.map(([mod, rows]) => rows.map((r, i) => {
@@ -191,15 +223,16 @@ const matrixRows = MATRIX.map(([mod, rows]) => rows.map((r, i) => {
 }).join("")).join("");
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Roles &amp; Visibility Matrix v${V}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 6 — Roles &amp; Visibility Matrix · Draft v${V}</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${D.version}, the Transaction Lifecycle &amp; Approval State Machines v1.1 and the Project Understanding v1.1 (§9, roles and visibility). It turns the one-sentence rule — Operations sees the least, Finance sees everything Operations sees plus the economics, Management sees everything — into a concrete table: for every module and every group of fields, who may view, enter, propose and approve. Appendix A applies the same classification to every one of the ${totalFields} fields of the ${Object.keys(D.E).length} tables and views, so the build has one list to implement and the acceptance tests in Section 6 have one list to check against: ${hiddenFromOps} fields are never shown to Operations.<br>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 6 — Roles &amp; Visibility Matrix · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against. Supersedes Draft v1.0 (ERD v4.0).</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${V} (decisions D1–D46 with the amendment and the corrections of v5.9), the Transaction Lifecycle &amp; Approval State Machines v${V} and the Project Understanding v1.1 (§9, roles and visibility). It turns the one-sentence rule — Operations sees the least, Finance sees everything Operations sees plus the economics, Management sees everything — into a concrete table: for every module and every group of fields, who may view, enter, propose and approve. Since D44 the rights are rows: ${c("ROLE")} holds the roles and ${c("ROLE_RIGHT")} says per controlled action who may initiate, who may approve and which role is added on escalation; Section 4 is the content of those rows. Appendix A applies the same classification to every one of the ${totalFields} fields of the ${Object.keys(D.E).length} tables and views, so the build has one list to implement and the acceptance tests in Section 6 have one list to check against: ${hiddenFromOps} fields are never shown to Operations.<br>
 <b>Audience:</b> NPL Management, who own the roles, and the New XP engineering team, for whom this is the build and acceptance reference for permissions.</p>
+<div class="box"><b>What changed since v1.0 (ERD v4.0).</b> Names follow the FRS and NPL's words (settlement, destination approval, markup-share party — D37). Rights are configuration rows (ROLE, ROLE_RIGHT, USER.role_id — D44) and ROLE.sees_economics carries the visibility rule. New things to classify: clients and system settings (D38, D43), tiers and the customer-facing figures (D21, D22), quote packages, extensions and templates (D35, D36, D45), cash tokens, screenings and single-use endpoints (D30–D32), cutoffs and holidays (D29, D34), the ledger design of D46 — the four variances by cause, FX_RESULT, loss shares and recoveries, earnings kept unconverted and offset between partners, NPL-GR's two invoices and the reseller and remittance margins, and the figures in the reporting currency (REPORTING_VALUE). ${withCode.length} of the ${ACTIONS.length} controlled actions carry a ROLE_RIGHT code.</div>
 <div class="rule"></div>
 
 <h2>1 · The model in one page</h2>
-<p>Three roles, three nested rings. <b>Operations</b> runs deals: quotes, verifies collections, instructs conversions, prepares disbursements, enters partner rates, requests reroutes and records partner approvals. <b>Finance</b> sees everything Operations sees plus the economics, approves what Operations initiates, resolves exceptions, proposes configuration and owns reconciliation. <b>Management</b> sees everything and approves the heavier actions, every configuration change and every user change. Visibility is <i>cumulative</i> — a wider role never loses a narrower role's view — and approval is <i>maker-checker</i>: the person who initiates an action is never the person who approves it, enforced by the server, not by convention.</p>
+<p>Three roles, three nested rings. <b>Operations</b> runs deals: quotes and extends quotes, screens wallets, verifies collections, instructs conversions, prepares settlements, enters partner rates as quoted, requests reroutes, records destination approvals and loss events. <b>Finance</b> sees everything Operations sees plus the economics, approves what Operations initiates, resolves exceptions, recommends covered fees, requests balance conversions, dues recovery, earnings offsets and loss splits, proposes configuration and owns reconciliation. <b>Management</b> sees everything and approves the heavier actions, every configuration change and every user change. Visibility is <i>cumulative</i> — a wider role never loses a narrower role's view — and approval is <i>maker-checker</i>: the person who initiates an action is never the person who approves it, enforced by the server from the ROLE_RIGHT rows, not by convention.</p>
 ${nest}
-<div class="box"><b>Derived economics — the eight things Operations never sees.</b> The reference rate at capture · the spread and rolling averages · NPL's margin and earnings · the pool resting at a partner · the cost breakdown (partner cost, bank and network fees, variance, referral, rounding) · ledger balances · variances and exceptions in figures · referral and rebate accruals. The rule applies on <i>any screen, export, message or report</i>; it is enforced where values leave the system, not in the user interface.</div>
+<div class="box"><b>Derived economics — what Operations never sees.</b> The reference rate at capture · the spread and rolling averages · NPL's margin and earnings, retained or offset · the pool resting at a partner · the cost breakdown (partner fee, bank and network fees, rounding, loss) · the four variances by cause and FX_RESULT · ledger balances · markup-share and rebate accruals · a loss event's split, funding and recoveries · the reseller and remittance margins and NPL's profit · any figure converted into the reporting currency. The rule applies on <i>any screen, export, message or report</i>; it is enforced where values leave the system, not in the user interface. Operations does see the customer-facing fee and rate a quote prints (D22): they are what the sender sees.</div>
 
 <h2>2 · Field groups</h2>
 <p>Every field of every table belongs to exactly one of eight groups, and the group decides who sees it. The groups are the unit of enforcement: the build filters by group, and the tests check by group.</p>
@@ -214,35 +247,36 @@ ${matrixRows}
 </tbody></table>
 </section>
 
-<section class="land"><h2>4 · Approval rights per controlled action</h2>
-<p class="small">The approving role is always a different user from the initiator. "Escalates to Management when" lists the conditions that add a Management approval on top of, not instead of, the approving role's. Identical to §4 of the Lifecycle &amp; Approvals document, from the same source.</p>
-<table style="font-size:8.4pt"><thead><tr><th style="width:21%">Controlled action</th><th style="width:9%">Initiates</th><th style="width:11%">Approves</th><th style="width:29%">Escalates to Management when</th><th>On rejection</th></tr></thead><tbody>
-${ACTIONS.map((a) => `<tr>${a.map((x) => `<td>${esc(x)}</td>`).join("")}</tr>`).join("")}
+<section class="land"><h2>4 · Approval rights per controlled action — the ROLE_RIGHT rows</h2>
+<p class="small">The approving role is always a different user from the initiator. "Escalates to Management when" lists the conditions that add a Management approval on top of, not instead of, the approving role's. The last column is the ${c("ROLE_RIGHT.action")} code; a row with a code is configuration (may_initiate, may_approve, escalates_to_role_id per role), a row marked — is an audited operational step. Identical to §5 of the Lifecycle &amp; Approvals document, from the same source.</p>
+<table style="font-size:8.2pt"><thead><tr><th style="width:19%">Controlled action</th><th style="width:9%">Initiates</th><th style="width:10%">Approves</th><th style="width:30%">Escalates to Management when</th><th style="width:20%">On rejection</th><th>ROLE_RIGHT</th></tr></thead><tbody>
+${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""}>${esc(x)}</td>`).join("")}</tr>`).join("")}
 </tbody></table>
 </section>
 
 <h2>5 · Enforcement rules (build reference)</h2>
 <ol>
-<li><b>Role on the user.</b> ${c("USER.role")} is one of operations, finance, management; one role per user; rights follow Sections 3 and 4 with no per-user exceptions.</li>
-<li><b>Server-side field filtering on every read.</b> Each table's fields carry the group of Appendix A. Any read by an Operations user strips the fields of groups <i>Reference rate and comparison</i>, <i>Margin, pool, cost breakdown</i> and <i>Ledger and balances</i> before the response is built; the same filter applies to list views, search, exports, generated documents, notifications, messages and scheduled reports. The user interface receives only what the role may see, so nothing can be revealed by inspecting a page or a cached response.</li>
-<li><b>Derived figures follow their inputs.</b> A figure computed from a hidden field is hidden; a total, average or chart that would reveal a hidden field is hidden. The one exception is deliberate: Operations sees the <i>amount available to pay out</i> per partner × currency as a single number, because preparing a disbursement needs it.</li>
-<li><b>Writes are role-scoped.</b> Operations may create and edit operational records only (group <i>Operational</i>, <i>Sender-facing prices</i> through quoting, <i>Partner rates as entered</i>); Finance may additionally resolve exceptions and record reconciliation; configuration and users are written only through an approved proposal.</li>
-<li><b>Maker-checker at the approval endpoint.</b> ${c("APPROVAL.approved_by")} must differ from ${c("APPROVAL.requested_by")}; Operations is never an approver; the escalation conditions of Section 4 add a Management approval rather than replacing Finance's; when only one Finance user is on shift a Management countersignature stands in for the second Finance user and is recorded as a countersignature.</li>
+<li><b>Role on the user, rights on the role.</b> ${c("USER.role_id")} names one ${c("ROLE")} (operations, finance, management today); ${c("ROLE.sees_economics")} is false for Operations; ${c("ROLE_RIGHT")} holds one row per role × controlled action with may_initiate, may_approve and the role added on escalation (D44). Rights follow Sections 3 and 4 with no per-user exceptions; a new role is a Management-approved configuration change.</li>
+<li><b>Server-side field filtering on every read.</b> Each table's fields carry the group of Appendix A. Any read by a role whose sees_economics is false strips the fields of groups <i>Reference rate and comparison</i>, <i>Margin, pool, cost breakdown</i> and <i>Ledger and balances</i> before the response is built; the same filter applies to list views, search, exports, generated documents, notifications, messages, the client journal and scheduled reports. The user interface receives only what the role may see, so nothing can be revealed by inspecting a page or a cached response.</li>
+<li><b>Derived figures follow their inputs.</b> A figure computed from a hidden field is hidden; a total, average, chart or reporting-currency value that would reveal a hidden field is hidden. The one exception is deliberate: Operations sees the <i>amount available to pay out</i> per partner × currency as a single number, because preparing a settlement needs it. Customer-facing figures (D22) are not derived economics: they are what the quote prints.</li>
+<li><b>Writes are role-scoped.</b> Operations may create and edit operational records only (group <i>Operational</i>, <i>Sender-facing prices</i> through quoting, <i>Partner rates as entered</i>); Finance may additionally resolve exceptions, record reconciliation, recoveries and true-ups; configuration, system settings, users and roles are written only through an approved proposal.</li>
+<li><b>Maker-checker at the approval endpoint.</b> ${c("APPROVAL.approved_by")} must differ from ${c("APPROVAL.requested_by")}; the approver's role must hold may_approve for the action in ROLE_RIGHT (invariant 9); the escalation conditions of Section 4 add a Management approval rather than replacing Finance's; when only one Finance user is on shift a Management countersignature stands in for the second Finance user and is recorded as a countersignature.</li>
 <li><b>Nothing is deleted.</b> Rejections keep the request, the decision and the mandatory reason; a re-submission is a new approval that points at the rejected one; ${c("AUDIT_LOG")} records actor, time, reason and record version for every controlled action and every configuration change.</li>
-<li><b>Users and roles need two Management users.</b> Creating, changing or removing a user or role is a Management action approved by a second Management user.</li>
-<li><b>Exceptions are shown as blockers, not as figures.</b> A frozen partner × pair, an open variance exception, an open offset and custody aging appear to Operations as the state that blocks their work and the role that must act; the spread, variance, offset amount and custody balance are Finance's view.</li>
+<li><b>Users and roles need two Management users.</b> Creating, changing or removing a user, a role or a ROLE_RIGHT row is a Management action approved by a second Management user.</li>
+<li><b>Exceptions are shown as blockers, not as figures.</b> A frozen partner × pair, an open variance exception, an open offset, custody aging, a negative pool, an unfunded make-good and an open loss recovery appear to Operations as the state that blocks their work and the role that must act; the spread, variance, offset amount, pool and loss shares are Finance's view.</li>
+<li><b>Messages print only what the template allows.</b> ${c("MESSAGE_TEMPLATE.printed_fields")} is the list of model fields a template may render; a quote template is sender-facing only (D36), so a message can never carry a partner rate, a margin or a cost whichever role sends it.</li>
 </ol>
-<div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a disclosed-rate partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate) and the Understanding document's wording. If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
+<div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate) and the Understanding document's wording. If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
 
 <h2>6 · Acceptance tests</h2>
 <p>The build passes when every test below holds for every role. Tests are stated as scenario → expected outcome; the field lists they refer to are those of Appendix A.</p>
 <table><thead><tr><th style="width:18%">Test</th><th style="width:38%">Scenario</th><th>Expected</th></tr></thead><tbody>
 ${TESTS.map(([t, s, e]) => `<tr><td><b>${esc(t)}</b></td><td>${esc(s)}</td><td>${esc(e)}</td></tr>`).join("")}
 </tbody></table>
-<p class="small"><i>Draft v${V} — for review with NPL. The group assignments in Appendix A are New XP's proposal from the Understanding document's §9 and are the decision Management is asked to confirm.</i></p>
+<p class="small"><i>Draft v${V} — for review with NPL. The group assignments in Appendix A are New XP's proposal from the Understanding document's §9 and the decisions to D46, and are the decision Management is asked to confirm.</i></p>
 
 <h2 class="pb">Appendix A · Every field, its group, its rights</h2>
-<p class="small">Generated from the data model (Draft v${D.version}). Rights per role as in Section 2; "view · enter" means Operations creates or edits the record in the normal course; actor fields (who approved, verified, posted) belong to the approvals group.</p>
+<p class="small">Generated from the data model (Draft v${D.version}): ${Object.keys(D.E).length} tables and views, ${totalFields} fields. Rights per role as in Section 2; "view · enter" means Operations creates or edits the record in the normal course; actor fields (who approved, verified, posted, screened, recorded) belong to the approvals group.</p>
 ${appendix}
 </body></html>`;
 
