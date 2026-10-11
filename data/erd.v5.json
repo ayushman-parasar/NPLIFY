@@ -7476,7 +7476,24 @@
    "blocks": "Ledger Posting Design; Calculation Specification",
    "status": "answered",
    "a": "NPL (10–11 Oct): accrue shares and rebates at conversion; book a loss to NPL first and recover share by share; run NPL-GR’s full reseller P&L inside NPLify with two invoices in EUR and the remittance markup absorbing partner cost and forex; one variance account per cause; earnings taken out of unconverted collections and offset between partners at the partner’s rate of the day; sent money is not NPL’s — the promise is discharged on release; bank transfers carry cents, cash rounds; fee parts on the principal; Jeton 1.25 %, Ali assumed 1 %; EUR → EUR 2.8 % split 50/50; NPL’s profit = remittance + reseller earnings.",
-   "impl": "v5.7 D46: LEDGER_ACCOUNT purposes (VAR_ × 4, LOSS_RECEIVABLE, MAKEGOOD, LOSS_PAYABLE, RESELL_REVENUE, RESELL_COST, VENDOR_PAYABLE, RESALE_RECEIVABLE, REMIT_CLAIM, FX_CLEARING; INTRANSIT retired), sources LossRecovery / Invoice / EarningsOffset, component resale; LOSS_RECOVERY and EARNINGS_OFFSET tables; INVOICE.kind, sender_id; EARNINGS_RECEIVABLE.recovered_by_offset_id; PARTNER_REBATE_RULE.payout_currency; CURRENCY_PAIR.amount_rounding exact; views RESELLER_MARGIN, REMITTANCE_MARGIN, NPL_PROFIT; invariants 16, 25, 26, 28, 39 restated, 40–44 new."
+   "impl": "v5.7 D46: LEDGER_ACCOUNT purposes (VAR_ × 4, LOSS_RECEIVABLE, MAKEGOOD, LOSS_PAYABLE, RESELL_REVENUE, RESELL_COST, VENDOR_PAYABLE, RESALE_RECEIVABLE, REMIT_CLAIM, FX_CLEARING; INTRANSIT retired), sources LossRecovery / Invoice / EarningsOffset, component resale; LOSS_RECOVERY and EARNINGS_OFFSET tables; INVOICE.kind, sender_id; EARNINGS_RECEIVABLE.recovered_by_offset_id; PARTNER_REBATE_RULE.payout_currency; CURRENCY_PAIR.amount_rounding exact; views RESELLER_MARGIN, REMITTANCE_MARGIN, NPL_PROFIT; invariants 16, 25, 26, 28, 39 restated, 40–44 new.",
+   "ents": [
+    "LEDGER_ACCOUNT",
+    "LEDGER_POSTING",
+    "LEDGER_TRANSACTION",
+    "LOSS_EVENT",
+    "LOSS_RECOVERY",
+    "EARNINGS_OFFSET",
+    "EARNINGS_RECEIVABLE",
+    "INVOICE",
+    "CONVERSION",
+    "SETTLEMENT",
+    "CURRENCY_PAIR",
+    "FEE_STRUCTURE",
+    "RESELLER_MARGIN",
+    "REMITTANCE_MARGIN",
+    "NPL_PROFIT"
+   ]
   }
  ],
  "UND_NEW": [
