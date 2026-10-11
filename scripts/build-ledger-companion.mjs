@@ -1,0 +1,183 @@
+// Build docs/NPLify-Ledger-Patterns-Companion-v<ERD>.{html,pdf}: the same worked transactions as the Ledger Posting
+// Design, laid out landscape with the posting table on the left and a plain-language explanation on the right
+// (explanation on top when the table is tall). Imports the checked ledger from build-ledger-doc.mjs.
+//   node scripts/build-ledger-companion.mjs
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import * as M from "./build-ledger-doc.mjs";
+
+const { L, fmt, pct, esc, EX, JET, D1, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas } = M;
+const here = path.dirname(fileURLToPath(import.meta.url));
+const outDir = path.join(path.resolve(here, ".."), "docs");
+const VERSION = M.ERD_VERSION, DATE = "11 October 2026";
+const e = (x) => fmt(x);
+const u = (x) => fmt(x, "USDT");
+
+// ------------------------------------------------------------------ the explanations, one per transaction
+const X = {
+  T1: `A sender has just paid 10,000 USDT into Ali's wallet. Two things are now true at once: the money is sitting at Ali (money IN to the "Ali, USDT" jar) and NPL has promised to deliver it onward for the client (a promise OUT of the "we owe the receivers" jar). Nothing is earned yet. The money is the client's; NPL is only holding it.`,
+  T2: `Ali turns the USDT into euros. The USDT promise is torn up (IN · promise) and the USDT leaves Ali's USDT jar. What arrives in euros is split two ways: ${e(D1.clientNet)} into the client's EUR jar at Ali${D1.residual ? ` (${e(D1.payable)} whole euros plus ${e(D1.residual)} of cents)` : ''}, and ${e(D1.earnings)} EUR into NPL's own jar at Ali (its pool). A new promise is made in euros, ${e(D1.clientNet)}, which is what the client was quoted. The ${e(D1.earnings)} is NPL's fee: this is the one moment client money becomes NPL's. Ali's own cost is hidden inside its rate, so it never appears as a line.`,
+  T3a: `A plain bank transfer of 5,000 EUR arrives at Ali for a deal where the sender pays in euros and the receiver gets euros. Same shape as T1: money IN at Ali, a promise OUT.`,
+  T3: `Even though no currency changes, the deal still "converts" at a rate of 1. That is how the fee is taken: of the 5,000, ${e(DS.clientNet)} is the client's (promise and jar in euros) and ${e(DS.earnings)} is NPL's fee into its pool. Without this step there would be no moment at which the fee is earned.`,
+  T4: `The sender pays a deal of 5,000 USDT in two instalments. The first 4,000 arrive: money IN at Ali, promise OUT for the same amount. The deal is not complete, so nothing converts yet.`,
+  T5: `The remaining 1,000 arrive the next day. Same two lines. Now the whole 5,000 is at Ali and the promise is 5,000.`,
+  T6: `With the deal fully paid, Ali converts the whole 5,000 at once, exactly like T2: USDT out, euros in for the client, NPL's fee into its pool, the promise re-stated in euros. A cash deal would wait here until the partner has counted the notes.`,
+  T7: `Ali now pays out. The client's euro jar at Ali holds several converted deals; NPL sends ${e(dueWhole)} in two bank transfers, ${e(line1)} to one of the receiver's accounts and ${e(line2)} to another. The money moves from "at Ali" to "in transit" (sent, not yet confirmed). Only whole euros go out; ${e(dust)} of cents stays behind, still the client's. The promise is untouched: nothing is delivered until the receiver confirms.`,
+  T8: `The receiver confirms the first transfer arrived in full. The money leaves "in transit" and the promise is reduced by the same ${e(line1)}: delivered means NPL no longer owes it.`,
+  T9: `The second transfer arrives ${e(bankFee)} short because a bank took a fee on the way. ${e(line2 - bankFee)} counts as delivered (promise reduced). The missing ${e(bankFee)} is parked in a "shortfall" jar for that receiver: NPL still owes it and will top it up next time. If the client had agreed to bear bank fees, the promise would simply drop by the full amount instead.`,
+  T10: `NPL makes the shortfall good from its own money at Ali. ${e(bankFee)} goes IN to NPL's cost jar (a bank fee NPL bears) and OUT of NPL's pool at Ali; the same ${e(bankFee)} goes back IN to the client's jar at Ali and the shortfall jar is emptied. This is the rare direction: NPL's money becoming client money. It goes out with the next payout like any other balance.`,
+  T11: `A Thai-baht payout that must be rounded up to the nearest 1,000 baht. The client is owed ${fmt(DT.clientNet, "THB")} but will be paid ${fmt(DT.payable, "THB")}. The extra ${fmt(-DT.residual, "THB")} is NPL's cost (rounding jar) and comes out of NPL's margin, so NPL's pool gets ${fmt(DT.earnings + DT.residual, "THB")} instead of ${fmt(DT.earnings, "THB")}. Rounding down (T2) is the opposite case: the leftover cents stay the client's.`,
+  T12: `Ali is unavailable, so with management's approval the sender pays 10,000 USDT into NPL's own contingency wallet instead. The money goes IN to a "held in NPL's wallet" jar, and the usual promise goes OUT. Money in NPL's own wallet is allowed only in three named cases; this is one of them, and a custody report watches it until it leaves.`,
+  T13: `NPL forwards the client's money to Jeton. The held jar empties and the "at Jeton, USDT" jar fills with the full 10,000. But NPL physically sends only ${u(10000 - recover)}: Jeton already owed NPL ${u(recover)} of earlier fees, so they net it off. For NPL that is ${u(recover)} IN to its own wallet (kept instead of sent) and ${u(recover)} OUT of what Jeton owed it. Nothing is taken from the client's amount.`,
+  T14: `Jeton converts at the market rate and then charges its own fee separately (${pct(JET)}). So the lines show three things: the client's euros (${e(DJ.clientNet)}) into the client's jar at Jeton, Jeton's fee (${e(DJ.partnerCost)}) into NPL's cost jar, and NPL's net margin (${e(DJ.earnings)}) into its pool at Jeton. The fee NPL charged in total was ${e(DJ.grossMargin)} (the "earned" line); Jeton's cost comes out of it. Compare T2, where Ali's cost is invisible because it is inside Ali's rate.`,
+  T15: `This sender can only pay on a network Ali does not accept. So NPL lets the money land on its own "bridge" wallet first: money IN to the held jar, promise OUT. It must be forwarded within a set number of hours.`,
+  T16: `The bridge forwards the 10,000 to Ali on a network Ali does accept. The held jar empties into "in transit from NPL's wallet". Sending costs a tiny network fee in ETH, which NPL pays from its own gas reserve: IN to the cost jar, OUT of NPL's wallet. The client pays nothing for the hop.`,
+  T17: `Ali confirms the money has arrived. "In transit" empties and the client's USDT jar at Ali fills, which is exactly where T1 would have put it. From here the deal continues normally.`,
+  T18: `A mistake: someone records a 2,000 USDT collection against the wrong deal. The posting looks normal (money IN at Ali, promise OUT), but it is wrong.`,
+  T19: `Nothing is ever deleted. Instead a mirror-image transaction is posted that points at the wrong one: promise IN, money OUT, same amounts. The two cancel. Then the correct posting is made afresh. Anyone looking at history sees the mistake, the reversal and the fix, so the books add up at every past moment.`,
+  T20: `A sender pays 3,000 USDT for a deal that is about to be cancelled. Normal collection lines.`,
+  T21: `The deal is voided, so the money must go back. The promise is torn up (IN · promise, the obligation ends) and the money leaves Ali's jar: ${u(3000 - netFee)} back to the sender and ${u(netFee)} to the network as the sending fee, which this project charges to the sender. If NPL absorbed the fee instead, the sender would get the full 3,000 and the ${u(netFee)} would come out of NPL's pool into its cost jar.`,
+  T22a: `A deal of 2,000 USDT that will be paid out in pounds. Money IN at Ali, promise OUT.`,
+  T22: `Ali converts to pounds, same shape as T2: USDT out, pounds in for the client (${fmt(D4.clientNet, "GBP")}), NPL's margin (${fmt(D4.earnings, "GBP")}) into its pool, promise re-stated in pounds.`,
+  T23: `The pounds are sent to the receiver's bank: from "at Ali" to "in transit".`,
+  T24: `The receiver's bank rejects the transfer and sends it back, minus a ${fmt(bounce, "GBP")} fee. The in-transit jar empties; what came back goes into the client's jar at Ali; the ${fmt(bounce, "GBP")} the bank kept is NPL's cost, and NPL tops the client's jar back up from its own pool so the client is whole. The promise was never reduced, because nothing was delivered.`,
+  T25: `The client decides to convert the pounds back to USDT and have them returned. The pound promise is torn up and the pounds leave Ali; ${u(retOut)} USDT arrive in the client's jar with a new USDT promise. NPL waived its fee on this return, so there is no earned line. Note NPL's margin from T22 is untouched: it was earned at the first conversion and a return never claws it back.`,
+  T26: `Starting point for the next example: the client has 5,000 Singapore dollars sitting at Ali from earlier deals (money in the SGD jar, promise in SGD).`,
+  T27: `NPL has the balance itself converted to USDT, without any sender or receiver involved, because a receiver needs USDT. The SGD promise is torn up and the SGD leave; ${u(bcOut)} USDT arrive in the client's jar with a USDT promise. No fee here (that would be a separate decision). Finance asks for this, Management approves it.`,
+  T28: `A sender pays 10,050 USDT against a 10,000 deal. All 10,050 are client money at Ali. The promise for the deal is 10,000; the extra 50 becomes a separate promise back to the sender, a credit.`,
+  T29: `The sender's next deal is 5,000 but they only need to send 4,950: the 50 credit is used up. The credit jar empties (IN · promise, the promise to the sender is fulfilled) and together with the 4,950 that arrived, the new deal's promise is the full 5,000.`,
+  T30: `An outside party who brought in this business is owed a quarter of NPL's margin on deal 3. The share, ${e(referral)}, is taken off NPL's earned jar (OUT · earned, the margin is smaller) and parked as a promise to that party. It is booked at the same moment as the conversion.`,
+  T31: `At month end NPL pays the party: the promise is fulfilled (IN · promise) and the money leaves NPL's own wallet.`,
+  T32: `A customer called Raeen brings deals through its own sub-account at Aquanow and shares NPL's margin half and half. The sender paid a 4 % fee; Aquanow charges ${pct(0.008)}; what is left to share is ${e(shareBase)}. The client's euros go into the client's jar as usual. NPL's half, ${e(nplRemainder)}, is not sitting in a pool at Aquanow because Raeen holds the converted money, so instead it is a promise Raeen owes NPL (a receivable). Raeen's half, ${e(raeenShare)}, is taken off NPL's earned jar. Raeen never learns about the rebate in T33.`,
+  T33: `Aquanow gives NPL back ${pct(0.003, 1)} of the amount as a rebate: ${u(rebateAqn)} USDT. NPL records it straight away as something Aquanow owes (a receivable) and as income in a separate "rebate earned" jar, never mixed with the margin, and never part of what is shared with Raeen.`,
+  T34: `Aquanow's monthly statement says ${u(stmtRebate)}, a little less than expected. NPL receives ${u(stmtRebate)} into its wallet, clears the whole ${u(rebateAqn)} it had expected, and the ${u(rebateAqn - stmtRebate)} difference is simply written off the rebate income. Nothing from before is edited.`,
+  T35: `Raeen pays NPL its half: money IN to NPL's wallet, the receivable cleared.`,
+  T36: `Ali converted at a slightly worse rate than the one it had quoted. The client is not affected: their euros were fixed when the sender was quoted. The difference (${e(M.V1.variance)}) is NPL's and goes into a variance jar labelled "the partner did something different from expected". NPL's pool at Ali gets that much less.`,
+  T37: `The rate was locked after Ali's 14:30 cutoff, so the conversion ran the next business day at a different rate. Same shape as T36, but the difference goes into a separate jar labelled "cutoff timing", because NPL chose to absorb this kind of difference and wants to see it on its own.`,
+  T38: `A sender's quote had expired, and NPL agreed to honour yesterday's rate anyway. Ali converts at today's rate. The difference is NPL's cost by choice and goes into its own jar, "honoured rate", so management can see what honouring old quotes costs.`,
+  T39: `A 10,000 USDT deal is paid into a one-time local account at Ali and verified. Normal collection lines.`,
+  T40: `Then the account is frozen and the money is lost. NPL's rule: book the whole loss to NPL first and make the client whole immediately. So ${u(lossAmt)} goes IN to NPL's loss jar; NPL funds the replacement ${u(poolPart)} from its pool at Ali and ${u(walletPart)} from its own wallet (physically transferred to Ali); the lost client money leaves Ali's jar and the replacement enters it. The client's promise never changes and the deal carries on.`,
+  T41: `Management then decides who bears what: Ali ${u(shares.partner)}, the sender ${u(shares.sender)}, the client ${u(shares.client)}, NPL ${u(shares.npl)}. Ali's and the sender's shares become receivables (promises they owe NPL) and come off the loss jar. The client's share is handled by undoing that part of the make-good: the client's promise and its jar at Ali both drop by ${u(shares.client)}, and NPL takes that much back into its pool. The loss jar ends at NPL's own share.`,
+  T42: `Ali pays its share by crediting NPL's pool at Ali. Receivable cleared.`,
+  T43: `The sender pays its share into NPL's wallet. Receivable cleared. (A sender's credit from an overpayment is never used for this: that is client money.)`,
+  T44: `NPL-GR, NPL's game-reseller unit, receives a vendor's invoice for ${e(VENDOR_INV)} EUR. These two lines are NPL-GR's own books, kept in euros: cost IN (what the goods cost) and a promise OUT to the vendor (what is owed). Nothing has moved yet.`,
+  T45: `NPL-GR sells the goods on at ${e(RESALE_INV)} EUR and issues its own invoice. Again in its own books: a promise IN from the customer (a receivable) and revenue earned. The difference, ${e(marginEur)}, is the reseller profit, and it is now fixed. Nothing that follows may change it.`,
+  T46: `The customer pays the ${e(RESALE_INV)} EUR invoice in Thai baht through NPL's remittance service, with the usual 2 % remittance fee on top: ${fmt(thbIn, "THB")} THB arrive at Ali. The first two lines are an ordinary collection (NPL-GR is simply the client here). The last two are NPL-GR's own books noting that the customer has paid and the remittance side now holds the value.`,
+  T47: `Ali converts baht to USDT. Just like T2: the client's share (${u(DM.clientNet)} USDT, worth exactly ${e(RESALE_INV)} EUR at the day's rate) goes into the client's jar, and NPL's remittance fee less Ali's cost (${u(DM.earnings)}) into NPL's pool. The reseller profit is not touched; it lives in euros in T45.`,
+  T48: `First instalment to the vendor: ${u(paid1)} USDT pays off ${e(inst1Eur)} EUR of the vendor invoice at today's rate. Remittance side: sent, confirmed, promise reduced. NPL-GR's books: the vendor is owed ${e(inst1Eur)} less and the remittance side holds ${e(inst1Eur)} less for NPL-GR.`,
+  T49: `A variant of where the money sits: instead of Ali paying the vendor, the remaining ${u(hop)} USDT are moved to NPL's own desk (its wallet at Aquanow), which will pay. From Ali to in-transit to the own desk; the own-desk jar is just another "at a partner" jar, with NPL as the partner.`,
+  T50: `Four days later the second instalment: the rate has moved, so the remaining ${e(inst2Eur)} EUR costs ${u(paid2)} USDT instead of the ${u(paid2 + fx2)} set aside. The ${u(fx2)} difference is a currency gain, and it belongs to the remittance side, not to NPL-GR: so it moves from the client's jar to NPL's pool and is recorded in a "fx timing" jar. Had the rate gone the other way, NPL's pool would have topped the client's jar up. NPL-GR's books: vendor fully paid.`,
+  T51: `What is left in the client's jar is NPL-GR's reseller profit, ${e(marginEur)} EUR worth, paid to NPL-GR's wallet as ${u(paid3)} USDT (with a small fx gain again). Because NPL-GR's books count in euros but the money arrived in USDT, a "clearing" pair of lines records the swap: euros out of the claim, USDT into the wallet. The two invoices are now fully settled and the ${e(marginEur)} profit is intact.`,
+  T52a: `A large collection: 300,000 USDT arrive at Jeton. Money IN, promise OUT.`,
+  T52: `Jeton converts all of it. The client gets ${e(DN_J.clientNet)} EUR (${e(DN_J.feeSender)} sender fee and ${e(DN_J.feeReceiver)} receiver fee came off the ${e(300000 * EX.Rm)} at market). Jeton keeps ${e(DN_J.partnerCost)} as its fee (NPL's cost), and NPL's margin of ${e(DN_J.earnings)} EUR sits in its pool at Jeton, in euros, mixed into Jeton's balance where Jeton cannot see it.`,
+  T53: `Meanwhile 100,000 USDT arrive at Ali for another deal that will convert tomorrow. Money IN, promise OUT, nothing converted yet.`,
+  T54: `NPL would rather hold its margin in USDT at Ali than in euros at Jeton. So it swaps: its ${e(offsetEur)} EUR at Jeton becomes the client's (client jar at Jeton up, NPL pool at Jeton down), and in exchange ${u(offsetUsdt)} USDT of the client's unconverted money at Ali becomes NPL's (client jar at Ali down, NPL pool at Ali up). The client's promises are adjusted the same way: fewer USDT owed, more euros owed. For the client it is as if ${u(offsetUsdt)} USDT had been converted at ${EX.Rp}; its total value is unchanged. For NPL it is a currency swap, and a clearing pair records that it gave up euros and took USDT. Nothing moves physically; both partners see nothing.`,
+  T55: `The next day Ali converts, but only ${u(convertUsdt)} USDT: NPL also leaves its own margin on this deal, ${u(retainUsdt)} USDT, unconverted and takes it into its USDT pool (earned in USDT this time). The client receives ${e(eurOut)} EUR at Ali, which together with the ${e(offsetEur)} it already holds at Jeton is exactly the ${e(DN_A.clientNet)} it was quoted. End state: Jeton's euros are all the client's; Ali's USDT are all NPL's; Ali's euros are all the client's.`,
+};
+
+// ------------------------------------------------------------------ patterns: intro + transactions
+const PATTERNS = [
+  ["A", "Direct collection, conversion and accumulation", `The everyday deal. A sender pays a partner, the partner converts the money, and the converted money waits at the partner until it is paid out. The fee is taken at the moment of conversion, and that is the only moment when some of the client's money becomes NPL's.`, ["T1", "T2", "T3a", "T3"]],
+  ["B", "Part collection", `A sender may pay a deal in several instalments. Each instalment is recorded as it arrives; the conversion waits until the deal is fully paid.`, ["T4", "T5", "T6"]],
+  ["C", "Settlement, confirmation, bank fees, shortfalls, rounding", `Paying out: the partner sends the money, the receiver confirms it arrived, and any bank fee or rounding difference is settled according to the rules of the project.`, ["T7", "T8", "T9", "T10", "T11"]],
+  ["D", "Contingency routes and the bridge wallet", `Sometimes money has to pass through one of NPL's own wallets: when the usual partner is unavailable, or when the sender can only pay on a network the partner does not accept. The ledger tracks it there until it leaves.`, ["T12", "T13", "T14", "T15", "T16", "T17"]],
+  ["E", "Cancellations, reversals and voids", `Mistakes are never erased; they are cancelled by an equal and opposite posting. A deal that is cancelled after the money arrived is refunded, with the network fee charged where the project's rules say.`, ["T18", "T19", "T20", "T21"]],
+  ["F", "Rejected payout and return leg", `A bank can reject a payout. The money comes back, the failed payout is undone, and the client can either try again later or have the money converted back and returned.`, ["T22a", "T22", "T23", "T24", "T25"]],
+  ["H", "Balance conversion", `Money already converted and waiting at a partner can be converted again into another currency, without a new sender or receiver, when a payout needs it.`, ["T26", "T27"]],
+  ["I", "Overpayment and sender credit", `A sender who pays too much gets a credit, which is refunded or used on the next deal.`, ["T28", "T29"]],
+  ["J", "Markup shares and partner rebates", `Two kinds of side payments, recorded the moment the conversion happens and settled monthly against a statement. A share is part of NPL's fee owed to a partner in the business; a rebate is money a partner gives back to NPL, kept separate and never shared.`, ["T30", "T31", "T32", "T33", "T34", "T35"]],
+  ["K", "Variances, by kind", `The client's figures are fixed when the sender is quoted. Whenever the partner's actual conversion differs from the one the quote assumed, the difference is NPL's, and it is filed in one of four jars according to why it happened.`, ["T36", "T37", "T38"]],
+  ["L", "Loss events: booked to NPL first, recovered share by share", `When money is lost after it was verified (a frozen account, cash gone missing), NPL takes the whole loss on itself at once and makes the client whole. Then, as each party agrees to bear a share, that share is recovered.`, ["T39", "T40", "T41", "T42", "T43"]],
+  ["M", "The reseller project (NPL-GR): two invoices, one remittance deal", `NPL-GR buys goods from a vendor and resells them. Its profit is the difference between the vendor's invoice and its own resale invoice, both in euros, fixed up front. The customer pays through NPL's remittance service, which charges its own 2 % and absorbs all the currency ups and downs so the reseller profit is never touched.`, ["T44", "T45", "T46", "T47", "T48", "T49", "T50", "T51"]],
+  ["N", "Earnings kept in the unconverted balance and offset between partners", `Partners convert everything they receive, so NPL's fee normally ends up converted along with the client's money. NPL prefers to keep its fees in USDT, taken out of money that has not been converted yet, even when the fee was earned at a different partner. The ledger records that as a swap between NPL and the client at the day's rate.`, ["T52a", "T52", "T53", "T54", "T55"]],
+];
+
+const STACK_AT = 7; // tables with this many lines or more get the explanation on top
+const pair = (key) => {
+  const t = L.txs[L.find(key)];
+  const stacked = t.rows.length >= STACK_AT;
+  const expl = X[key]; if (!expl) throw new Error("no explanation for " + key);
+  const table = L.html(key).replace(/<p class="txnote">[\s\S]*?<\/p>/, "");
+  return `<div class="pair${stacked ? " stack" : ""}"><div class="left">${table}</div><div class="right"><div class="guide"><div class="gh">What is happening</div>${expl}</div></div></div>`;
+};
+
+const CSS = `
+@page { size: A4 landscape; margin: 12mm 14mm 12mm 14mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
+body{font:10pt/1.42 Georgia,"Times New Roman",serif;color:#111;margin:0}
+h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
+h2{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:14pt 0 5pt;break-after:avoid}
+h3{font:700 11pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:10pt 0 4pt;break-after:avoid}
+p{margin:0 0 6pt} ul{margin:0 0 6pt 16pt;padding:0} li{margin:0 0 3pt}
+code,.mono{font:8.4pt Menlo,Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:3pt 0 6pt;font-size:8.6pt}
+th{text-align:left;font-weight:600;border-bottom:1px solid #333;padding:2pt 4pt;vertical-align:bottom}
+td{padding:2pt 4pt;border-bottom:1px solid #ddd;vertical-align:top}
+th.n,td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr{break-inside:avoid}
+.title{text-align:center;margin-top:34mm}
+.title .sub{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:0 0 8pt}
+.rule{border-top:2px solid #222;border-bottom:1px solid #222;height:2px;margin:8pt 0 10pt}
+.pb{break-before:page}
+.pair{display:grid;grid-template-columns:57% 1fr;column-gap:6mm;break-inside:avoid;margin:0 0 9pt;padding-top:4pt;border-top:1px solid #e3e3e3}
+.pair.stack{grid-template-columns:1fr}
+.pair.stack .right{order:-1}
+.tx{margin:0} .txh{font-size:9.4pt;margin-bottom:1pt} .src{color:#666;font-size:8.4pt;margin-left:6pt}
+table.post{table-layout:fixed} table.post td,table.post th{font-size:8pt;padding:1.5pt 3pt} td.io{font-size:7.8pt;white-space:nowrap}
+.txnote{font-size:8.4pt;color:#444;margin:2pt 0 0}
+.guide{background:#f3f6fb;border-left:3px solid #2f5d9e;padding:5pt 8pt;font-size:9.2pt;line-height:1.4}
+.howto{grid-template-columns:50% 1fr}
+.howto .guide table{font-size:8.2pt} .howto .guide td{padding:1.5pt 3pt}
+.gh{font:700 8.6pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3pt}
+.intro{background:#fbfbf6;border:1px solid #e0dcc8;padding:5pt 9pt;margin:0 0 8pt;font-size:9.8pt}
+.jars td:first-child{white-space:nowrap;font-weight:600}
+.small{font-size:8.6pt;color:#444}
+`;
+
+const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Ledger Patterns, a Reading Companion v${VERSION}</title><style>${CSS}</style></head><body>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Patterns — a Reading Companion · Draft v${VERSION}</p><p>New XP Technologies Limited</p><p>${DATE} · Confidential</p>
+<p class="small" style="margin-top:14pt">Companion to the Ledger Posting Design &amp; Chart of Accounts v${VERSION}: the same ${L.txs.length} worked transactions, each with a plain-language explanation beside it. Numbered with the ERD edition it is built against.</p></div>
+
+<h2 class="pb">How to read this document</h2>
+<div class="pair howto"><div class="left">
+<p>Every account in the ledger is a <b>jar with a label</b>. Some jars hold money (at a partner, in NPL's wallet, in transit). Some hold promises (what NPL has undertaken to deliver, what someone owes NPL). Two hold NPL's results: what it has earned, and what it has cost. Every event moves value <b>out of one jar and into another</b>, and the amounts always match, so nothing ever appears from nowhere or disappears.</p>
+<p>Each example is one event, shown as a table. The columns:</p>
+<ul>
+<li><b>Account</b> — the jar, written as owner · place · currency · purpose. <code>CL</code> jars hold the client's money; <code>CO</code> jars are NPL's.</li>
+<li><b>Debit / Credit</b> — the bookkeeper's two columns. You can ignore them.</li>
+<li><b>In / Out</b> — the same thing in a word: IN means value goes <i>to</i> this jar, OUT means it comes <i>from</i> this jar. The word after the dot says what kind of jar it is.</li>
+<li><b>Owner</b> — whose value it is, the client's or NPL's. <b>Component</b> — what kind of value: principal (the money itself), earnings, a cost, a fee, and so on.</li>
+<li><b>Why</b> — the reason for the line, in a few words.</li>
+</ul>
+<p>Read the <b>explanation on the right</b> first, then look for each sentence in the table. A tall table has its explanation above it instead.</p>
+</div><div class="right"><div class="guide"><div class="gh">The jars that appear most</div>
+<table class="jars"><tbody>
+<tr><td>COLLECTED</td><td>client money that has arrived at a partner and is not yet converted</td></tr>
+<tr><td>DUE</td><td>client money, converted, waiting at a partner to be paid out</td></tr>
+<tr><td>INTRANSIT</td><td>client money sent out and not yet confirmed as received</td></tr>
+<tr><td>HELD</td><td>client money sitting in one of NPL's own wallets (allowed in three cases only)</td></tr>
+<tr><td>PAYABLE</td><td>the promise: what NPL still has to deliver for the client, per currency</td></tr>
+<tr><td>CREDIT / SHORTFALL</td><td>smaller promises: owed back to a sender; still owed to a receiver after a short delivery</td></tr>
+<tr><td>POOL</td><td>NPL's own money resting at a partner, mostly its fees, invisible to the partner</td></tr>
+<tr><td>WALLET</td><td>NPL's own money in its own wallets</td></tr>
+<tr><td>EARN_GROSS / EARN_REBATE</td><td>what NPL has earned: its fees; rebates from partners, kept separate</td></tr>
+<tr><td>EXP_…</td><td>what NPL has borne: partner fees, bank fees, network fees, rounding, losses</td></tr>
+<tr><td>VAR_…</td><td>differences between what was expected and what happened, by cause</td></tr>
+<tr><td>…_RECEIVABLE / …_PAYABLE</td><td>what others owe NPL, and what NPL owes others, for shares, rebates, losses, invoices</td></tr>
+</tbody></table></div></div></div>
+
+${PATTERNS.map(([letter, name, intro, keys]) => `<h2 class="pb">Pattern ${letter} — ${esc(name)}</h2><div class="intro">${intro}</div>${keys.map(pair).join("")}`).join("")}
+
+<h2 class="pb">Pattern G — inter-group offsets, and what is not here</h2>
+<div class="intro">One pattern of the main document has no table because it has no special lines: when a receiver of one group is paid out of money collected for another group, the payout posts exactly like Pattern C, and a report (not an account) shows one group owed and the other holding its flow. The main document also carries the full chart of accounts, the identities that must hold after every posting, the reports built from the ledger, who may post what, and the list of changes asked of the ERD (proposed D46). This companion is for reading the examples; that one is the reference.</div>
+<p class="small"><i>Draft v${VERSION} — companion for review with NPL. Figures are worked examples, not NPL data, except where the main document says otherwise.</i></p>
+</body></html>`;
+
+fs.mkdirSync(outDir, { recursive: true });
+const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const name = `NPLify-Ledger-Patterns-Companion-v${VERSION}`;
+const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
+fs.writeFileSync(h, html);
+execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
+console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "· explanations:", Object.keys(X).length);

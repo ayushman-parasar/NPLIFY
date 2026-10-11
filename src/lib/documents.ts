@@ -44,6 +44,15 @@ export const DOCS: Doc[] = [
     group: "design",
   },
   {
+    slug: "ledger-companion",
+    title: "Ledger Patterns — Reading Companion",
+    version: "v5.6",
+    blurb: "The same worked transactions as the Ledger Posting Design, laid out with a plain-language explanation beside each table, for readers with no bookkeeping background.",
+    audience: "client",
+    files: { html: "NPLify-Ledger-Patterns-Companion-v5.6.html", pdf: "NPLify-Ledger-Patterns-Companion-v5.6.pdf" },
+    group: "design",
+  },
+  {
     slug: "lifecycle",
     title: "Lifecycle & Approvals",
     version: "v1.1",

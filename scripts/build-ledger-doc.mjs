@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -826,11 +826,14 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <p class="small"><i>Draft v${DOC_VERSION} — for review with NPL. Figures are worked examples, not NPL data, except the invoice amounts and instalment rates of Pattern M, which are NPL's.</i></p>
 </body></html>`;
 
-// ------------------------------------------------------------------ write + print
-fs.mkdirSync(outDir, { recursive: true });
-const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const name = `NPLify-Ledger-Posting-Design-v${DOC_VERSION}`;
-const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
-fs.writeFileSync(h, html);
-execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
-console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "· transactions checked:", L.txs.length);
+// ------------------------------------------------------------------ write + print (only when run directly; the companion imports this module)
+export { L, PURPOSES, KIND, fmt, pct, r2, esc, code, CSS, DOC_VERSION, ERD_VERSION, DATE, EX, JET, D1, D2, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas, V1, V2, V3, identities };
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  fs.mkdirSync(outDir, { recursive: true });
+  const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  const name = `NPLify-Ledger-Posting-Design-v${DOC_VERSION}`;
+  const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
+  fs.writeFileSync(h, html);
+  execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
+  console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "· transactions checked:", L.txs.length);
+}

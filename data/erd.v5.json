@@ -8130,6 +8130,10 @@
     "v5.6 (was v1.2), 11 October 2026 — numbered with the ERD edition; against ERD v5.6 with NPL’s answers of 10 October (accruals at conversion, loss booked to NPL first, full reseller P&L for NPL-GR, four variance accounts) and the earnings offset between partners; proposes D46 (Section 24)"
    ],
    [
+    "Ledger Patterns — Reading Companion",
+    "v5.6, 11 October 2026 — the same worked transactions as the Ledger Posting Design with a plain-language explanation beside each table"
+],
+   [
     "Transaction Lifecycle & Approval State Machines",
     "v1.1, 8 October 2026 — against ERD v5.2; v1.2 pending"
    ],
