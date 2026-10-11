@@ -1,5 +1,5 @@
 // Build the client deliverable
-//   docs/NPLify-Ledger-Posting-Design-v5.7.{html,pdf}   (chart of accounts + worked postings; numbered with the ERD edition it is built against)
+//   docs/NPLify-Ledger-Posting-Design-v5.8.{html,pdf}   (chart of accounts + worked postings; numbered with the ERD edition it is built against)
 // Every number in the worked examples is computed here; every transaction is checked to balance
 // per currency and per owner before the document is written.   node scripts/build-ledger-doc.mjs
 import fs from "node:fs";
@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const outDir = path.join(root, "docs");
-const DOC_VERSION = "5.7", ERD_VERSION = "5.7", DATE = "11 October 2026";
+const DOC_VERSION = "5.8", ERD_VERSION = "5.8", DATE = "11 October 2026";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 // ------------------------------------------------------------------ money helpers (exact to a millionth)
@@ -822,8 +822,8 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <li><b>Management</b> approves the actions the ledger patterns depend on: approve_loss_split, balance_conversion, recover_dues, cross_group_payout, cover_bank_fee, raise_fee_cap, enable_own_desk, settlements above limit and past the cutoff, own-wallet outbound transfers, and post-money voids. Every controlled action is audited with actor, time, reason and record version.</li>
 </ul>
 
-<h2>24 · What this design put into the ERD (D46, applied in v5.7, amended the same day)</h2>
-<p>The patterns above required the following additions, agreed with NPL on 10–11 October and cut into ERD Draft v5.7 as decision D46. Recovery postings use the source LossRecovery; the reseller books the source Invoice; the offset the source EarningsOffset. An offset records the to-partner's rate of the day (NPL's choice over the market rate), and the reseller books are postings rather than invoice records with views, so that NPL's profit (NPL_PROFIT) can be asked for as remittance earnings, reseller earnings, or both. An independent re-derivation of every calculation from the ERD and this document, run on 11 October, found five gaps between the model's definitions and these postings; they were applied the same evening as an amendment of D46 and are marked below.</p>
+<h2>24 · What this design put into the ERD (D46 in v5.7, amended as v5.8)</h2>
+<p>The patterns above required the following additions, agreed with NPL on 10–11 October and cut into ERD Draft v5.7 as decision D46. Recovery postings use the source LossRecovery; the reseller books the source Invoice; the offset the source EarningsOffset. An offset records the to-partner's rate of the day (NPL's choice over the market rate), and the reseller books are postings rather than invoice records with views, so that NPL's profit (NPL_PROFIT) can be asked for as remittance earnings, reseller earnings, or both. An independent re-derivation of every calculation from the ERD and this document, run on 11 October, found five gaps between the model's definitions and these postings; they were applied the same evening as an amendment of D46, cut as ERD v5.8, and are marked below.</p>
 <ol>
 <li><b>Variance by kind.</b> ${code("LEDGER_ACCOUNT.purpose")}: VARIANCE replaced by VAR_CONVERSION, VAR_CUTOFF, VAR_RATE_HONOUR, VAR_FX_TIMING. Invariants 28 and 39 and decisions D24, D29, D45 then name the account they post to.</li>
 <li><b>Loss first, recover later.</b> Purposes LOSS_RECEIVABLE (holder Partner or Sender), and the pair MAKEGOOD (client asset, holder Project) / LOSS_PAYABLE (company liability) for an unfunded make-good. A table ${code("LOSS_RECOVERY")} (loss_event_id, party kind sender / partner / client, amount, state agreed / received, received_at, reference, approved_by) as the source record of each recovery posting, under source LossEvent. ${code("COLLECTION.state")} reversed is used only when the deal is unwound. Invariant 16 restated (amendment) as two lists — client → company: margin recognition, the client side of an offset, a forex true-up gain, the client's loss share; company → client: absorbed or covered fees, round-ups, top-ups, make-wholes, make-goods, the company side of an offset, a forex true-up loss.</li>

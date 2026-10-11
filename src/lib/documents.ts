@@ -19,10 +19,10 @@ export const DOCS: Doc[] = [
   {
     slug: "erd",
     title: "ERD & Data Model",
-    version: "v5.7",
+    version: "v5.8",
     blurb: "The entity-relationship diagram and data dictionary behind the interactive map: every table, field, key and link, the invariants, the derived views and the walkthroughs.",
     audience: "client",
-    files: { html: "NPLify-P0-ERD-v5.7.html", pdf: "NPLify-P0-ERD-v5.7.pdf" },
+    files: { html: "NPLify-P0-ERD-v5.8.html", pdf: "NPLify-P0-ERD-v5.8.pdf" },
     group: "model",
   },
   {
@@ -37,19 +37,19 @@ export const DOCS: Doc[] = [
   {
     slug: "ledger",
     title: "Ledger Posting Design",
-    version: "v5.7",
+    version: "v5.8",
     blurb: "The chart of accounts and how every deal, collection, conversion, settlement, fee, share, rebate, variance, loss and reseller invoice becomes append-only postings, with the balances and reports derived from them.",
     audience: "client",
-    files: { html: "NPLify-Ledger-Posting-Design-v5.7.html", pdf: "NPLify-Ledger-Posting-Design-v5.7.pdf" },
+    files: { html: "NPLify-Ledger-Posting-Design-v5.8.html", pdf: "NPLify-Ledger-Posting-Design-v5.8.pdf" },
     group: "design",
   },
   {
     slug: "ledger-companion",
     title: "Ledger Patterns — Reading Companion",
-    version: "v5.7",
+    version: "v5.8",
     blurb: "The same worked transactions as the Ledger Posting Design, laid out with a plain-language explanation beside each table, for readers with no bookkeeping background.",
     audience: "client",
-    files: { html: "NPLify-Ledger-Patterns-Companion-v5.7.html", pdf: "NPLify-Ledger-Patterns-Companion-v5.7.pdf" },
+    files: { html: "NPLify-Ledger-Patterns-Companion-v5.8.html", pdf: "NPLify-Ledger-Patterns-Companion-v5.8.pdf" },
     group: "design",
   },
   {
@@ -73,10 +73,10 @@ export const DOCS: Doc[] = [
   {
     slug: "calculation",
     title: "Calculation Specification",
-    version: "v5.7",
+    version: "v5.8",
     blurb: "Every calculation the engine performs, in order, with its rounding rule: fee parts on the principal, target-out quotes, tiers, rounding, shares and rebates, the four variance kinds, invoice instalments, earnings offsets and the reseller arithmetic, with acceptance vectors checked against NPL's own figures.",
     audience: "client",
-    files: { html: "NPLify-Calculation-Specification-v5.7.html", pdf: "NPLify-Calculation-Specification-v5.7.pdf", json: "calc-vectors.json" },
+    files: { html: "NPLify-Calculation-Specification-v5.8.html", pdf: "NPLify-Calculation-Specification-v5.8.pdf", json: "calc-vectors.json" },
     group: "design",
   },
   {
