@@ -17,7 +17,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const SCALE = 1e6;
 const units = (x) => Math.round(x * SCALE + (x >= 0 ? 1e-7 : -1e-7));
 const r2 = (x) => Math.round(x * 100 + (x >= 0 ? 1e-7 : -1e-7)) / 100;
-const DP = { ETH: 4 };
+const DP = {};
 const fmt = (x, ccy) => { const dp = DP[ccy] ?? 2; return Math.abs(x) < 10 ** -(dp + 1) ? (0).toFixed(dp) : x.toLocaleString("en-GB", { minimumFractionDigits: dp, maximumFractionDigits: dp }); };
 const pct = (p, dp = 2) => (p * 100).toFixed(dp) + " %";
 const trunc = (x) => Math.floor(x + 1e-9);
@@ -35,7 +35,7 @@ const PURPOSES = [
   ["CL", "CREDIT", "liability", "<SENDER>", "v5.2", "Owed back to a sender: an overpayment waiting to be refunded or applied to the next deal (SENDER_CREDIT)."],
   ["CL", "MAKEGOOD", "asset", "PROJECT", "D46", "Client money NPL has undertaken to replace after a loss but has not yet placed at a partner. Appears only when NPL's pool at the partner cannot fund the make-good at once; cleared when NPL's funds land (Pattern L)."],
   ["CO", "POOL", "asset", "<PARTNER>", "v5.2", "NPL's own money resting at this partner: margin captured at conversion (EARNINGS_RECEIVABLE), plus anything NPL transferred there. Settled on the partner's fee cycle or netted on a reroute."],
-  ["CO", "WALLET", "asset", "OWN", "v5.2", "NPL's own money in its own wallets: recovered dues, rebates and shares received, gas reserves."],
+  ["CO", "WALLET", "asset", "OWN", "v5.2", "NPL's own money in its own wallets: recovered dues, rebates and shares received, network fees paid."],
   ["CO", "REBATE_RECEIVABLE", "asset", "<PARTNER>", "v5.2", "Rebate a partner owes NPL on NPLify deals, accrued at conversion and reconciled against the partner's monthly statement (D27)."],
   ["CO", "SHARE_RECEIVABLE", "asset", "<PARTY>", "v5.3", "NPL's remainder of the markup owed by a party that holds the converted funds (settlement_mode party_retains, D26); reconciled monthly."],
   ["CO", "SHARE_PAYABLE", "liability", "<PARTY>", "v5.2", "Markup share owed by NPL to a markup-share party (settlement_mode npl_pays, D26)."],
@@ -50,7 +50,7 @@ const PURPOSES = [
   ["CO", "RESELL_COST", "expense", "NONE", "D46", "NPL-GR's reseller books: the vendor invoice at NPL's preferential price, in the invoice currency, recognised when received. Revenue − cost is the game reseller revenue, fixed on issue and never touched afterwards (Pattern M)."],
   ["CO", "EXP_PARTNER", "expense", "NONE", "v5.2", "Partner cost where the partner states it separately (fee_on_market). Zero by construction for fee_in_rate partners and the own desk."],
   ["CO", "EXP_BANKFEE", "expense", "NONE", "v5.2", "Bank and payout fees NPL absorbs: gross-ups, shortfall top-ups, bounce fees, covered fees (D41)."],
-  ["CO", "EXP_NETWORK", "expense", "NONE", "v5.2", "Crypto network fees NPL absorbs: a refund, a bridge hop, a forwarded reroute."],
+  ["CO", "EXP_NETWORK", "expense", "NONE", "v5.2", "Crypto network fees NPL absorbs, in USDT: a refund, a bridge hop, a forwarded reroute. Zero when none applies."],
   ["CO", "EXP_ROUNDING", "expense", "NONE", "v5.3", "The amount added when a payout is rounded up to the pair's unit (D25)."],
   ["CO", "EXP_LOSS", "expense", "NONE", "v5.3", "Loss events. The whole loss is booked here first; each recovered share is credited back as it is agreed (Pattern L)."],
   ["CO", "VAR_CONVERSION", "expense", "NONE", "D46", "Partner converted differently from the engine's expectation (partner_calculates), and basis variance on a reroute. Gain or loss. Was VARIANCE."],
@@ -146,7 +146,7 @@ const DS = price({ amountIn: 5000, Rm: 1, Rp: 1, basis: "market", s: EX.s, r: EX
 const DR = price({ amountIn: 10000, Rm: 0.9000, Rp: 0.9000, basis: "market", s: 0.04, r: 0, partnerFee: 0.008 }); // Raeen at Aquanow: 4 % sender_pays on market, partner 0.80 %
 
 const L = new Ledger();
-const EUR = "EUR", USDT = "USDT", GBP = "GBP", THB = "THB", SGD = "SGD", ETH = "ETH";
+const EUR = "EUR", USDT = "USDT", GBP = "GBP", THB = "THB", SGD = "SGD";
 const CL = "client", CO = "company";
 
 // ---- Pattern A: collection, conversion, accumulation
@@ -257,17 +257,17 @@ L.tx(`T14 · Conversion of deal 3 at Jeton (fee_on_market, ${pct(JET)}): 10,000 
   ["CO.NONE.EUR.EARN_GROSS", "Cr", DJ.grossMargin, EUR, CO, "earnings", "gross margin before partner cost"],
 ], `Total cost to the client = partner cost ${fmt(DJ.partnerCost)} + NPL earnings ${fmt(DJ.earnings)} = ${fmt(DJ.grossMargin)} EUR. For a fee_in_rate partner (T2) the partner cost is inside the rate and no EXP_PARTNER line exists.`);
 const snapDeal3 = L.snapshot();
-const gas = 0.0012;
+const gas = 2;   // network fee in USDT when one applies; zero (no lines) when it does not
 L.tx("T15 · Deal 4 (D40): the sender can only pay on ERC-20, which Ali does not accept; 10,000 USDT arrive on NPL's bridge wallet", "Collection", [
   ["CL.OWN.USDT.HELD", "Dr", 10000, USDT, CL, "principal", "client money on the bridge (OWN_WALLET.role collection_bridge), to be forwarded within custody_max_hours"],
   ["CL.PROJECT.USDT.PAYABLE", "Cr", 10000, USDT, CL, "principal", ""],
 ]);
-L.tx(`T16 · Hop: the bridge forwards 10,000 USDT to Ali on TRC-20 (a SETTLEMENT_LINE to the partner_transit receiver); gas ${fmt(gas, ETH)} ETH paid by NPL`, "Settlement", [
+L.tx(`T16 · Hop: the bridge forwards 10,000 USDT to Ali on TRC-20 (a SETTLEMENT_LINE to the partner_transit receiver); network fee ${fmt(gas)} USDT paid by NPL when one applies`, "Settlement", [
   ["CL.OWN.USDT.INTRANSIT", "Dr", 10000, USDT, CL, "principal", "left the bridge, not yet credited by Ali"],
   ["CL.OWN.USDT.HELD", "Cr", 10000, USDT, CL, "principal", "custody ends when Ali credits (T17)"],
-  ["CO.NONE.ETH.EXP_NETWORK", "Dr", gas, ETH, CO, "network_fee", "network fee of the hop, NPL's cost (project network_fee_policy)"],
-  ["CO.OWN.ETH.WALLET", "Cr", gas, ETH, CO, "network_fee", "paid from NPL's gas reserve"],
-], "The hop line carries deal_id (invariant 19) so the entitlement view keeps the leg's group; nothing is earned or charged to the client on a hop.");
+  ["CO.NONE.USDT.EXP_NETWORK", "Dr", gas, USDT, CO, "network_fee", "network fee of the hop, in USDT, NPL's cost (project network_fee_policy)"],
+  ["CO.OWN.USDT.WALLET", "Cr", gas, USDT, CO, "network_fee", "paid from NPL's own USDT; when no network fee applies these two lines are absent"],
+], "The hop line carries deal_id (invariant 19) so the entitlement view keeps the leg's group; nothing is earned or charged to the client on a hop. A network fee may or may not apply; when it does it is stated in USDT, and when it does not the fee is zero and no line posts.");
 L.tx("T17 · Ali credits the hop: 10,000 USDT now sit at Ali as collected client money", "Confirmation", [
   ["CL.ALI.USDT.COLLECTED", "Dr", 10000, USDT, CL, "principal", "the leg continues at its partner exactly as T1"],
   ["CL.OWN.USDT.INTRANSIT", "Cr", 10000, USDT, CL, "principal", ""],
@@ -664,7 +664,7 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <tr><td>rebate</td><td>REBATE_RECEIVABLE, EARN_REBATE, WALLET</td><td>A partner's rebate on NPLify deals: accrual, receipt, true-up.</td></tr>
 <tr><td>share</td><td>EARN_GROSS (debit), SHARE_PAYABLE, SHARE_RECEIVABLE</td><td>A markup-share party's part of the net markup and its settlement.</td></tr>
 <tr><td>bank_fee</td><td>EXP_BANKFEE, SHORTFALL, POOL, DUE</td><td>Bank and payout fees: waived, carried forward, absorbed, covered, bounce.</td></tr>
-<tr><td>network_fee</td><td>EXP_NETWORK, WALLET, COLLECTED</td><td>Crypto network fees on refunds, hops and forwards.</td></tr>
+<tr><td>network_fee</td><td>EXP_NETWORK, WALLET, COLLECTED</td><td>Crypto network fees on refunds, hops and forwards, stated in USDT; zero, and no line, when none applies.</td></tr>
 <tr><td>rounding</td><td>DUE, EXP_ROUNDING, POOL</td><td>The signed residual of the pair's rounding option.</td></tr>
 <tr><td>variance</td><td>VAR_CONVERSION, VAR_RATE_HONOUR, VAR_FX_TIMING</td><td>Expected versus actual, by kind.</td></tr>
 <tr><td>cutoff_timing</td><td>VAR_CUTOFF</td><td>Rate at lock versus rate used after the partner's cutoff.</td></tr>
