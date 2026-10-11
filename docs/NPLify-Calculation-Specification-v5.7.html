@@ -91,7 +91,8 @@ customer_facing_rate     = sender_rate ÷ (1 − customer_facing_fee_pct)   — 
 <div class="formula">fee_in_rate:    delivered = amount_in × partner_rate;           partner_cost (inferred) = amount_in × (market − partner_rate), information only
 fee_on_market:  converted = amount_in × market_rate;  partner_cost = converted × partner_fee_pct;  delivered = converted − partner_cost
 earnings        = delivered − client_net                      (NPL's margin: EARN_GROSS − EXP_PARTNER)
-fee_charged     = fee_sender_part + fee_receiver_part          (EARN_GROSS; = earnings + partner_cost for fee_on_market)
+EARN_GROSS      = converted − client_net                       (fee_on_market: the full fee parts, the partner's cost booked apart as EXP_PARTNER;
+                                                                fee_in_rate: the fee parts less the partner's hidden cost — equal to earnings)
 retained_in     = earnings_in_out_currency ÷ partner_rate      when the margin is kept in the collection currency (CONVERSION.residual_in, D46)
 converted_in    = amount_in − retained_in − offset_in          (what the partner actually converts, §13)</div>
 <ul class="nums"><li>Ali (fee_in_rate) converts at 0.8910: delivered = 10,000 × 0.8910 = 8,910.00; NPL earnings = 8,910.00 − 8,820.00 = 90.00; Ali's inferred cost = 10,000 × (0.9000 − 0.8910) = 90.00, information only</li><li>Jeton (fee_on_market 1.25 %) converts at market: 9,000.00; partner cost = 9,000.00 × 1.25 % = 112.50; delivered 8,887.50; fee charged 180.00 (EARN_GROSS); NPL earnings = 8,887.50 − 8,820.00 = 67.50</li></ul>
@@ -100,7 +101,8 @@ converted_in    = amount_in − retained_in − offset_in          (what the par
 <div class="formula">payout:   amount_rounding = exact | truncate_unit | nearest_unit | round_up_unit | nearest_n | round_up_n (rounding_unit)
           payable  = round(client_net, option);   residual = client_net − payable   (signed)
           residual &gt; 0 → stays client money in DUE;  residual &lt; 0 → NPL's cost, EXP_ROUNDING, out of its margin
-cash in:  cash_rounding = truncate_n | nearest_n | round_up_n (cash_rounding_unit: AED 100, USD cash 10, THB 1,000)
+cash in:  cash_rounding = truncate_n | nearest_n | round_up_n (cash_rounding_unit: AED 100, USD cash 10, THB 1,000)   — the collection side;
+          a cash payout rounds by the pair's amount_rounding (round_up_n 1,000 for THB hand-overs)
           amount_in = round(exact amount_in, option);   surplus = (amount_in − exact) × basis_rate × (1 − fee)   → the client's
 rates:    rate_precision per pair (6 for EUR/USDT, 8 for BTC);   intermediate amounts 2 dp (8 for BTC), round half up</div>
 <p>Bank transfers go out exact, cents included; rounding to a unit applies where the pair says so, in practice to cash hand-overs (NPL, 11 October). USDT paid by reseller customers is rounded up.</p>
