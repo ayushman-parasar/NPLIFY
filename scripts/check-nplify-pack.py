@@ -87,7 +87,7 @@ def main(erd_pdf, post_pdf, comp_pdf):
     purposes = [p.strip() for p in re.sub(r'\(.*?\)', '', m.group(1)).split('/')] if m else []
     m = re.search(r'source_type string (.*?)(?: \(v5|source_id)', erd)
     sources = [s.strip() for s in m.group(1).split('/')] if m else []
-    m = re.search(r'cost_component string (.*?)(?: \(v5|LEDGER_ACCOUNT)', erd)
+    m = re.search(r'cost_component string (.*?)(?: \(v5|LEDGER_ACCOUNT|receiver_group_id)', erd)
     comps = [c.strip() for c in m.group(1).split('/')] if m else []
     print('\n== Cross-check against the ERD enumerations')
     tcount = {}

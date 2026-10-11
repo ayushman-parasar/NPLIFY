@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { clientFacing } from "./client-facing.mjs";
 import { fileURLToPath } from "node:url";
 import * as M from "./build-ledger-doc.mjs";
 
@@ -110,9 +111,7 @@ table.vec td,table.vec th{font-size:8.2pt;padding:2pt 3pt}
 `;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Calculation Specification v${VERSION}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Calculation Specification · Draft v${VERSION}</p><p>New XP Technologies Limited</p><p>${DATE} · Confidential</p><p class="small" style="margin-top:14pt">Numbered with the ERD edition it is built against. Supersedes Draft v1.0 (ERD v4.0).</p></div>
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${VERSION} (decisions D1–D46) and the Ledger Posting Design v${VERSION}. It states every calculation the engine performs as a precise formula, in the order it is performed, with the rounding rule at each step, and gives acceptance vectors of two kinds: the Ledger Posting Design's worked deals, produced by the same pricing function this document imports, and NPL's own figures from its fee table, recomputed here and compared. The engine passes when it reproduces every vector.<br>
-<b>What changed since v1.0:</b> fee parts are percentages of the principal at the basis rate and never compound (NPL, 11 October); a target-out quote applies the fee as a markup on the target (NPL's sheets); the rate basis is market or agent_rate with the partner's cost inside its rate or stated separately; tiers, the customer-facing figures, the rounding menu, cash rounding, same-currency pairs, the markup-share base, rebates, the four variance kinds, the forex true-up on invoice instalments, earnings retained and offset between partners, loss splits, and the reseller arithmetic are all specified (D20–D46, with the same-day amendment of D46: views over postings, the two-invoice links, FX_RESULT, the target-out rule). v5.9 regenerates this document against ERD v5.9 and the Ledger Posting Design v5.9 (the corrections of the cross-document review): no formula changes; the loss split of §16 is now posted as one LOSS_RECOVERY per share.</p>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Calculation Specification · Draft v${VERSION}</p><p>New XP Technologies Limited</p><p>${DATE} · Confidential</p><p class="small" style="margin-top:14pt">Numbered with the ERD edition it is built against.</p></div>
 <div class="rule"></div>
 
 <h2>1 · Conventions</h2>
@@ -133,7 +132,7 @@ spread         = 1 − partner_rate ÷ market_rate      (what the partner keeps 
 breach         = spread > avg_2w_spread × (1 + variance_threshold_rel)   → the pair freezes until Finance decides`)}
 
 <h2>3 · Fee parts on the principal</h2>
-<p>The sender's part and the receiver's part are each a percentage of the <b>principal at the basis rate</b>. They are never compounded on each other (NPL, 11 October: 300,000 USDT × 0.9000 − 2 % = 264,600, not 264,622.68).</p>
+<p>The sender's part and the receiver's part are each a percentage of the <b>principal at the basis rate</b>. They are never compounded on each other (300,000 USDT × 0.9000 − 2 % = 264,600).</p>
 ${F(`principal          = amount_in × basis_rate                                   (fixed_in)
 fee_sender_part    = principal × sender_pays_pct
 fee_receiver_part  = principal × receiver_pays_pct
@@ -284,7 +283,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const name = `NPLify-Calculation-Specification-v${VERSION}`;
 const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
-fs.writeFileSync(h, html);
+fs.writeFileSync(h, clientFacing(html));
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
 fs.writeFileSync(path.join(outDir, "calc-vectors.json"), JSON.stringify({ version: VERSION, ledger: Object.fromEntries(LV.map(([id, name, D, cin, cout]) => [id, { name, in: cin, out: cout, ...D }])), npl: NPL }, null, 1));
 console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "· NPL vectors matching:", NPL.filter((v) => v.ok).length, "/", NPL.length);

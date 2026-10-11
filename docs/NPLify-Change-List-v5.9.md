@@ -49,6 +49,20 @@ Five documents regenerated or written against ERD v5.9, the Ledger Posting Desig
 - Roles & Visibility Matrix v5.9 (`build-roles-doc.mjs`): eight field groups; every one of the model's 82 tables and views mapped (the build refuses otherwise) — 667 fields, 148 never shown to Operations; the matrix by module; the ROLE_RIGHT rows; nine enforcement rules; 16 acceptance tests; Appendix A generated from the model.
 - Configuration Schema v5.9 (`build-config-doc.mjs`): all 33 configuration tables under their current names (PARTNER_ENTITY, COLLECTION_RECEIVING_ENDPOINT, DESTINATION_APPROVAL, MARKUP_SHARE_*, CLIENT, SYSTEM_SETTING, HOLIDAY, PARTNER_CUTOFF_OVERRIDE, MESSAGE_TEMPLATE, WALLET_SCREENING, FEE_TIER), rules and value sets of v5.9, twelve cross-entity rules, the Client 1 example re-expressed and validated by code (`docs/config-example-client1.json` regenerated).
 - Architecture & Stack Note v5.9 (`build-architecture-doc.mjs`, new): NPL's architecture page expanded against the model — nine background jobs, the insert-only ledger enforced by privileges, triggers and a balance check at commit, the field filter at the API, every `_ref` field and where its content lives, outside services and their failure modes, environments (local, temporary staging, production), backups, cost, and seven decisions for NPL.
-- Cutover & Opening-Entries Approach v5.9 (`build-cutover-doc.mjs`, new): NPL's plan — parallel run on staging with the sheets leading, backfill as imported records, opening entries per project × currency with a balanced example checked by code, twelve reconciliation checks, eight exit criteria, the Sunday runbook, rollback, roles, assumptions.
-- Proposed ERD additions for the next edition (not applied in v5.9): LEDGER_ACCOUNT purpose OPENING with kind equity; LEDGER_TRANSACTION source Opening with an approval action post_opening_entries; DEAL_GROUP / DEAL imported_from; RATE_SOURCE code MANUAL.
+- Cutover Approach v5.9 (`build-cutover-doc.mjs`, new): NPL's plan — a parallel run of three to four weeks on staging with the sheets leading, earlier deals entered through the normal screens as real postings (no opening entries, no change to the ERD or the ledger), twelve reconciliation checks, eight exit criteria, a switch on a quiet day chosen a couple of days before, rollback, roles, assumptions.
 - ERD v5.9 rebuilt: the dependent-documents table and the footer now say which documents are at v5.9; the document registry, the README and the documents group blurb updated; the Lifecycle v1.1, Roles v1.0 and Configuration v1.0 files stay in docs/ for the record but are no longer served.
+
+## Client-facing pass (12 October 2026)
+
+Every served document was regenerated so that it reads for NPL without New XP's working papers: no status or audience paragraphs, no "what changed since" boxes, no references to the decision record (D-numbers), to earlier editions (v5.x) or to the review questions (Q-numbers), and no renames or retirements in the text. The model data file is untouched; `scripts/client-facing.mjs` strips the references at render time (`hist` for descriptions, `note` for field notes, `clientFacing` over the whole page).
+
+- ERD: the status paragraph, the invariants section, the change history (old §6) and the open questions (old §7) are gone; the data dictionary's history notes are stripped. The ERD is now the diagrams, the notes per domain, the derived views, the FRS reconciliation and the data dictionary.
+- Ledger Posting Design: status, audience, "what changed", the Since column of the chart of accounts (and the retired INTRANSIT row) and old §24 removed. Companion: same pass.
+- Calculation Specification: status and "what changed" removed; the fee-parts sentence no longer quotes the compounded figure.
+- Lifecycle & Approvals: status, audience, "what changed" and the "where the Understanding document says two things" box removed.
+- Roles & Visibility Matrix: status, audience, "what changed" and the acceptance tests (old §6) removed.
+- Configuration Schema: status, audience, "what changed" and the import/export section (old §8) removed.
+- Architecture & Stack Note: status, the "views, not stored balances" box and the files and outside-services sections (old §6–7) removed; no ERD additions are proposed (manual rates are ordinary market rates with an approval).
+- Cutover: retitled Cutover Approach (see above).
+- The check script `scripts/check-nplify-pack.py` was adjusted for the removed passages.
+

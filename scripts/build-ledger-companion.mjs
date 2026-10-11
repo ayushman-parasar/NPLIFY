@@ -7,6 +7,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as M from "./build-ledger-doc.mjs";
+import { clientFacing } from "./client-facing.mjs";
 
 const { L, fmt, pct, esc, r2, EX, JET, D1, D2, DJ, squareUsdt, surplus, thbExact, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas } = M;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -225,7 +226,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 ${PATTERNS.map(([letter, name, intro, keys]) => `<h2 class="pb">Pattern ${letter} — ${esc(name)}</h2><div class="intro">${intro}</div>${keys.map(pair).join("")}`).join("")}
 
 <h2 class="pb">Pattern G — inter-group offsets, and what is not here</h2>
-<div class="intro">One pattern of the main document has no table because it has no special lines: when a receiver of one group is paid out of money collected for another group, the payout posts exactly like Pattern C, and a report (not an account) shows one group owed and the other holding its flow. The main document also carries the full chart of accounts, the identities that must hold after every posting, the reports built from the ledger, who may post what, and the changes put into the ERD as D46 (v5.7), amended in v5.8 and propagated in v5.9. This companion is for reading the examples; that one is the reference.</div>
+<div class="intro">One pattern of the main document has no table because it has no special lines: when a receiver of one group is paid out of money collected for another group, the payout posts exactly like Pattern C, and a report (not an account) shows one group owed and the other holding its flow. The main document also carries the full chart of accounts, the identities that must hold after every posting, the reports built from the ledger, and who may post what. This companion is for reading the examples; that one is the reference.</div>
 <p class="small"><i>Draft v${VERSION} — companion for review with NPL. Figures are worked examples, not NPL data, except where the main document says otherwise.</i></p>
 </body></html>`;
 
@@ -233,6 +234,6 @@ fs.mkdirSync(outDir, { recursive: true });
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const name = `NPLify-Ledger-Patterns-Companion-v${VERSION}`;
 const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
-fs.writeFileSync(h, html);
+fs.writeFileSync(h, clientFacing(html));
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
 console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "· explanations:", Object.keys(X).length);

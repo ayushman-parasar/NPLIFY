@@ -8,6 +8,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ACTIONS } from "./controlled-actions.mjs";
+import { clientFacing } from "./client-facing.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -223,10 +224,7 @@ const matrixRows = MATRIX.map(([mod, rows]) => rows.map((r, i) => {
 }).join("")).join("");
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Roles &amp; Visibility Matrix v${V}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 6 — Roles &amp; Visibility Matrix · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against. Supersedes Draft v1.0 (ERD v4.0).</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${V} (decisions D1–D46 with the amendment and the corrections of v5.9), the Transaction Lifecycle &amp; Approval State Machines v${V} and the Project Understanding v1.1 (§9, roles and visibility). It turns the one-sentence rule — Operations sees the least, Finance sees everything Operations sees plus the economics, Management sees everything — into a concrete table: for every module and every group of fields, who may view, enter, propose and approve. Since D44 the rights are rows: ${c("ROLE")} holds the roles and ${c("ROLE_RIGHT")} says per controlled action who may initiate, who may approve and which role is added on escalation; Section 4 is the content of those rows. Appendix A applies the same classification to every one of the ${totalFields} fields of the ${Object.keys(D.E).length} tables and views, so the build has one list to implement and the acceptance tests in Section 6 have one list to check against: ${hiddenFromOps} fields are never shown to Operations.<br>
-<b>Audience:</b> NPL Management, who own the roles, and the New XP engineering team, for whom this is the build and acceptance reference for permissions.</p>
-<div class="box"><b>What changed since v1.0 (ERD v4.0).</b> Names follow the FRS and NPL's words (settlement, destination approval, markup-share party — D37). Rights are configuration rows (ROLE, ROLE_RIGHT, USER.role_id — D44) and ROLE.sees_economics carries the visibility rule. New things to classify: clients and system settings (D38, D43), tiers and the customer-facing figures (D21, D22), quote packages, extensions and templates (D35, D36, D45), cash tokens, screenings and single-use endpoints (D30–D32), cutoffs and holidays (D29, D34), the ledger design of D46 — the four variances by cause, FX_RESULT, loss shares and recoveries, earnings kept unconverted and offset between partners, NPL-GR's two invoices and the reseller and remittance margins, and the figures in the reporting currency (REPORTING_VALUE). ${withCode.length} of the ${ACTIONS.length} controlled actions carry a ROLE_RIGHT code.</div>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 6 — Roles &amp; Visibility Matrix · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
 <h2>1 · The model in one page</h2>
@@ -266,14 +264,7 @@ ${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""
 <li><b>Exceptions are shown as blockers, not as figures.</b> A frozen partner × pair, an open variance exception, an open offset, custody aging, a negative pool, an unfunded make-good and an open loss recovery appear to Operations as the state that blocks their work and the role that must act; the spread, variance, offset amount, pool and loss shares are Finance's view.</li>
 <li><b>Messages print only what the template allows.</b> ${c("MESSAGE_TEMPLATE.printed_fields")} is the list of model fields a template may render; a quote template is sender-facing only (D36), so a message can never carry a partner rate, a margin or a cost whichever role sends it.</li>
 </ol>
-<div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate) and the Understanding document's wording. If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
-
-<h2>6 · Acceptance tests</h2>
-<p>The build passes when every test below holds for every role. Tests are stated as scenario → expected outcome; the field lists they refer to are those of Appendix A.</p>
-<table><thead><tr><th style="width:18%">Test</th><th style="width:38%">Scenario</th><th>Expected</th></tr></thead><tbody>
-${TESTS.map(([t, s, e]) => `<tr><td><b>${esc(t)}</b></td><td>${esc(s)}</td><td>${esc(e)}</td></tr>`).join("")}
-</tbody></table>
-<p class="small"><i>Draft v${V} — for review with NPL. The group assignments in Appendix A are New XP's proposal from the Understanding document's §9 and the decisions to D46, and are the decision Management is asked to confirm.</i></p>
+<div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate). If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
 
 <h2 class="pb">Appendix A · Every field, its group, its rights</h2>
 <p class="small">Generated from the data model (Draft v${D.version}): ${Object.keys(D.E).length} tables and views, ${totalFields} fields. Rights per role as in Section 2; "view · enter" means Operations creates or edits the record in the normal course; actor fields (who approved, verified, posted, screened, recorded) belong to the approvals group.</p>
@@ -281,7 +272,7 @@ ${appendix}
 </body></html>`;
 
 const h = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.html`), p = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.pdf`);
-fs.writeFileSync(h, html);
+fs.writeFileSync(h, clientFacing(html));
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
 console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "fields:", totalFields, "hidden from Operations:", hiddenFromOps, JSON.stringify(counts));

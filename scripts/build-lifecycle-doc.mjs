@@ -6,6 +6,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ACTIONS } from "./controlled-actions.mjs";
+import { clientFacing } from "./client-facing.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -215,10 +216,7 @@ figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
 `;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Transaction Lifecycle &amp; Approval State Machines v${V}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 4 — Transaction Lifecycle &amp; Approval State Machines · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against. Supersedes Draft v1.1 (ERD v5.2).</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${V} (decisions D1–D46 with the amendment and the corrections of v5.9), the Ledger Posting Design v${V} and the Calculation Specification v${V}. The Roles &amp; Visibility Matrix v${V} is the companion document for view and approval rights; the two share one list of controlled actions. It defines the states a transaction passes through from quote to settlement, the events that move it between states, and for every controlled action who initiates it, who approves it, when it escalates to Management and what happens on rejection.<br>
-<b>Audience:</b> NPL Operations, Finance and Management, and the New XP engineering team. Figures show the normal path in blue, exceptions in orange, rejections dashed in red, and end states as rounded boxes.</p>
-<div class="box"><b>What changed since v1.1 (ERD v5.2).</b> Names follow the FRS and NPL's words: settlement, not disbursement; destination approval, not settlement registration; markup-share party, not introducer (D37). The deal leg gains the rate lock and the partner's cutoff (D29), cash parts by token and count (D30), wallet screening before collecting (D31), single-use endpoints (D32), quote packages (D35), repeatable validity extensions and the honoured expired rate (D45) and a loss path on which NPL stands in (D32, D46). Settlement is reworked around D46: the promise is discharged when the partner releases the money, a full confirmation posts nothing, a short one or a return re-raises the promise, and a line ends confirmed, short or returned (v5.9). New state machines: the loss event with its recoveries (Figure 6), the earnings offset between partners (Figure 7), NPL-GR's two invoices, balance conversions waiting for the cutoff, and the own desk and bridge wallet as custody cases (D23, D40). Approvals are rows: ROLE and ROLE_RIGHT say per controlled action who may initiate and who may approve (D44); the controlled-action table carries the ROLE_RIGHT code.</div>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 4 — Transaction Lifecycle &amp; Approval State Machines · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
 <h2>1 · Three roles, one principle</h2>
@@ -228,7 +226,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <tr><td>Finance</td><td>Approves what Operations initiates (quotes, extensions, rates, conversions, settlements, exceptions); resolves variance exceptions; recommends covered fees and fee caps; overrides a screening reject; requests balance conversions, dues recovery, earnings offsets and loss splits; owns reconciliation, the month-end true-ups and ledger adjustments; proposes configuration</td><td>Everything Operations sees plus all economics, postings and balances</td><td>—</td></tr>
 <tr><td>Management</td><td>Approves escalations and the heavier actions listed in Section 5 (loss splits, offsets, balance conversions, dues recovery, covered fees and raised caps, own-wallet transfers, post-money voids, own desks); approves configuration, system settings and user changes; countersigns releases when only one Finance user is on shift</td><td>Everything</td><td>—</td></tr>
 </tbody></table>
-<div class="box"><b>Where the Understanding document says two things.</b> Section 7.1 says a reroute is "Ops requests, Finance approves"; Section 9 lists "contingency routes" among Management's approvals. Both are kept: Finance approves the individual reroute; Management approves the <i>set</i> of alternate partners a project may reroute to (${code("PARTNER_CONFIG.applicable_for_reroute")}, which is configuration) and, together with Finance, every outbound transfer from NPL's own wallet.</div>
+
 
 <h2>2 · The deal: Quote → Collect → Convert → Settle</h2>
 <p>A deal is a group of one or more legs. A quote-first leg walks the whole top row of Figure 1; a collect-first leg is born at Collected because the money arrived before any quote; an estimate-first leg enters Collecting with an indicative figure and is priced at conversion; a return leg is born at Collected, funded by the returned payout and attributed to its parent leg's group. Pricing fields are stamped once and never recomputed. Fee parts are percentages of the principal at the basis rate and never compound (invariant 42); a target-out quote applies the fee as a markup on the target (D46 amendment).</p>
@@ -294,7 +292,7 @@ ${STATES.map((s) => `<tr><td class="mono">${esc(s[0])}</td><td>${esc(s[1])}</td>
 </body></html>`;
 
 const h = path.join(outDir, `NPLify-Lifecycle-and-Approvals-v${V}.html`), p = path.join(outDir, `NPLify-Lifecycle-and-Approvals-v${V}.pdf`);
-fs.writeFileSync(h, html);
+fs.writeFileSync(h, clientFacing(html));
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
 console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "actions:", ACTIONS.length, "state rows:", STATES.length);
