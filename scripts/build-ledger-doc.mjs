@@ -134,12 +134,14 @@ function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding
 }
 
 // ------------------------------------------------------------------ worked example parameters
-const EX = { Rm: 0.9000, Rp: 0.8950, s: 0.014, r: 0.006 };   // Evo USDT → EUR: sender pays 1.4 % (the other sender type pays 1 %), receiver always pays 0.6 %
+const EX = { Rm: 0.9000, Rp: 0.8910, s: 0.014, r: 0.006 };   // Evo USDT → EUR: sender pays 1.4 % (the other sender type pays 1 %), receiver always pays 0.6 %; Ali assumed at 1 % inside its rate (it changes daily)
+const JET = 0.0125;                                               // Jeton's stated fee on Evo transactions
 const D1 = price({ amountIn: 10000, Rm: EX.Rm, Rp: EX.Rp, basis: "market", s: EX.s, r: EX.r });
 const D2 = price({ amountIn: 5000, Rm: EX.Rm, Rp: EX.Rp, basis: "market", s: EX.s, r: EX.r });
-const DJ = price({ amountIn: 10000, Rm: EX.Rm, Rp: EX.Rm, basis: "market", s: EX.s, r: EX.r, partnerFee: 0.005 });
-const DT = price({ amountIn: 3000, Rm: 32.60, Rp: 32.50, basis: "market", s: EX.s, r: EX.r, rounding: "round_up_n", unit: 1000 });
-const D4 = price({ amountIn: 2000, Rm: 0.7800, Rp: 0.7750, basis: "market", s: EX.s, r: EX.r });
+const DJ = price({ amountIn: 10000, Rm: EX.Rm, Rp: EX.Rm, basis: "market", s: EX.s, r: EX.r, partnerFee: JET });
+const THB_M = 32.60, THB_A = 32.27;
+const DT = price({ amountIn: 3000, Rm: THB_M, Rp: THB_A, basis: "market", s: EX.s, r: EX.r, rounding: "round_up_n", unit: 1000 });
+const D4 = price({ amountIn: 2000, Rm: 0.7800, Rp: 0.7722, basis: "market", s: EX.s, r: EX.r });
 const DS = price({ amountIn: 5000, Rm: 1, Rp: 1, basis: "market", s: EX.s, r: EX.r });          // same-currency pass-through
 const DR = price({ amountIn: 10000, Rm: 0.9000, Rp: 0.9000, basis: "market", s: 0.04, r: 0, partnerFee: 0.008 }); // Raeen at Aquanow: 4 % sender_pays on market, partner 0.80 %
 
@@ -162,10 +164,12 @@ L.tx(`T2 · Conversion of deal 1 at Ali (fee_in_rate): 10,000 USDT → ${fmt(D1.
   ["CO.NONE.EUR.EARN_GROSS", "Cr", D1.earnings, EUR, CO, "earnings", "margin recognised: the client's claim shrinks from 10,000 USDT to its EUR entitlement, the difference is NPL's"],
 ], `Ownership changes here and only here: ${fmt(D1.earnings)} EUR becomes company money, because the client's claim is re-denominated at the sender's price while the partner delivers at its rate. The sender is priced on the market rate (rate_basis market: the fee is disclosed) and Ali converts at its own rate, so Ali's cost — ${fmt(D1.inferredPartnerCost)} EUR against market, inside its rate (fee_in_rate) — comes out of NPL's ${pct(EX.s + EX.r)} and no partner-cost line exists; NPL keeps the ${fmt(D1.earnings)} EUR. Under rate_basis agent_rate (a calculated rate, breakdown not disclosed) the sender's rate would be Ali's rate less the fee instead, and NPL would keep the whole ${pct(EX.s + EX.r)}; the postings have the same shape. Evo's other sender type pays 1.00 % instead of 1.40 %: a second fee structure (or a FEE_OVERRIDE with its own split, D20), same postings, smaller sender part. Nothing differs for a leg split across two fee tiers (D21): the fee parts are the blended sum and the posting is identical. The customer-facing rate and fee (D22) are print-only and never post.`);
 const snapDeal1 = L.snapshot();
-L.tx(`T3 · Same-currency pass-through (D33): 5,000 EUR collected by bank transfer and converted at rate 1 — fee ${pct(EX.s + EX.r)} captured, client net ${fmt(DS.clientNet)} EUR`, "Conversion", [
-  ["CL.ALI.EUR.COLLECTED", "Dr", 5000, EUR, CL, "principal", "collection (shown with the conversion)"],
-  ["CL.PROJECT.EUR.PAYABLE", "Cr", 5000, EUR, CL, "principal", "collection"],
-  ["CL.PROJECT.EUR.PAYABLE", "Dr", 5000, EUR, CL, "principal", "conversion: the obligation is re-stated at the sender's price"],
+L.tx("T3a · Same-currency collection at Ali: 5,000 EUR by bank transfer (as T1)", "Collection", [
+  ["CL.ALI.EUR.COLLECTED", "Dr", 5000, EUR, CL, "principal", ""],
+  ["CL.PROJECT.EUR.PAYABLE", "Cr", 5000, EUR, CL, "principal", ""],
+]);
+L.tx(`T3 · Same-currency pass-through (D33): the 5,000 EUR converted at rate 1 — fee ${pct(EX.s + EX.r)} captured, client net ${fmt(DS.clientNet)} EUR (the collection posted as in T1 and is not repeated)`, "Conversion", [
+  ["CL.PROJECT.EUR.PAYABLE", "Dr", 5000, EUR, CL, "principal", "the obligation is re-stated at the sender's price"],
   ["CL.ALI.EUR.COLLECTED", "Cr", 5000, EUR, CL, "principal", ""],
   ["CL.ALI.EUR.DUE", "Dr", DS.payable, EUR, CL, "principal", "client net, available to settle"],
   ["CL.ALI.EUR.DUE", "Dr", DS.residual, EUR, CL, "rounding", ""],
@@ -219,7 +223,7 @@ L.tx("T10 · Shortfall top-up funded from NPL's pool at Ali (BANK_FEE_EVENT appl
   ["CL.RECEIVER_X.EUR.SHORTFALL", "Cr", bankFee, EUR, CL, "bank_fee", "the shortfall is cleared"],
 ], "The 50 EUR now sits in DUE and goes out with the next settlement like any other balance. Company → client transfers like this one are the only way company money becomes client money (besides a loss make-good, Pattern L).");
 const snapSettled = L.snapshot();
-L.tx(`T11 · Conversion with round-up (D25): 3,000 USDT → ${fmt(DT.actualOut, THB)} THB at 32.50; client net ${fmt(DT.clientNet, THB)}, paid out as ${fmt(DT.payable, THB)} (round_up_n, unit 1,000)`, "Conversion", [
+L.tx(`T11 · Conversion with round-up (D25): 3,000 USDT → ${fmt(DT.actualOut, THB)} THB at ${THB_A} (market ${THB_M}); client net ${fmt(DT.clientNet, THB)}, paid out as ${fmt(DT.payable, THB)} (round_up_n, unit 1,000)`, "Conversion", [
   ["CL.PROJECT.USDT.PAYABLE", "Dr", 3000, USDT, CL, "principal", "(collection of the 3,000 USDT assumed posted as T1)"],
   ["CL.ALI.USDT.COLLECTED", "Cr", 3000, USDT, CL, "principal", ""],
   ["CL.ALI.THB.DUE", "Dr", DT.clientNet, THB, CL, "principal", "client net as priced"],
@@ -242,7 +246,7 @@ L.tx(`T13 · Forward to Jeton with recover dues: 10,000 USDT of client money cre
   ["CO.OWN.USDT.WALLET", "Dr", recover, USDT, CO, "earnings", "NPL keeps 30 USDT in its wallet instead of sending it"],
   ["CO.JETON.USDT.POOL", "Cr", recover, USDT, CO, "earnings", "Jeton's debt to NPL falls by the same 30 USDT"],
 ], `NPL physically sends ${fmt(10000 - recover)} USDT; Jeton treats it as 10,000 of client money because it owed NPL ${fmt(recover)} USDT of earnings from earlier deals (partner_agreement_ref). The recovery is an asset swap, never income, and names the deal it recovers (invariant 15). <b>Nothing is withheld from the client amount:</b> NPL's margin is captured when Jeton converts (T14).`);
-L.tx(`T14 · Conversion of deal 3 at Jeton (fee_on_market, ${pct(0.005)}): 10,000 USDT → ${fmt(DJ.grossConverted)} EUR at market, Jeton keeps ${fmt(DJ.partnerCost)}`, "Conversion", [
+L.tx(`T14 · Conversion of deal 3 at Jeton (fee_on_market, ${pct(JET)}): 10,000 USDT → ${fmt(DJ.grossConverted)} EUR at market, Jeton keeps ${fmt(DJ.partnerCost)}`, "Conversion", [
   ["CL.PROJECT.USDT.PAYABLE", "Dr", 10000, USDT, CL, "principal", ""],
   ["CL.JETON.USDT.COLLECTED", "Cr", 10000, USDT, CL, "principal", ""],
   ["CL.JETON.EUR.DUE", "Dr", DJ.payable, EUR, CL, "principal", "client net, whole euros"],
@@ -290,11 +294,13 @@ L.tx(`T21 · Deal 5 voided after collection: refund to the sender in USDT, netwo
 ], `If the policy, or a FEE_DECISION for this transaction, says NPL absorbs the fee, the last line becomes <code>Dr CO.NONE.USDT.EXP_NETWORK ${fmt(netFee)} / Cr CO.ALI.USDT.POOL ${fmt(netFee)}</code> and the sender receives the full 3,000. Management approves the disposition of any post-money void.`);
 
 // ---- Pattern F: rejected payout and return leg
-L.tx(`T22 · Deal 6 collected and converted at Ali: 2,000 USDT → ${fmt(D4.actualOut)} GBP (collection and conversion shown together)`, "Conversion", [
-  ["CL.ALI.USDT.COLLECTED", "Dr", 2000, USDT, CL, "principal", "collection"],
-  ["CL.PROJECT.USDT.PAYABLE", "Cr", 2000, USDT, CL, "principal", "collection"],
-  ["CL.PROJECT.USDT.PAYABLE", "Dr", 2000, USDT, CL, "principal", "conversion, USDT leg"],
-  ["CL.ALI.USDT.COLLECTED", "Cr", 2000, USDT, CL, "principal", "conversion, USDT leg"],
+L.tx("T22a · Collection of deal 6 at Ali: 2,000 USDT (as T1)", "Collection", [
+  ["CL.ALI.USDT.COLLECTED", "Dr", 2000, USDT, CL, "principal", ""],
+  ["CL.PROJECT.USDT.PAYABLE", "Cr", 2000, USDT, CL, "principal", ""],
+]);
+L.tx(`T22 · Conversion of deal 6 at Ali: 2,000 USDT → ${fmt(D4.actualOut)} GBP (the collection posted as in T1 and is not repeated)`, "Conversion", [
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", 2000, USDT, CL, "principal", "USDT leg"],
+  ["CL.ALI.USDT.COLLECTED", "Cr", 2000, USDT, CL, "principal", "USDT leg"],
   ["CL.ALI.GBP.DUE", "Dr", D4.payable, GBP, CL, "principal", ""],
   ["CL.ALI.GBP.DUE", "Dr", D4.residual, GBP, CL, "rounding", ""],
   ["CO.ALI.GBP.POOL", "Dr", D4.earnings, GBP, CO, "earnings", ""],
@@ -402,9 +408,9 @@ function varianceTx(key, title, source, { amountIn, Rexp, Ract, purpose, expecte
   L.tx(`${key} · ${title}: expected ${fmt(expected)} EUR, actual ${fmt(actual)} EUR, variance ${fmt(variance)} EUR`, source, rows, note);
   return { expected, actual, variance, priced };
 }
-const V1 = varianceTx("T36", "Partner calculates (calc_mode partner_calculates): Ali booked 3,000 USDT at 0.8945 instead of the 0.8950 version", "Conversion", { amountIn: 3000, Rexp: 0.8950, Ract: 0.8945, purpose: "VAR_CONVERSION", expectedNote: "what the partner did worse than expected; beyond the project's tolerance an exception opens, the deal does not wait", note: "The same account takes the basis variance of a reroute (the alternate partner's expected conversion on the net amount forwarded)." });
-const V2 = varianceTx("T37", "Cutoff timing (D29): 3,000 USDT locked at 0.8950 after Ali's 14:30 cutoff, converted next business day at 0.8930", "Conversion", { amountIn: 3000, Rexp: 0.8950, Ract: 0.8930, purpose: "VAR_CUTOFF", expectedNote: "rate stamped at lock vs rate used; NPL absorbs it", note: "The leg stamps rate_locked_at, cutoff_at and conversion_due_date; Converting may not start before the due date (invariant 28). If the next day's rate would breach the minimum margin, the due date is pushed with conversion_deferred_reason and nothing posts until it runs." });
-const V3 = varianceTx("T38", "Honoured expired rate (D45): a new leg priced on yesterday's 0.8950 by an approved override (honour_expired_rate); Ali converts today at 0.8900", "Conversion", { amountIn: 3000, Rexp: 0.8950, Ract: 0.8900, purpose: "VAR_RATE_HONOUR", expectedNote: "the reused rate vs the day's rate: NPL's cost, chosen (invariant 39)", note: "The leg stamps rate_reused_from_deal_id, rate_override_reason and rate_override_approved_by (Finance). A variance can also be a gain, in which case the line is a credit." });
+const V1 = varianceTx("T36", "Partner calculates (calc_mode partner_calculates): Ali booked 3,000 USDT at 0.8905 instead of the 0.8910 version", "Conversion", { amountIn: 3000, Rexp: 0.8910, Ract: 0.8905, purpose: "VAR_CONVERSION", expectedNote: "what the partner did worse than expected; beyond the project's tolerance an exception opens, the deal does not wait", note: "The same account takes the basis variance of a reroute (the alternate partner's expected conversion on the net amount forwarded)." });
+const V2 = varianceTx("T37", "Cutoff timing (D29): 3,000 USDT locked at 0.8910 after Ali's 14:30 cutoff, converted next business day at 0.8890", "Conversion", { amountIn: 3000, Rexp: 0.8910, Ract: 0.8890, purpose: "VAR_CUTOFF", expectedNote: "rate stamped at lock vs rate used; NPL absorbs it", note: "The leg stamps rate_locked_at, cutoff_at and conversion_due_date; Converting may not start before the due date (invariant 28). If the next day's rate would breach the minimum margin, the due date is pushed with conversion_deferred_reason and nothing posts until it runs." });
+const V3 = varianceTx("T38", "Honoured expired rate (D45): a new leg priced on yesterday's 0.8910 by an approved override (honour_expired_rate); Ali converts today at 0.8860", "Conversion", { amountIn: 3000, Rexp: 0.8910, Ract: 0.8860, purpose: "VAR_RATE_HONOUR", expectedNote: "the reused rate vs the day's rate: NPL's cost, chosen (invariant 39)", note: "The leg stamps rate_reused_from_deal_id, rate_override_reason and rate_override_approved_by (Finance). A variance can also be a gain, in which case the line is a credit." });
 
 // ---- Pattern L: loss event, booked to NPL first, recovered later
 const lossAmt = 10000, poolPart = 6000, walletPart = 4000;
@@ -441,7 +447,7 @@ const snapLoss = L.snapshot();
 // ---- Pattern M: the reseller project (NPL-GR): reseller books in EUR, remittance as an ordinary client project
 const VENDOR_INV = 9000, RESALE_INV = 9450;                       // EUR
 const Rq = 0.8708, Rd2 = 0.87527;                                 // EUR per USDT at pricing and at the second instalment (NPL's figures, D24)
-const RmT = 1 / 32.50, RpT = 1 / 32.73;                           // USDT per THB: market and Ali (Ali's 0.7 % inside its rate)
+const RmT = 1 / 32.50, RpT = 1 / (32.50 / 0.99);                  // USDT per THB: market and Ali (Ali's 1 % inside its rate)
 const targetOut = r2(RESALE_INV / Rq);                            // USDT the remittance side must deliver for the resale invoice
 const thbIn = r2(targetOut / (RmT * (1 - 0.02)));                 // amount_mode target_out, 2 % remittance markup on market (rate_basis market), bank transfer (no cash rounding)
 const DM = price({ amountIn: thbIn, Rm: RmT, Rp: RpT, basis: "market", s: 0.02, r: 0 });
@@ -465,13 +471,13 @@ L.tx(`T46 · The customer pays the resale invoice in THB by bank transfer to Ali
   ["CO.PROJECT.EUR.REMIT_CLAIM", "Dr", RESALE_INV, EUR, CO, "resale", "reseller books: the customer has paid, the remittance side now holds the value for NPL-GR"],
   ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", "Cr", RESALE_INV, EUR, CO, "resale", "the customer's debt is settled"],
 ], "The remittance side posts exactly like any client project (T1): Evo's sender is a customer of NPL-GR's here, and NPL-GR is the client. The two EUR lines are the reseller books recording that the customer paid; each owner's lines balance in their own currency.");
-L.tx(`T47 · Conversion at Ali (fee_in_rate, markup on market): ${fmt(thbIn, THB)} THB → ${fmt(DM.actualOut)} USDT at 32.73 (market 32.50); client net ${fmt(DM.clientNet)} USDT (= ${fmt(RESALE_INV)} EUR at ${Rq}), NPL's earnings ${fmt(DM.earnings)} USDT`, "Conversion", [
+L.tx(`T47 · Conversion at Ali (fee_in_rate, markup on market): ${fmt(thbIn, THB)} THB → ${fmt(DM.actualOut)} USDT at ${(32.50 / 0.99).toFixed(2)} (market 32.50); client net ${fmt(DM.clientNet)} USDT (= ${fmt(RESALE_INV)} EUR at ${Rq}), NPL's earnings ${fmt(DM.earnings)} USDT`, "Conversion", [
   ["CL.PROJECT.THB.PAYABLE", "Dr", thbIn, THB, CL, "principal", ""],
   ["CL.ALI.THB.COLLECTED", "Cr", thbIn, THB, CL, "principal", ""],
   ["CL.ALI.USDT.DUE", "Dr", DM.clientNet, USDT, CL, "principal", "NPL-GR's entitlement in USDT, reserved for the vendor and for NPL-GR's margin"],
   ["CO.ALI.USDT.POOL", "Dr", DM.earnings, USDT, CO, "earnings", "remittance earnings resting at Ali"],
   ["CL.PROJECT.USDT.PAYABLE", "Cr", DM.clientNet, USDT, CL, "principal", ""],
-  ["CO.NONE.USDT.EARN_GROSS", "Cr", DM.earnings, USDT, CO, "earnings", `${pct(DM.earnings / mktValue)} of the market value: the 2 % markup less Ali's 0.7 % inside its rate`],
+  ["CO.NONE.USDT.EARN_GROSS", "Cr", DM.earnings, USDT, CO, "earnings", `${pct(DM.earnings / mktValue)} of the market value: the 2 % markup less Ali's 1 % inside its rate`],
 ], `The markup is applied on the market rate because the price is built from the EUR invoice; Ali's agent rate is used for the THB → USDT conversion and only decides whether 2 % leaves enough: the fee structure's minimum margin is checked against the spread between market and agent rate (FEE_STRUCTURE mode variable, min_margin_pct, floor and cap), and when Ali's rate leaves less, the markup rises within the cap or Finance asks for a better rate. The markup pays for the remittance service and carries the rate risk of the instalments, so the ${fmt(marginEur)} EUR reseller revenue is never diluted. Had the customer paid in USDT, the pair would be USDT → USDT at rate 1 (D33) and the same lines would post in USDT.`);
 L.tx(`T48 · Instalment 1 paid by Ali: ${fmt(paid1)} USDT to the vendor, discharging ${fmt(inst1Eur)} EUR of the vendor invoice at discharge_rate ${Rq} (settlement and confirmation shown together)`, "Confirmation", [
   ["CL.ALI.USDT.INTRANSIT", "Dr", paid1, USDT, CL, "principal", "released by Ali on NPL's instruction"],
@@ -518,7 +524,7 @@ const remitMargin = r2(DM.earnings + fx2 + fx3);
 
 // ---- Pattern N: earnings kept in the unconverted balance and offset between partners (NPL, 10 October)
 const snapBeforeN = L.snapshot();
-const DN_J = price({ amountIn: 300000, Rm: EX.Rm, Rp: EX.Rm, basis: "market", s: EX.s, r: EX.r, partnerFee: 0.005 });   // Jeton converts all of it
+const DN_J = price({ amountIn: 300000, Rm: EX.Rm, Rp: EX.Rm, basis: "market", s: EX.s, r: EX.r, partnerFee: JET });   // Jeton converts all of it
 const DN_A = price({ amountIn: 100000, Rm: EX.Rm, Rp: EX.Rp, basis: "market", s: EX.s, r: EX.r });                      // Ali, converts next day
 const offsetEur = DN_J.earnings;                                   // NPL's margin resting at Jeton in EUR
 const offsetUsdt = r2(offsetEur / EX.Rp);                          // its USDT equivalent at Ali's rate of the day
@@ -527,14 +533,16 @@ const convertUsdt = r2(100000 - offsetUsdt - retainUsdt);
 const eurOut = r2(convertUsdt * EX.Rp);
 const eurOwed = r2(DN_A.clientNet - offsetEur);
 const convRound = r2(eurOut - eurOwed);                            // cents of difference from rounding the USDT equivalents
-L.tx(`T52 · Jeton converts a 300,000 USDT collection in full → ${fmt(DN_J.actualOut)} EUR; NPL's margin ${fmt(DN_J.earnings)} EUR now sits at Jeton in EUR (collection and conversion shown together)`, "Conversion", [
-  ["CL.JETON.USDT.COLLECTED", "Dr", 300000, USDT, CL, "principal", "collection"],
-  ["CL.PROJECT.USDT.PAYABLE", "Cr", 300000, USDT, CL, "principal", "collection"],
-  ["CL.PROJECT.USDT.PAYABLE", "Dr", 300000, USDT, CL, "principal", "conversion"],
+L.tx("T52a · Collection at Jeton: 300,000 USDT (as T1)", "Collection", [
+  ["CL.JETON.USDT.COLLECTED", "Dr", 300000, USDT, CL, "principal", ""],
+  ["CL.PROJECT.USDT.PAYABLE", "Cr", 300000, USDT, CL, "principal", ""],
+]);
+L.tx(`T52 · Jeton converts the 300,000 USDT in full → ${fmt(DN_J.actualOut)} EUR; NPL's margin ${fmt(DN_J.earnings)} EUR now sits at Jeton in EUR (the collection posted as in T1 and is not repeated)`, "Conversion", [
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", 300000, USDT, CL, "principal", "the USDT promise is discharged by the conversion"],
   ["CL.JETON.USDT.COLLECTED", "Cr", 300000, USDT, CL, "principal", ""],
   ["CL.JETON.EUR.DUE", "Dr", DN_J.clientNet, EUR, CL, "principal", "client net (dust ignored here)"],
   ["CO.JETON.EUR.POOL", "Dr", DN_J.earnings, EUR, CO, "earnings", "NPL's margin, in EUR, inside Jeton's balance; Jeton does not know it is there"],
-  ["CO.NONE.EUR.EXP_PARTNER", "Dr", DN_J.partnerCost, EUR, CO, "partner_cost", "Jeton's stated 0.50 %"],
+  ["CO.NONE.EUR.EXP_PARTNER", "Dr", DN_J.partnerCost, EUR, CO, "partner_cost", `Jeton's stated ${pct(JET)}`],
   ["CL.PROJECT.EUR.PAYABLE", "Cr", DN_J.clientNet, EUR, CL, "principal", ""],
   ["CO.NONE.EUR.EARN_GROSS", "Cr", DN_J.grossMargin, EUR, CO, "earnings", ""],
 ], "The normal case: the partner converts everything it received, so NPL's margin is converted with it and rests at that partner (EARNINGS_RECEIVABLE). Partners never see NPL's margin; what they hold is one balance.");
@@ -667,7 +675,7 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <p>Transaction sources (${code("LEDGER_TRANSACTION.source_type")}): Collection, Conversion, BalanceConversion, Settlement, SettlementReturn, Confirmation, BankFeeEvent, Reroute, MarkupShare, Rebate, LossEvent, Adjustment, <span class="new">Invoice</span> for the reseller books and <span class="new">EarningsOffset</span> for the cross-partner offset. Section 22 lists what each one posts; Section 24 asks for the source record a loss recovery points at.</p>
 
 <h2>5 · Reading a posting table</h2>
-<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts in bookkeeping's two columns; <i>In / Out</i> says the same thing in one word: every transaction moves value from somewhere to somewhere, a <b>debit</b> marks the account the value goes <b>to</b> (IN) and a <b>credit</b> the account it comes <b>from</b> (OUT). The word after the dot says what kind of account it is. <b>money</b> is a place where money sits (a partner, a wallet, a balance): IN means money arrives there, OUT that it leaves. <b>promise</b> is what NPL has undertaken to deliver: OUT means NPL now holds money on the strength of a promise (the promise is the source), IN means the promise is being fulfilled. <b>earned</b> is NPL's margin or income: OUT means earnings are the source of money that lands somewhere, usually NPL's pool at a partner. <b>cost</b> is what NPL bears: IN means value goes to a cost. A money or cost account is full when more has gone in than out; a promise or earned account is full when more has come out of it than gone in, because those two are sources by nature; the balance tables show the right figure either way. A reader who ignores the Debit and Credit columns and reads only Account, In / Out and Why will follow every example. <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example is project Evo: Sender A, Receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2; partner Ali (fee_in_rate: its cost is inside its rate), partner Jeton (fee_on_market + ${pct(0.005)}) and partner Aquanow (fee_on_market + ${pct(0.008)}, rebate ${pct(0.003, 1)} of the amount). Rates: market ${EX.Rm.toFixed(4)} EUR per USDT, Ali ${EX.Rp.toFixed(4)}. Fee structure: rate_basis market (the sender is priced on the market rate and Ali converts at its own), fixed, ${pct(EX.s + EX.r)} in total: this sender type pays ${pct(EX.s)} (Evo's other type pays 1.00 %) and the receiver always pays ${pct(EX.r)}. The arithmetic is in the Calculation Specification; the headline figures for deal 1 are:</p>
+<p>Each worked example shows one transaction as a table. <i>Debit</i> and <i>Credit</i> are the amounts in bookkeeping's two columns; <i>In / Out</i> says the same thing in one word: every transaction moves value from somewhere to somewhere, a <b>debit</b> marks the account the value goes <b>to</b> (IN) and a <b>credit</b> the account it comes <b>from</b> (OUT). The word after the dot says what kind of account it is. <b>money</b> is a place where money sits (a partner, a wallet, a balance): IN means money arrives there, OUT that it leaves. <b>promise</b> is what NPL has undertaken to deliver: OUT means NPL now holds money on the strength of a promise (the promise is the source), IN means the promise is being fulfilled. <b>earned</b> is NPL's margin or income: OUT means earnings are the source of money that lands somewhere, usually NPL's pool at a partner. <b>cost</b> is what NPL bears: IN means value goes to a cost. A money or cost account is full when more has gone in than out; a promise or earned account is full when more has come out of it than gone in, because those two are sources by nature; the balance tables show the right figure either way. A reader who ignores the Debit and Credit columns and reads only Account, In / Out and Why will follow every example. <i>Owner</i> is the ownership tag; <i>Cost component</i> is the breakdown tag; <i>Why</i> says in plain words what that line records. The running example is project Evo: Sender A, Receiver X (receiver group A, the default group) with entities Entity X1 and Entity X2; partner Ali (fee_in_rate: its cost is inside its rate), partner Jeton (fee_on_market + ${pct(JET)}, Evo's Jeton fee) and partner Aquanow (fee_on_market + ${pct(0.008)}, rebate ${pct(0.003, 1)} of the amount). Rates: market ${EX.Rm.toFixed(4)} EUR per USDT, Ali ${EX.Rp.toFixed(4)} (Ali's cost is assumed at 1 % inside its rate; the real figure changes daily). Fee structure: rate_basis market (the sender is priced on the market rate and Ali converts at its own), fixed, ${pct(EX.s + EX.r)} in total: this sender type pays ${pct(EX.s)} (Evo's other type pays 1.00 %) and the receiver always pays ${pct(EX.r)}. The arithmetic is in the Calculation Specification; the headline figures for deal 1 are:</p>
 <table><thead><tr><th>Figure</th><th class="n">Deal 1 (10,000 USDT at Ali)</th><th>How</th></tr></thead><tbody>
 <tr><td>Sender rate</td><td class="n">${D1.Rs.toFixed(5)}</td><td>market ${EX.Rm.toFixed(4)} × (1 − ${pct(EX.s)}): the sender's part is taken off the rate</td></tr>
 <tr><td>Gross out</td><td class="n">${fmt(D1.grossOut)} EUR</td><td>10,000 × sender rate</td></tr>
@@ -682,7 +690,7 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <p>The everyday case: the sender pays, the partner converts, the client balance at that partner grows until it is settled. Collect-first and quote-first deals post identically; only the moment pricing is fixed differs. A quote extended any number of times (D45) still posts once, at conversion.</p>
 ${L.html("T1")}${L.html("T2")}
 ${L.balancesHtml([["CL.ALI.USDT.COLLECTED", USDT, "nothing left unconverted"], ["CL.ALI.EUR.DUE", EUR, "client balance at Ali (PROJECT_BALANCE)"], ["CL.PROJECT.EUR.PAYABLE", EUR, "owed to receivers; equals group entitlement"], ["CO.ALI.EUR.POOL", EUR, "NPL's margin resting at Ali"], ["CO.NONE.EUR.EARN_GROSS", EUR, "margin recognised to date"]], "Balances after deal 1", snapDeal1)}
-${L.html("T3")}
+${L.html("T3a")}${L.html("T3")}
 
 <h2>7 · Pattern B — part collection</h2>
 <p>A deal may be collected in parts, by any method; the obligation grows with each part and the conversion waits for the last one (or for the partner's cash count).</p>
@@ -704,7 +712,7 @@ ${L.html("T15")}${L.html("T16")}${L.html("T17")}
 ${L.html("T18")}${L.html("T19")}${L.html("T20")}${L.html("T21")}
 
 <h2>11 · Pattern F — rejected payout and return leg</h2>
-${L.html("T22")}${L.html("T23")}${L.html("T24")}${L.html("T25")}
+${L.html("T22a")}${L.html("T22")}${L.html("T23")}${L.html("T24")}${L.html("T25")}
 
 <h2>12 · Pattern G — inter-group offsets</h2>
 <p>An offset is not an account. It arises only when a counterparty receiver of one group is paid from a leg attributed to another group (invariant 17): the settlement posts exactly as T7 and T8, and the ${code("OFFSET")} view, reading ${code("GROUP_ENTITLEMENT")}, shows one group owed and the other holding its flow. A project with a single group never has an offset; a cross-group payout needs Management approval (cross_group_payout) and tighter aging. No ledger line differs, which is the point: the money and the claim are right, only the attribution needs watching.</p>
@@ -739,7 +747,7 @@ ${L.balancesHtml([["CO.NONE.EUR.RESELL_REVENUE", EUR, "resale invoice, untouched
 <h2 class="pb">19 · Pattern N — earnings kept in the unconverted balance and offset between partners</h2>
 <p>Partners convert everything they receive, so NPL's margin is converted along with the client's money and rests at the partner in the payout currency, invisible to the partner (EARNINGS_RECEIVABLE, Pattern A). NPL's practice (10 October) is to take its earnings out of collections that are not yet converted instead, and to offset between partners: where Jeton has converted a large collection in full, and Ali holds a collection that converts tomorrow, NPL leaves in Ali's USDT balance the USDT equivalent of its margin at Jeton and of its margin on the Ali deal, and converts only the rest. Jeton's EUR balance is then entirely the client's; at Ali the USDT balance is NPL's and the EUR balance the client's.</p>
 <p>In the ledger this is two things. <b>Retention</b> is a conversion that keeps the deal's own margin in the collection currency (CONVERSION.residual_in), so EARN_GROSS is recognised in USDT rather than EUR. <b>The offset</b> is an exchange at the day's rate: NPL's EUR at one partner becomes client money there, the same value of the client's unconverted USDT at another partner becomes NPL's, and the client's claim is re-denominated accordingly. For the client it is a conversion NPL performed out of its own earnings; for NPL it is a currency swap, recorded in FX_CLEARING. Neither moves money physically, and neither changes any client's entitlement.</p>
-${L.html("T52")}${L.html("T53")}${L.html("T54")}${L.html("T55")}
+${L.html("T52a")}${L.html("T52")}${L.html("T53")}${L.html("T54")}${L.html("T55")}
 ${L.deltaHtml([["CL.JETON.EUR.DUE", EUR, "client money at Jeton: the deal's client net plus NPL's former margin there"], ["CO.JETON.EUR.POOL", EUR, "nothing of NPL's rests at Jeton"], ["CL.ALI.USDT.COLLECTED", USDT, "nothing of the client's unconverted at Ali"], ["CO.ALI.USDT.POOL", USDT, "NPL's margins from both partners, in USDT at Ali"], ["CL.ALI.EUR.DUE", EUR, "client money at Ali"], ["CL.PROJECT.EUR.PAYABLE", EUR, "the client's EUR claim: both deals' client nets in full"], ["CL.PROJECT.USDT.PAYABLE", USDT, "no USDT claim left"], ["CO.NONE.EUR.EARN_GROSS", EUR, "Jeton deal's margin, earned in EUR"], ["CO.NONE.USDT.EARN_GROSS", USDT, "Ali deal's margin, earned in USDT"], ["CO.NONE.EUR.FX_CLEARING", EUR, "the EUR NPL gave up at Jeton"], ["CO.NONE.USDT.FX_CLEARING", USDT, "the USDT it took at Ali (negative = credit)"]], "Change in balances over Pattern N", snapBeforeN, snapAfterN)}
 <p>The offset is approximate only in the sense that NPL chooses the rate (the partner's rate of the day in the example); the ledger is exact at that rate. The same mechanism recovers EARNINGS_RECEIVABLE rows without waiting for the partner's fee cycle, and it is the everyday counterpart of the netting on a reroute (T13). Where NPL later converts its USDT pool at Ali into EUR, that is a conversion of company money and closes the FX_CLEARING pair; the difference against the rate used here is NPL's forex result (VAR_FX_TIMING).</p>
 
