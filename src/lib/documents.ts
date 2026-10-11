@@ -19,10 +19,10 @@ export const DOCS: Doc[] = [
   {
     slug: "erd",
     title: "ERD & Data Model",
-    version: "v5.8",
+    version: "v5.9",
     blurb: "The entity-relationship diagram and data dictionary behind the interactive map: every table, field, key and link, the invariants, the derived views and the walkthroughs.",
     audience: "client",
-    files: { html: "NPLify-P0-ERD-v5.8.html", pdf: "NPLify-P0-ERD-v5.8.pdf" },
+    files: { html: "NPLify-P0-ERD-v5.9.html", pdf: "NPLify-P0-ERD-v5.9.pdf" },
     group: "model",
   },
   {
@@ -37,19 +37,19 @@ export const DOCS: Doc[] = [
   {
     slug: "ledger",
     title: "Ledger Posting Design",
-    version: "v5.8",
+    version: "v5.9",
     blurb: "The chart of accounts and how every deal, collection, conversion, settlement, fee, share, rebate, variance, loss and reseller invoice becomes append-only postings, with the balances and reports derived from them.",
     audience: "client",
-    files: { html: "NPLify-Ledger-Posting-Design-v5.8.html", pdf: "NPLify-Ledger-Posting-Design-v5.8.pdf" },
+    files: { html: "NPLify-Ledger-Posting-Design-v5.9.html", pdf: "NPLify-Ledger-Posting-Design-v5.9.pdf" },
     group: "design",
   },
   {
     slug: "ledger-companion",
     title: "Ledger Patterns — Reading Companion",
-    version: "v5.8",
+    version: "v5.9",
     blurb: "The same worked transactions as the Ledger Posting Design, laid out with a plain-language explanation beside each table, for readers with no bookkeeping background.",
     audience: "client",
-    files: { html: "NPLify-Ledger-Patterns-Companion-v5.8.html", pdf: "NPLify-Ledger-Patterns-Companion-v5.8.pdf" },
+    files: { html: "NPLify-Ledger-Patterns-Companion-v5.9.html", pdf: "NPLify-Ledger-Patterns-Companion-v5.9.pdf" },
     group: "design",
   },
   {
