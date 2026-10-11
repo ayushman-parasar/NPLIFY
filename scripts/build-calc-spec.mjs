@@ -34,7 +34,7 @@ add("BF-Raeen via Ali: 300,000 USDT at 0.864189, fee 1 %", "fixed_in; 300,000 ×
 // 5. Raeen sub-account via Aquanow: 50,000 USDT, 4 % on market
 add("Raeen sub-account: 50,000 USDT at 0.8650036, fee 4 %", "fixed_in; 50,000 × 0.8650036 × (1 − 4 %)", rdN(50000 * 0.8650036 * 0.96, 2), 41520.17);
 // 6. GDC: USD 84,482 target + 2.5 % → USDT, rate 1
-add("GDC: USD 84,482 target, fee 2.5 %, USDT → USD at 1", "target_out; 84,482 × (1 + 2.5 %) ÷ 1", rdN(84482 * 1.025, 0), 86594);
+add("GDC: USD 84,482 target, fee 2.5 %, converted at a rate of 1 USDT per USD", "target_out; 84,482 × (1 + 2.5 %) ÷ 1.0000", rdN(84482 * 1.025, 0), 86594, "the sheet's figure implies a rate of exactly 1");
 add("GDC above USD 500,000 a month: tier 2.25 %", "target_out; 84,482 × (1 + 2.25 %)", rdN(84482 * 1.0225, 0), 86383, "FEE_TIER chosen from PROJECT_MONTH_VOLUME (D21)");
 // 7. 27 Group reseller: THB 17,000,000 fixed_in at 0.0259463782412186 EUR per THB, 2 %
 add("27 Group (reseller): THB 17,000,000 at 0.0259463782412186 EUR per THB, fee 2 %", "fixed_in; sender rate = 0.0259463782412186 × 0.98 = 0.02542745; 17,000,000 × 0.02542745", rdN(17000000 * 0.0259463782412186 * 0.98, 2), 432266.66, "NPL rounds the EUR to the unit: 432,267");

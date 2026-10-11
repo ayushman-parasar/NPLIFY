@@ -232,12 +232,12 @@
    "note": ""
   },
   {
-   "name": "GDC: USD 84,482 target, fee 2.5 %, USDT → USD at 1",
-   "inputs": "target_out; 84,482 × (1 + 2.5 %) ÷ 1",
+   "name": "GDC: USD 84,482 target, fee 2.5 %, converted at a rate of 1 USDT per USD",
+   "inputs": "target_out; 84,482 × (1 + 2.5 %) ÷ 1.0000",
    "computed": 86594,
    "shown": 86594,
    "ok": true,
-   "note": ""
+   "note": "the sheet's figure implies a rate of exactly 1"
   },
   {
    "name": "GDC above USD 500,000 a month: tier 2.25 %",
