@@ -8676,43 +8676,43 @@
   "documents": [
    [
     "ERD & Data Model",
-    "Draft v5.9, 11 October 2026 — this model (70 tables, 12 views); the served edition is client-facing (no status, change history, open questions or decision references; invariants kept in the model and the map, not in the document)"
+    "Draft v5.9, 11 October 2026 — this model (70 tables, 12 views); the served edition is client-facing (no status, change history, open questions or decision references; invariants kept in the model and the map, not in the document); served without a draft marker or edition number"
    ],
    [
     "Ledger Posting Design & Chart of Accounts",
-    "v5.9, 11 October 2026 — numbered with the ERD edition; the chart of accounts and 61 worked transactions (one loss-recovery posting per share), all of D46 applied; client-facing edition"
+    "v5.9, 11 October 2026 — numbered with the ERD edition; the chart of accounts and 61 worked transactions (one loss-recovery posting per share), all of D46 applied; client-facing edition; served without a draft marker or edition number"
    ],
    [
     "Ledger Patterns — Reading Companion",
-    "v5.9, 11 October 2026 — the same worked transactions with a plain-language explanation and the arithmetic beside each table; client-facing edition"
+    "v5.9, 11 October 2026 — the same worked transactions with a plain-language explanation and the arithmetic beside each table; client-facing edition; served without a draft marker or edition number"
    ],
    [
     "Calculation Specification",
-    "v5.9, 11 October 2026 — every formula with its rounding rule, fee parts on the principal, target-out quotes as a markup on the target, variances by cause, instalment forex true-ups, earnings offsets, the reseller arithmetic; 16 of 17 of NPL’s own fee-sheet figures reproduced exactly; client-facing edition"
+    "v5.9, 11 October 2026 — every formula with its rounding rule, fee parts on the principal, target-out quotes as a markup on the target, variances by cause, instalment forex true-ups, earnings offsets, the reseller arithmetic; 16 of 17 of NPL’s own fee-sheet figures reproduced exactly; client-facing edition; served without a draft marker or edition number"
    ],
    [
     "Transaction Lifecycle & Approval State Machines",
-    "v5.9, 11 October 2026 — seven figures, the 35 controlled actions (who initiates, approves, escalates), 31 state tables, the daily aging list; client-facing edition"
+    "v5.9, 11 October 2026 — seven figures, the 35 controlled actions (who initiates, approves, escalates), 31 state tables, the daily aging list; client-facing edition; served without a draft marker or edition number"
    ],
    [
     "Roles & Visibility Matrix",
-    "v5.9, 11 October 2026 — Operations ⊂ Finance ⊂ Management; eight field groups over every table and view (667 fields, 148 never shown to Operations); the approval rights per controlled action (ROLE_RIGHT rows); enforcement rules; client-facing edition"
+    "v5.9, 11 October 2026 — Operations ⊂ Finance ⊂ Management; eight field groups over every table and view (667 fields, 148 never shown to Operations); the approval rights per controlled action (ROLE_RIGHT rows); enforcement rules; client-facing edition; served without a draft marker or edition number"
    ],
    [
     "Configuration Schema",
-    "v5.9, 11 October 2026 — all 33 configuration tables with fields, allowed values, defaults and the rules checked on save; the FRS Client 1 project as a validated example (config-example-client1.json); client-facing edition"
+    "v5.9, 11 October 2026 — all 33 configuration tables with fields, allowed values, defaults and the rules checked on save; the FRS Client 1 project as a validated example; client-facing edition; served without a draft marker or edition number"
    ],
    [
     "Architecture & Stack Note",
-    "v5.9, 11 October 2026 — NPL’s architecture page (one Next.js app, PostgreSQL with an insert-only ledger, S3, own login with an authenticator app, AWS Hong Kong, Kraken → CoinMarketCap → manual rates, Tronscan / Etherscan hash checks, one Google Sheet journal per client, daily backups kept 30 days, about USD 50–80 a month) expanded against the model: nine background jobs, the ledger enforced in the database, the visibility filter at the API, environments incl. a temporary staging instance"
+    "v5.9, 11 October 2026 — NPL’s architecture page (one Next.js app, PostgreSQL with an insert-only ledger, S3, own login with an authenticator app, AWS Hong Kong, Kraken → CoinMarketCap → manual rates, Tronscan / Etherscan hash checks, one Google Sheet journal per client, daily backups kept 30 days, about USD 50–80 a month) expanded against the model: nine background jobs, the ledger enforced in the database, the visibility filter at the API, environments incl. a temporary staging instance; served without a draft marker or edition number"
    ],
    [
     "Cutover Approach",
-    "v5.9, 11 October 2026 — from the spreadsheets to NPLify: a parallel run of three to four weeks on a staging instance with the sheets leading, earlier deals entered through the normal screens as real postings (no opening entries, no change to the model), twelve daily reconciliation checks, eight exit criteria, a switch on the day with the least traffic chosen a couple of days before, rollback"
+    "v5.9, 11 October 2026 — from the spreadsheets to NPLify: a parallel run of three to four weeks on a staging instance with the sheets leading, earlier deals entered through the normal screens as real postings (no opening entries, no change to the model), twelve daily reconciliation checks, eight exit criteria, a switch on the day with the least traffic chosen a couple of days before, rollback; served without a draft marker or edition number"
    ],
    [
     "ERD Reading Guide",
-    "v1.0, 8 October 2026 — plain-language companion to the diagrams of v5.2; not yet regenerated"
+    "v1.0, 8 October 2026 — plain-language companion to the diagrams of v5.2; no longer in the served pack"
    ],
    [
     "Model Gaps & Proposals",
