@@ -267,7 +267,7 @@ ${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""
 <div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate). If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
 
 <h2 class="pb">Appendix A · Every field, its group, its rights</h2>
-<p class="small">Generated from the data model (Draft v${D.version}): ${Object.keys(D.E).length} tables and views, ${totalFields} fields. Rights per role as in Section 2; "view · enter" means Operations creates or edits the record in the normal course; actor fields (who approved, verified, posted, screened, recorded) belong to the approvals group.</p>
+<p class="small">Generated from the data model: ${Object.keys(D.E).length} tables and views, ${totalFields} fields. Rights per role as in Section 2; "view · enter" means Operations creates or edits the record in the normal course; actor fields (who approved, verified, posted, screened, recorded) belong to the approvals group.</p>
 ${appendix}
 </body></html>`;
 

@@ -66,3 +66,10 @@ Every served document was regenerated so that it reads for NPL without New XP's 
 - Cutover: retitled Cutover Approach (see above).
 - The check script `scripts/check-nplify-pack.py` was adjusted for the removed passages.
 
+## Client-facing pass, second round (12 October 2026)
+
+- No "Draft" marker and no edition number anywhere in a served document (title page, running header, footers, cross-references): stripped at render time by `clientFacing`. File names in `docs/` keep the edition for the record.
+- The ERD Reading Guide (v1.0, against ERD v5.2) is no longer served; its files stay in `docs/`.
+- The JSON downloads (calc-vectors.json, config-example-client1.json) are no longer offered on the documents page; the builders still write them.
+- Scenarios page: the "NPL's answers to the operational questions" section is removed; every catalogue text is passed through `src/lib/client-facing.ts`, so no decision, edition or review-question reference is shown; the staff review section no longer names ERD editions.
+

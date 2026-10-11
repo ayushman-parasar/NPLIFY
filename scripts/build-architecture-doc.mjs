@@ -152,7 +152,7 @@ ${JOBS.map((j) => `<tr><td class="k">${esc(j[0])}</td><td>${esc(j[1])}</td><td>$
 <li><b>Client journal content</b>: which state changes and which fields each client sees; assumed the sender-facing set of MESSAGE_TEMPLATE quote plus state and timestamps, per client.</li>
 <li><b>Availability.</b> A single task and a single-AZ database are assumed; a short outage falls back to the sheets. Multi-AZ roughly doubles the database line and is not proposed at this scale.</li>
 </ol>
-<p class="small"><i>Draft v${V} — for review with NPL. This note describes the build; the data model it serves is ERD v${V}, and the rules it enforces are those of the Lifecycle &amp; Approvals, Roles &amp; Visibility, Calculation and Configuration documents of the same edition.</i></p>
+<p class="small"><i>Draft v${V} — for review with NPL. This note describes the build; the data model it serves is the ERD &amp; Data Model, and the rules it enforces are those of the Lifecycle &amp; Approvals, Roles &amp; Visibility, Calculation and Configuration documents.</i></p>
 </body></html>`;
 
 const h = path.join(outDir, `NPLify-Architecture-and-Stack-v${V}.html`), p = path.join(outDir, `NPLify-Architecture-and-Stack-v${V}.pdf`);

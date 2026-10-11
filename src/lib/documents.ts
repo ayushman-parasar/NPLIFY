@@ -26,15 +26,6 @@ export const DOCS: Doc[] = [
     group: "model",
   },
   {
-    slug: "reading-guide",
-    title: "ERD Reading Guide",
-    version: "v1.0",
-    blurb: "A plain-language companion to the six diagrams: how to read a lane, a box and an arrow, and what each domain is for.",
-    audience: "client",
-    files: { html: "NPLify-ERD-Reading-Guide-v1.0.html", pdf: "NPLify-ERD-Reading-Guide-v1.0.pdf" },
-    group: "model",
-  },
-  {
     slug: "ledger",
     title: "Ledger Posting Design",
     version: "v5.9",
@@ -76,7 +67,7 @@ export const DOCS: Doc[] = [
     version: "v5.9",
     blurb: "Every calculation the engine performs, in order, with its rounding rule: fee parts on the principal, target-out quotes, tiers, rounding, shares and rebates, the four variance kinds, invoice instalments, earnings offsets and the reseller arithmetic, with acceptance vectors checked against NPL's own figures.",
     audience: "client",
-    files: { html: "NPLify-Calculation-Specification-v5.9.html", pdf: "NPLify-Calculation-Specification-v5.9.pdf", json: "calc-vectors.json" },
+    files: { html: "NPLify-Calculation-Specification-v5.9.html", pdf: "NPLify-Calculation-Specification-v5.9.pdf" },
     group: "design",
   },
   {
@@ -85,7 +76,7 @@ export const DOCS: Doc[] = [
     version: "v5.9",
     blurb: "Every configuration table — client, system settings, project, parties, the partner block — with its fields, allowed values, defaults and the rules checked on save, and one client's configuration as a validated example.",
     audience: "client",
-    files: { html: "NPLify-Configuration-Schema-v5.9.html", pdf: "NPLify-Configuration-Schema-v5.9.pdf", json: "config-example-client1.json" },
+    files: { html: "NPLify-Configuration-Schema-v5.9.html", pdf: "NPLify-Configuration-Schema-v5.9.pdf" },
     group: "design",
   },
   {
@@ -136,7 +127,7 @@ export const DOCS: Doc[] = [
 ];
 
 export const GROUPS: { id: Doc["group"]; title: string; blurb: string }[] = [
-  { id: "model", title: "The model", blurb: "Start here: the diagram itself and how to read it." },
+  { id: "model", title: "The model", blurb: "Start here: the diagram itself." },
   { id: "design", title: "Design specifications", blurb: "How the model behaves and how it is built: postings, lifecycle, roles, arithmetic, configuration, architecture and cutover." },
   { id: "working", title: "Working papers", blurb: "Internal material behind the decisions. Staff only." },
 ];

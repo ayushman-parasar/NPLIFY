@@ -4,11 +4,12 @@ import type { ReactNode } from "react";
 import erd from "@data/erd.v5.json";
 import TopBar from "@/components/TopBar";
 import { currentViewer } from "@/lib/auth";
+import { clientText } from "@/lib/client-facing";
 
 export const dynamic = "force-dynamic";
 
 type Project = { client: string; projects: string; lead: string; scenarios: string[][] };
-type Catalogue = { intro: string; projects: Project[]; flows: string[][]; answered_questions: string[][] };
+type Catalogue = { intro: string; projects: Project[]; flows: string[][] };
 type ReviewScenario = { id: string; name: string; story: string; verdict: string; ents: string[] };
 const cat = erd.SCENARIO_CATALOGUE as Catalogue;
 const review = erd.SCENARIOS as ReviewScenario[];
@@ -40,9 +41,7 @@ export default async function ScenariosPage() {
   const viewer = await currentViewer();
   if (!viewer) redirect("/login");
   const total = cat.projects.reduce((n, p) => n + p.scenarios.length, 0);
-  const intro = viewer.isVisitor
-    ? "Every scenario NPL runs today, grouped by client and project. The operational flows they share are defined once (F1–F10) and referenced by number."
-    : cat.intro;
+  const intro = "Every scenario NPL runs today, grouped by client and project. The operational flows they share are defined once (F1–F10) and referenced by number.";
 
   return (
     <>
@@ -72,7 +71,6 @@ export default async function ScenariosPage() {
             <a href="#flows">Shared flows</a>
             <a href="#walks">Walkthroughs</a>
             {!viewer.isVisitor && <a href="#review">Review scenarios</a>}
-            {!viewer.isVisitor && <a href="#answers">NPL&apos;s answers</a>}
           </aside>
 
           <div className="sc-body">
@@ -80,8 +78,8 @@ export default async function ScenariosPage() {
               <section key={p.client} id={slug(p.client)} className="client" style={{ animationDelay: `${pi * 60}ms` }}>
                 <div className="client-h">
                   <h2>{p.client}</h2>
-                  <p className="proj">{withEntities(p.projects)}</p>
-                  <p className="lead">{p.lead}</p>
+                  <p className="proj">{withEntities(clientText(p.projects))}</p>
+                  <p className="lead">{clientText(p.lead)}</p>
                 </div>
                 <div className="scns">
                   {p.scenarios.map(([name, story, mech, tables], i) => (
@@ -91,15 +89,15 @@ export default async function ScenariosPage() {
                         <span className="name">{name}</span>
                       </summary>
                       <div className="scn-body">
-                        <p>{story}</p>
+                        <p>{clientText(story)}</p>
                         {mech && (
                           <p className="mech">
-                            <b>Fee and flow</b> {withEntities(mech)}
+                            <b>Fee and flow</b> {withEntities(clientText(mech))}
                           </p>
                         )}
                         {tables && (
                           <p className="tables">
-                            <b>In the model</b> {withEntities(tables)}
+                            <b>In the model</b> {withEntities(clientText(tables))}
                           </p>
                         )}
                         <Link href={ask(`${p.client}: ${name}. Walk me through this scenario end to end and name the tables involved.`)} className="askl">
@@ -120,8 +118,8 @@ export default async function ScenariosPage() {
                   <article key={id} className="flow">
                     <span className="fid">{id}</span>
                     <h3>{name}</h3>
-                    <p>{desc}</p>
-                    {tables && <p className="tables">{withEntities(tables)}</p>}
+                    <p>{clientText(desc)}</p>
+                    {tables && <p className="tables">{withEntities(clientText(tables))}</p>}
                     <Link href={ask(`Flow ${id}: ${name}. Which tables carry it, step by step?`)} className="askl">
                       Ask the ERD ↗
                     </Link>
@@ -148,7 +146,7 @@ export default async function ScenariosPage() {
             {!viewer.isVisitor && (
               <section id="review" className="review">
                 <h2>Edge-case scenarios from the review</h2>
-                <p className="lead">Traced step by step against ERD v3.0 in the review of 6–7 October 2026, and how the current draft resolves each.</p>
+                <p className="lead">Traced step by step in the review of 6–7 October 2026, and how the model resolves each.</p>
                 {review.map((s) => (
                   <details key={s.id} className="scn">
                     <summary>
@@ -156,14 +154,14 @@ export default async function ScenariosPage() {
                       <span className="name">{s.name}</span>
                     </summary>
                     <div className="scn-body">
-                      <p>{s.story}</p>
+                      <p>{clientText(s.story)}</p>
                       <p className="mech">
-                        <b>v3.0 verdict</b> {s.verdict}
+                        <b>Verdict in the review</b> {clientText(s.verdict)}
                       </p>
                       <p className="tables">
-                        <b>Resolved in v4.0</b> {withEntities(reviewV4[s.id] ?? "")}
+                        <b>How the model resolves it</b> {withEntities(clientText(reviewV4[s.id] ?? ""))}
                       </p>
-                      <Link href={ask(`Scenario ${s.id}: ${s.name}. Why did ERD v3.0 fail it, step by step, and how does the current draft handle it?`)} className="askl">
+                      <Link href={ask(`Scenario ${s.id}: ${s.name}. Why did the earlier model fail it, step by step, and how does the current model handle it?`)} className="askl">
                         Ask the ERD about this ↗
                       </Link>
                     </div>
@@ -172,19 +170,6 @@ export default async function ScenariosPage() {
               </section>
             )}
 
-            {!viewer.isVisitor && cat.answered_questions.length > 0 && (
-              <section id="answers" className="answers">
-                <h2>NPL&apos;s answers to the operational questions</h2>
-                <dl>
-                  {cat.answered_questions.map(([q, a]) => (
-                    <div key={q}>
-                      <dt>{q}</dt>
-                      <dd>{withEntities(a)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            )}
           </div>
         </div>
       </main>

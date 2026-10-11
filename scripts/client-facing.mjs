@@ -59,6 +59,14 @@ export function clientFacing(html) {
   h = h.replace(/\bthe\s+D(?:[1-9]|[1-4]\d)\s+amendment\b/g, "a later amendment").replace(DREF, "").replace(DATED, "");
   h = h.replace(/<span class="new">([^<]*)<\/span>/g, "$1");
   h = h.replace(/\bthe events invariant \d+ names\b/g, "named events").replace(/\bone of the ownership movements invariant \d+ names\b/g, "one of the named ownership movements").replace(INV, "the ledger rules");
+  // no draft marker and no edition number anywhere in a client document
+  h = h.replace(/\s*·\s*Draft v\d\.\d(?:\.\d)?/g, "")
+    .replace(/<p class="small"[^>]*>Numbered with the ERD edition it is built against\.?<\/p>\s*/g, "")
+    .replace(/Draft v\d\.\d(?:\.\d)?\s*[—–-]\s*(?:companion )?for review with NPL\.?\s*/g, "")
+    .replace(/\(Draft v\d\.\d(?:\.\d)?\)/g, "")
+    .replace(/<p class="small"><i>\s*<\/i><\/p>\s*/g, "")
+    .replace(/\s+v\d\.\d(?:\.\d)?\b/g, "")
+    .replace(/\(\s*\)/g, "");
   h = h.replace(/\s*,\s*,+/g, ",").replace(/ {2,}/g, " ").replace(/\s+([,.;:])(?=\s|<|$)/g, "$1").replace(/\(\s*\)/g, "");
   return h;
 }

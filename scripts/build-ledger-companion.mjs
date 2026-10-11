@@ -193,7 +193,7 @@ ul.nums{margin:0 0 2pt 14pt;font-size:8.8pt;font-variant-numeric:tabular-nums} u
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Ledger Patterns, a Reading Companion v${VERSION}</title><style>${CSS}</style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Patterns — a Reading Companion · Draft v${VERSION}</p><p>New XP Technologies Limited</p><p>${DATE} · Confidential</p>
-<p class="small" style="margin-top:14pt">Companion to the Ledger Posting Design &amp; Chart of Accounts v${VERSION}: the same ${L.txs.length} worked transactions, each with a plain-language explanation beside it. Numbered with the ERD edition it is built against.</p></div>
+<p class="small" style="margin-top:14pt">Companion to the Ledger Posting Design &amp; Chart of Accounts v${VERSION}: the same ${L.txs.length} worked transactions, each with a plain-language explanation beside it.</p></div>
 
 <h2 class="pb">How to read this document</h2>
 <div class="pair howto"><div class="left">
