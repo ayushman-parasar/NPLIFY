@@ -7120,7 +7120,7 @@
    ]
   }
  ],
- "DOC_META": "NPLify · P0 Technical Baseline. Deliverable 1 — Entity-Relationship Diagram & Data Model, Draft v5.9. New XP Technologies Limited, 11 October 2026, Confidential — internal baseline document; client deliverables are derived from it. Supersedes v5.8, v5.7, v5.6, v5.5, v5.4 and v5.3 (the working drafts of 8–9 October), v5.2, v5.1, v5.0, v4.0 and v3.0 in full.",
+ "DOC_META": "NPLify · P0 Technical Baseline. Entity-Relationship Diagram & Data Model, Draft v5.9. New XP Technologies Limited, 11 October 2026, Confidential — internal baseline document; the nine client-facing documents of the P0 pack are derived from it and served without status, change-history, decision references, draft markers or edition numbers. Supersedes v5.8, v5.7, v5.6, v5.5, v5.4 and v5.3 (the working drafts of 8–9 October), v5.2, v5.1, v5.0, v4.0 and v3.0 in full.",
  "CONVENTIONS": [
   "All monetary amounts are stored as exact decimals.",
   "Every table carries created_at / created_by.",
