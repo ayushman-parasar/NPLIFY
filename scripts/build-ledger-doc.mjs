@@ -116,14 +116,25 @@ ${list.map(([a, c, why]) => `<tr><td class="mono">${esc(a)}</td><td>${c}</td><td
 
 // ------------------------------------------------------------------ pricing (the Calculation Specification's formulas)
 // All rates are OUT units per 1 IN unit. s = sender_pays share, r = receiver_pays share, s + r = the fee pct.
-function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding = "exact", unit = 1 }) {
+function price({ amountIn, targetOut, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding = "exact", unit = 1, inRounding = null, inUnit = 1 }) {
   const rd = (x) => Math.round(x * 10 ** dp + 1e-9) / 10 ** dp;
   const Rb = basis === "market" ? Rm : Rp;                   // market or agent_rate basis
-  const Rs = Rb * (1 - s);                                   // sender rate: embeds the sender's part
-  const grossOut = rd(amountIn * Rs);
-  const feeReceiver = rd(amountIn * Rb * r);                 // on the principal at the basis rate, not on gross out (NPL, 11 October)
-  const clientNet = rd(grossOut - feeReceiver);               // = amount × basis rate × (1 − s − r): the receiver group's entitlement
-  const feeSender = rd(amountIn * Rb - grossOut);
+  let grossOut, feeReceiver, clientNet, feeSender, Rs;
+  if (targetOut != null) {                                   // amount_mode target_out: the fee is a markup on the target (NPL's sheets: target × (1 + fee) ÷ rate)
+    const exactIn = targetOut * (1 + s) / Rb;
+    amountIn = inRounding === "round_up_n" ? roundUpN(exactIn, inUnit) : inRounding === "nearest_unit" ? Math.round(exactIn) : rd(exactIn);
+    Rs = Rb / (1 + s);                                       // the sender rate as printed: target ÷ amount_in
+    grossOut = rd(amountIn * Rs);                            // = target, plus any cash-rounding surplus
+    feeReceiver = rd(targetOut * r);                         // the receiver's part is on the target
+    clientNet = rd(grossOut - feeReceiver);
+    feeSender = rd(amountIn * Rb - grossOut);
+  } else {                                                   // amount_mode fixed_in
+    Rs = Rb * (1 - s);                                       // sender rate: embeds the sender's part
+    grossOut = rd(amountIn * Rs);
+    feeReceiver = rd(amountIn * Rb * r);                     // on the principal at the basis rate, not on gross out (NPL, 11 October)
+    clientNet = rd(grossOut - feeReceiver);                  // = amount × basis rate × (1 − s − r): the receiver group's entitlement
+    feeSender = rd(amountIn * Rb - grossOut);
+  }
   const grossConverted = rd(amountIn * (partnerFee ? Rm : Rp));   // fee_on_market partners convert at market, then charge
   const partnerCost = partnerFee ? rd(grossConverted * partnerFee) : 0;
   const actualOut = rd(grossConverted - partnerCost);
@@ -132,7 +143,7 @@ function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding
   const payable = rounding === "round_up_n" ? roundUpN(clientNet, unit) : rounding === "truncate_unit" ? trunc(clientNet) : clientNet;
   const residual = rd(clientNet - payable);                    // signed (D25): + dropped fraction stays client money, − added by rounding up is NPL's cost
   const inferredPartnerCost = partnerFee ? partnerCost : rd(amountIn * (Rm - Rp));
-  return { Rb, Rs, grossOut, feeReceiver, clientNet, feeSender, grossConverted, partnerCost, actualOut, grossMargin, earnings, payable, residual, inferredPartnerCost };
+  return { amountIn, Rb, Rs, grossOut, feeReceiver, clientNet, feeSender, grossConverted, partnerCost, actualOut, grossMargin, earnings, payable, residual, inferredPartnerCost };
 }
 
 // ------------------------------------------------------------------ worked example parameters
@@ -451,9 +462,9 @@ const VENDOR_INV = 9000, RESALE_INV = 9450;                       // EUR
 const Rq = 0.8708, Rd2 = 0.87527;                                 // EUR per USDT at pricing and at the second instalment (NPL's figures, D24)
 const RmT = 1 / 32.50, RpT = 1 / (32.50 / 0.99);                  // USDT per THB: market and Ali (Ali's 1 % inside its rate)
 const targetOut = r2(RESALE_INV / Rq);                            // USDT the remittance side must deliver for the resale invoice
-const thbExact = r2(targetOut / (RmT * (1 - 0.02)));              // amount_mode target_out, 2 % remittance markup on market (rate_basis market)
-const thbIn = roundUpN(thbExact, 1000);                            // collected as cash: rounded up to the 1,000 (cash_rounding round_up_n)
-const DM = price({ amountIn: thbIn, Rm: RmT, Rp: RpT, basis: "market", s: 0.02, r: 0 });
+const thbExact = r2(targetOut * 1.02 / RmT);                      // amount_mode target_out: 2 % remittance markup on the target, at market (NPL's convention)
+const DM = price({ targetOut, Rm: RmT, Rp: RpT, basis: "market", s: 0.02, r: 0, inRounding: "round_up_n", inUnit: 1000 });   // collected as cash: rounded up to the 1,000
+const thbIn = DM.amountIn;
 const mktValue = r2(thbIn * RmT);
 const inst1Eur = 3000, inst2Eur = 6000, marginEur = RESALE_INV - VENDOR_INV;
 const paid1 = r2(inst1Eur / Rq), reserved1 = r2(inst1Eur / Rq);
@@ -825,7 +836,7 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 </body></html>`;
 
 // ------------------------------------------------------------------ write + print (only when run directly; the companion imports this module)
-export { L, PURPOSES, KIND, fmt, pct, r2, esc, code, CSS, squareUsdt, surplus, thbExact, DOC_VERSION, ERD_VERSION, DATE, EX, JET, D1, D2, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas, V1, V2, V3, identities };
+export { L, PURPOSES, KIND, fmt, pct, r2, esc, code, CSS, price, roundUpN, trunc, targetOut, RmT, RpT, squareUsdt, surplus, thbExact, DOC_VERSION, ERD_VERSION, DATE, EX, JET, D1, D2, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas, V1, V2, V3, identities };
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   fs.mkdirSync(outDir, { recursive: true });
   const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";

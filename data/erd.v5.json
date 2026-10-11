@@ -8658,7 +8658,7 @@
    ],
    [
     "Calculation Specification",
-    "v1.0 — v1.1 pending"
+    "v5.7, 11 October 2026 — numbered with the ERD edition; every formula with its rounding rule, fee parts on the principal, target-out quotes as a markup on the target, variances by cause, instalment forex true-ups, earnings offsets, the reseller arithmetic; 16 of 17 of NPL’s own fee-sheet figures reproduced exactly, the receiver-part convention flagged for NPL to confirm"
    ],
    [
     "Configuration Schema",

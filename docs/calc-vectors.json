@@ -1,311 +1,323 @@
 {
- "vectors": [
-  {
-   "name": "V1 · Collect-first, disclosed-rate partner (deal 1 in the ledger document)",
-   "in": {
-    "amountIn": 10000,
-    "Rm": 0.9,
-    "Rp": 0.895,
-    "basis": "partner",
-    "s": 0.004,
-    "r": 0.006
-   },
-   "out": {
-    "Rb": 0.895,
-    "Rs": 0.89142,
-    "grossOut": 8914.2,
-    "feeReceiver": 53.49,
-    "clientNet": 8860.71,
-    "feeSender": 35.8,
-    "grossConverted": 8950,
-    "partnerCost": 0,
-    "actualOut": 8950,
-    "grossMargin": 89.29,
-    "earnings": 89.29,
-    "payable": 8860,
-    "residual": 0.71,
-    "inferredPartnerCost": 50,
-    "marginPct": 0.009976536312849163
-   }
-  },
-  {
-   "name": "V2 · Same deal priced on market basis",
-   "in": {
-    "amountIn": 10000,
-    "Rm": 0.9,
-    "Rp": 0.895,
-    "basis": "market",
-    "s": 0.004,
-    "r": 0.006
-   },
-   "out": {
-    "Rb": 0.9,
-    "Rs": 0.8964,
-    "grossOut": 8964,
-    "feeReceiver": 53.78,
-    "clientNet": 8910.22,
-    "feeSender": 36,
-    "grossConverted": 8950,
-    "partnerCost": 0,
-    "actualOut": 8950,
-    "grossMargin": 39.78,
-    "earnings": 39.78,
-    "payable": 8910,
-    "residual": 0.22,
-    "inferredPartnerCost": 50,
-    "marginPct": 0.004444692737430167
-   }
-  },
-  {
-   "name": "V3 · market + 0.50 % partner, market basis (deal 3 in the ledger document)",
-   "in": {
-    "amountIn": 10000,
-    "Rm": 0.9,
-    "Rp": 0.9,
-    "basis": "market",
-    "s": 0.004,
-    "r": 0.006,
-    "partnerMarkup": 0.005
-   },
-   "out": {
-    "Rb": 0.9,
-    "Rs": 0.8964,
-    "grossOut": 8964,
-    "feeReceiver": 53.78,
-    "clientNet": 8910.22,
-    "feeSender": 36,
-    "grossConverted": 9000,
-    "partnerCost": 45,
-    "actualOut": 8955,
-    "grossMargin": 89.78,
-    "earnings": 44.78,
-    "payable": 8910,
-    "residual": 0.22,
-    "inferredPartnerCost": 45,
-    "marginPct": 0.005000558347292016
-   }
-  },
-  {
-   "name": "V4 · All fee on the sender side (FRS style), 1 : 1 rate",
-   "in": {
-    "amountIn": 1004.02,
-    "Rm": 1,
-    "Rp": 1,
-    "basis": "market",
-    "s": 0.004,
-    "r": 0
-   },
-   "out": {
-    "Rb": 1,
-    "Rs": 0.996,
-    "grossOut": 1000,
-    "feeReceiver": 0,
-    "clientNet": 1000,
-    "feeSender": 4.02,
-    "grossConverted": 1004.02,
-    "partnerCost": 0,
-    "actualOut": 1004.02,
-    "grossMargin": 4.02,
-    "earnings": 4.02,
-    "payable": 1000,
-    "residual": 0,
-    "inferredPartnerCost": 0,
-    "marginPct": 0.004003904304695125
-   }
-  },
-  {
-   "name": "V5 · Receiver share only",
-   "in": {
-    "amountIn": 10000,
-    "Rm": 0.9,
-    "Rp": 0.895,
-    "basis": "partner",
-    "s": 0,
-    "r": 0.006
-   },
-   "out": {
-    "Rb": 0.895,
-    "Rs": 0.895,
-    "grossOut": 8950,
-    "feeReceiver": 53.7,
-    "clientNet": 8896.3,
-    "feeSender": 0,
-    "grossConverted": 8950,
-    "partnerCost": 0,
-    "actualOut": 8950,
-    "grossMargin": 53.7,
-    "earnings": 53.7,
-    "payable": 8896,
-    "residual": 0.3,
-    "inferredPartnerCost": 50,
-    "marginPct": 0.006
-   }
-  },
-  {
-   "name": "V6 · Sub-unit pair, 8 dp rate (USDT → BTC)",
-   "in": {
-    "amountIn": 10000,
-    "Rm": 0.00001532,
-    "Rp": 0.00001525,
-    "basis": "partner",
-    "s": 0.004,
-    "r": 0.006,
-    "dp": 8
-   },
-   "out": {
-    "Rb": 0.00001525,
-    "Rs": 0.000015189,
-    "grossOut": 0.15189,
-    "feeReceiver": 0.00091134,
-    "clientNet": 0.15097866,
-    "feeSender": 0.00061,
-    "grossConverted": 0.1525,
-    "partnerCost": 0,
-    "actualOut": 0.1525,
-    "grossMargin": 0.00152134,
-    "earnings": 0.00152134,
-    "payable": 0,
-    "residual": 0.15097866,
-    "inferredPartnerCost": 0.0007,
-    "marginPct": 0.009976
-   }
-  }
- ],
- "deals": {
-  "D1": {
-   "Rb": 0.895,
-   "Rs": 0.89142,
-   "grossOut": 8914.2,
-   "feeReceiver": 53.49,
-   "clientNet": 8860.71,
-   "feeSender": 35.8,
-   "grossConverted": 8950,
-   "partnerCost": 0,
-   "actualOut": 8950,
-   "grossMargin": 89.29,
-   "earnings": 89.29,
-   "payable": 8860,
-   "residual": 0.71,
-   "inferredPartnerCost": 50,
-   "marginPct": 0.009976536312849163
-  },
-  "D2": {
-   "Rb": 0.895,
-   "Rs": 0.89142,
-   "grossOut": 4457.1,
-   "feeReceiver": 26.74,
-   "clientNet": 4430.36,
-   "feeSender": 17.9,
-   "grossConverted": 4475,
-   "partnerCost": 0,
-   "actualOut": 4475,
-   "grossMargin": 44.64,
-   "earnings": 44.64,
-   "payable": 4430,
-   "residual": 0.36,
-   "inferredPartnerCost": 25,
-   "marginPct": 0.009975418994413407
-  },
-  "DJ": {
+ "version": "5.7",
+ "ledger": {
+  "L1": {
+   "name": "Deal 1 — Evo, 10,000 USDT → EUR at Ali (fee_in_rate), market 0.9000, Ali 0.8910, sender 1.4 % + receiver 0.6 % on market",
+   "in": "USDT",
+   "out": "EUR",
+   "amountIn": 10000,
    "Rb": 0.9,
-   "Rs": 0.8964,
-   "grossOut": 8964,
-   "feeReceiver": 53.78,
-   "clientNet": 8910.22,
-   "feeSender": 36,
-   "grossConverted": 9000,
-   "partnerCost": 45,
-   "actualOut": 8955,
-   "grossMargin": 89.78,
-   "earnings": 44.78,
-   "payable": 8910,
-   "residual": 0.22,
-   "inferredPartnerCost": 45,
-   "marginPct": 0.005000558347292016
-  },
-  "D4": {
-   "Rb": 0.775,
-   "Rs": 0.7719,
-   "grossOut": 1543.8,
-   "feeReceiver": 9.26,
-   "clientNet": 1534.54,
-   "feeSender": 6.2,
-   "grossConverted": 1550,
+   "Rs": 0.8874,
+   "grossOut": 8874,
+   "feeReceiver": 54,
+   "clientNet": 8820,
+   "feeSender": 126,
+   "grossConverted": 8910,
    "partnerCost": 0,
-   "actualOut": 1550,
-   "grossMargin": 15.46,
-   "earnings": 15.46,
-   "payable": 1534,
-   "residual": 0.54,
-   "inferredPartnerCost": 10,
-   "marginPct": 0.009974193548387097
+   "actualOut": 8910,
+   "grossMargin": 90,
+   "earnings": 90,
+   "payable": 8820,
+   "residual": 0,
+   "inferredPartnerCost": 90
+  },
+  "L2": {
+   "name": "Deal 3 — 10,000 USDT → EUR at Jeton (fee_on_market 1.25 %), same fee",
+   "in": "USDT",
+   "out": "EUR",
+   "amountIn": 10000,
+   "Rb": 0.9,
+   "Rs": 0.8874,
+   "grossOut": 8874,
+   "feeReceiver": 54,
+   "clientNet": 8820,
+   "feeSender": 126,
+   "grossConverted": 9000,
+   "partnerCost": 112.5,
+   "actualOut": 8887.5,
+   "grossMargin": 180,
+   "earnings": 67.5,
+   "payable": 8820,
+   "residual": 0,
+   "inferredPartnerCost": 112.5
+  },
+  "L3": {
+   "name": "Same-currency 5,000 EUR → EUR at rate 1, Evo EUR → EUR 2.8 % split 1.4 / 1.4",
+   "in": "EUR",
+   "out": "EUR",
+   "amountIn": 5000,
+   "Rb": 1,
+   "Rs": 0.986,
+   "grossOut": 4930,
+   "feeReceiver": 70,
+   "clientNet": 4860,
+   "feeSender": 70,
+   "grossConverted": 5000,
+   "partnerCost": 0,
+   "actualOut": 5000,
+   "grossMargin": 140,
+   "earnings": 140,
+   "payable": 4860,
+   "residual": 0,
+   "inferredPartnerCost": 0
+  },
+  "L4": {
+   "name": "3,000 USDT → THB cash at Ali (market 32.60, Ali 32.27), round_up_n 1,000",
+   "in": "USDT",
+   "out": "THB",
+   "amountIn": 3000,
+   "Rb": 32.6,
+   "Rs": 32.1436,
+   "grossOut": 96430.8,
+   "feeReceiver": 586.8,
+   "clientNet": 95844,
+   "feeSender": 1369.2,
+   "grossConverted": 96810,
+   "partnerCost": 0,
+   "actualOut": 96810,
+   "grossMargin": 966,
+   "earnings": 966,
+   "payable": 96000,
+   "residual": -156,
+   "inferredPartnerCost": 990
+  },
+  "L5": {
+   "name": "2,000 USDT → GBP at Ali (market 0.7800, Ali 0.7722)",
+   "in": "USDT",
+   "out": "GBP",
+   "amountIn": 2000,
+   "Rb": 0.78,
+   "Rs": 0.76908,
+   "grossOut": 1538.16,
+   "feeReceiver": 9.36,
+   "clientNet": 1528.8,
+   "feeSender": 21.84,
+   "grossConverted": 1544.4,
+   "partnerCost": 0,
+   "actualOut": 1544.4,
+   "grossMargin": 15.6,
+   "earnings": 15.6,
+   "payable": 1528.8,
+   "residual": 0,
+   "inferredPartnerCost": 15.6
+  },
+  "L6": {
+   "name": "Raeen sub-account: 10,000 USDT → EUR at Aquanow (fee_on_market 0.80 %), sender 4 % on market, receiver 0",
+   "in": "USDT",
+   "out": "EUR",
+   "amountIn": 10000,
+   "Rb": 0.9,
+   "Rs": 0.864,
+   "grossOut": 8640,
+   "feeReceiver": 0,
+   "clientNet": 8640,
+   "feeSender": 360,
+   "grossConverted": 9000,
+   "partnerCost": 72,
+   "actualOut": 8928,
+   "grossMargin": 360,
+   "earnings": 288,
+   "payable": 8640,
+   "residual": 0,
+   "inferredPartnerCost": 72
+  },
+  "L7": {
+   "name": "NPL-GR: target 10,852.09 USDT (= 9,450 EUR at 0.8708) collected in THB cash at Ali, 2 % markup on the target, cash round-up 1,000; Ali 1 ÷ 32.83 vs market 1 ÷ 32.50",
+   "in": "THB",
+   "out": "USDT",
+   "amountIn": 360000,
+   "Rb": 0.03076923076923077,
+   "Rs": 0.030165912518853696,
+   "grossOut": 10859.73,
+   "feeReceiver": 0,
+   "clientNet": 10859.73,
+   "feeSender": 217.19,
+   "grossConverted": 10966.15,
+   "partnerCost": 0,
+   "actualOut": 10966.15,
+   "grossMargin": 106.42,
+   "earnings": 106.42,
+   "payable": 10859.73,
+   "residual": 0,
+   "inferredPartnerCost": 110.77
+  },
+  "L8": {
+   "name": "Pattern N: 300,000 USDT → EUR at Jeton (1.25 %)",
+   "in": "USDT",
+   "out": "EUR",
+   "amountIn": 300000,
+   "Rb": 0.9,
+   "Rs": 0.8874,
+   "grossOut": 266220,
+   "feeReceiver": 1620,
+   "clientNet": 264600,
+   "feeSender": 3780,
+   "grossConverted": 270000,
+   "partnerCost": 3375,
+   "actualOut": 266625,
+   "grossMargin": 5400,
+   "earnings": 2025,
+   "payable": 264600,
+   "residual": 0,
+   "inferredPartnerCost": 3375
+  },
+  "L9": {
+   "name": "Pattern N: 100,000 USDT → EUR at Ali",
+   "in": "USDT",
+   "out": "EUR",
+   "amountIn": 100000,
+   "Rb": 0.9,
+   "Rs": 0.8874,
+   "grossOut": 88740,
+   "feeReceiver": 540,
+   "clientNet": 88200,
+   "feeSender": 1260,
+   "grossConverted": 89100,
+   "partnerCost": 0,
+   "actualOut": 89100,
+   "grossMargin": 900,
+   "earnings": 900,
+   "payable": 88200,
+   "residual": 0,
+   "inferredPartnerCost": 900
   }
  },
- "target": {
-  "tgt": 1004.0160642570281,
-  "tgt2": 9999.994582829817
- },
- "variableFee": {
-  "vf1": {
-   "spread": 0.005555555555555536,
-   "required": 0.010555555555555537,
-   "f": 0.010555555555555537,
-   "belowMargin": false
+ "npl": [
+  {
+   "name": "Evo sender: 29,325 USDT at market 0.888977323, sender pays 1.40 %",
+   "inputs": "fixed_in; sender rate = market × (1 − 1.40 %) = 0.876531640478",
+   "computed": 25704.29,
+   "shown": 25704,
+   "ok": true,
+   "note": "NPL's sheet prints the sender rate 0.876531640478 and EUR 25,704 (rounded to the unit)"
   },
-  "vf2": {
-   "spread": 0.022222222222222254,
-   "required": 0.027222222222222255,
-   "f": 0.015,
-   "belowMargin": true
+  {
+   "name": "Evo receiver: the same deal, receiver pays 0.60 %",
+   "inputs": "fee parts on the principal: 29,325 × 0.888977323 × (1 − 1.40 % − 0.60 %)",
+   "computed": 25547.87,
+   "shown": 25550,
+   "ok": false,
+   "note": "NPL's sheet applies 0.60 % to the EUR 25,704 (25,550); on the principal it is 25,547.88 — a 2 EUR difference NPL is asked to confirm (see §3)"
   },
-  "vf3": {
-   "spread": 0.005555555555555536,
-   "required": 0.005,
-   "f": 0.005,
-   "belowMargin": false
+  {
+   "name": "Evo selected senders: EUR 50,000 target, market 1 ÷ 0.8652 USDT per EUR, sender pays 1.00 %",
+   "inputs": "target_out; amount_in = target × (1 + 1.00 %) × market in_per_out = 50,000 × 1.01 × 1.155802126676",
+   "computed": 58368,
+   "shown": 58368,
+   "ok": true,
+   "note": "NPL prints the final rate 1.16736014794267 = market × 1.01"
+  },
+  {
+   "name": "BF-Raeen via Jeton: 200,000 USDT at 0.8610999, fee 1 %",
+   "inputs": "fixed_in; 200,000 × 0.8610999 × (1 − 1 %)",
+   "computed": 170498,
+   "shown": 170498,
+   "ok": true,
+   "note": ""
+  },
+  {
+   "name": "BF-Raeen via Ali: 300,000 USDT at 0.864189, fee 1 %",
+   "inputs": "fixed_in; 300,000 × 0.864189 × (1 − 1 %)",
+   "computed": 256664,
+   "shown": 256664,
+   "ok": true,
+   "note": "the printed rate is recomputed so the sender-facing fee reads 1 % (D22)"
+  },
+  {
+   "name": "Raeen sub-account: 50,000 USDT at 0.8650036, fee 4 %",
+   "inputs": "fixed_in; 50,000 × 0.8650036 × (1 − 4 %)",
+   "computed": 41520.17,
+   "shown": 41520.17,
+   "ok": true,
+   "note": ""
+  },
+  {
+   "name": "GDC: USD 84,482 target, fee 2.5 %, USDT → USD at 1",
+   "inputs": "target_out; 84,482 × (1 + 2.5 %) ÷ 1",
+   "computed": 86594,
+   "shown": 86594,
+   "ok": true,
+   "note": ""
+  },
+  {
+   "name": "GDC above USD 500,000 a month: tier 2.25 %",
+   "inputs": "target_out; 84,482 × (1 + 2.25 %)",
+   "computed": 86383,
+   "shown": 86383,
+   "ok": true,
+   "note": "FEE_TIER chosen from PROJECT_MONTH_VOLUME (D21)"
+  },
+  {
+   "name": "27 Group (reseller): THB 17,000,000 at 0.0259463782412186 EUR per THB, fee 2 %",
+   "inputs": "fixed_in; sender rate = 0.0259463782412186 × 0.98 = 0.02542745; 17,000,000 × 0.02542745",
+   "computed": 432266.66,
+   "shown": 432266.66,
+   "ok": true,
+   "note": "NPL rounds the EUR to the unit: 432,267"
+  },
+  {
+   "name": "27 Group: the same THB at Ali, agent rate 1 ÷ 33.83 USDT per THB",
+   "inputs": "what the partner delivers: 17,000,000 ÷ 33.83",
+   "computed": 502513,
+   "shown": 502513,
+   "ok": true,
+   "note": "agent fee 0.64 % inside the rate against market 1 ÷ 33.613"
+  },
+  {
+   "name": "27 Group balance clearance: EUR 329,408 target, market 38.13570206 THB per EUR, fee 2 %",
+   "inputs": "target_out; 329,408 × 1.02 × 38.13570206",
+   "computed": 12813449.45,
+   "shown": 12813449.45,
+   "ok": true,
+   "note": "then cash-rounded by NPL to THB 12,813,000 (nearest 1,000; the pair's cash_rounding)"
+  },
+  {
+   "name": "Bala (reseller): EUR 2,220 target, market 1 ÷ 0.8716, fee 2 %",
+   "inputs": "target_out; 2,220 × 1.02 × 1.147315282240",
+   "computed": 2597.98,
+   "shown": 2597.98,
+   "ok": true,
+   "note": "then rounded up to USDT 2,600 (D25: USDT paid by reseller customers rounded up)"
+  },
+  {
+   "name": "66 Group (reseller): EUR 239,149 target, market 1 ÷ 0.8796, fee 1.5 %",
+   "inputs": "target_out; 239,149 × 1.015 × 1.136880400182",
+   "computed": 275962.07,
+   "shown": 275962.07,
+   "ok": true,
+   "note": "rounded to USDT 275,962"
+  },
+  {
+   "name": "TripleSeven/GZ (reseller): EUR 4,097 target, market 1 ÷ 0.8598, fee 1.5 %",
+   "inputs": "target_out; 4,097 × 1.015 × 1.163061177018",
+   "computed": 4837,
+   "shown": 4837,
+   "ok": true,
+   "note": ""
+  },
+  {
+   "name": "Alpha Plus (reseller): EUR 2,939 target, market 1 ÷ 0.8712, fee 1.5 %",
+   "inputs": "target_out; 2,939 × 1.015 × 1.147842056933",
+   "computed": 3424.11,
+   "shown": 3424.11,
+   "ok": true,
+   "note": "rounded to USDT 3,424"
+  },
+  {
+   "name": "Fair (reseller): EUR 1,079 target, market 1 ÷ 0.8642, fee 0.75 %",
+   "inputs": "target_out; 1,079 × 1.0075 × 1.157139551030",
+   "computed": 1257.92,
+   "shown": 1257.92,
+   "ok": true,
+   "note": "rounded to USDT 1,258"
+  },
+  {
+   "name": "D28 rate direction: Ali quotes 1.1738 (USDT per EUR) on a USDT → EUR pair",
+   "inputs": "normalised rate = 1 ÷ 1.1738 at the pair's precision (6)",
+   "computed": 0.851934,
+   "shown": 0.851934,
+   "ok": true,
+   "note": "a direction slip freezes the pair instead of pricing a deal"
   }
- },
- "breach": {
-  "br1": {
-   "spread": 0.005555555555555536,
-   "limit": 0.006,
-   "breached": false
-  },
-  "br2": {
-   "spread": 0.007777777777777772,
-   "limit": 0.006,
-   "breached": true
-  }
- },
- "ledgerBalances": {
-  "CL.PT.USDT.COLLECTED|USDT": 7050,
-  "CL.PROJECT.USDT.PAYABLE|USDT": 12671.19,
-  "CL.PT.EUR.DUE|EUR": 2708.28,
-  "CO.PT.EUR.POOL|EUR": 109.22,
-  "CL.PROJECT.EUR.PAYABLE|EUR": 11618.5,
-  "CO.NONE.EUR.EARN_GROSS|EUR": 239.3,
-  "CL.PT.EUR.INTRANSIT|EUR": 0,
-  "CL.SUD.EUR.SHORTFALL|EUR": 0,
-  "CO.NONE.EUR.EXP_BANKFEE|EUR": 50,
-  "CL.OWN.USDT.HELD|USDT": 0,
-  "CL.JETON.USDT.COLLECTED|USDT": 0,
-  "CO.OWN.USDT.WALLET|USDT": 30,
-  "CO.JETON.USDT.POOL|USDT": -30,
-  "CL.JETON.EUR.DUE|EUR": 8910.22,
-  "CO.JETON.EUR.POOL|EUR": 44.78,
-  "CO.NONE.EUR.EXP_PARTNER|EUR": 30.6,
-  "CL.PT.GBP.DUE|GBP": 0.54,
-  "CO.PT.GBP.POOL|GBP": 0.46,
-  "CL.PROJECT.GBP.PAYABLE|GBP": 0.54,
-  "CO.NONE.GBP.EARN_GROSS|GBP": 15.46,
-  "CL.PT.GBP.INTRANSIT|GBP": 0,
-  "CO.NONE.GBP.EXP_BANKFEE|GBP": 15,
-  "CL.PT.USDT.DUE|USDT": 5671.19,
-  "CL.PT.SGD.DUE|SGD": 0,
-  "CL.PROJECT.SGD.PAYABLE|SGD": 0,
-  "CO.JOHN.EUR.REFERRAL_PAYABLE|EUR": 11.2,
-  "CO.JETON.EUR.REBATE_RECEIVABLE|EUR": 14.4,
-  "CL.AYUSH.USDT.CREDIT|USDT": 50,
-  "CO.NONE.EUR.VARIANCE|EUR": 1.5
- }
+ ]
 }
