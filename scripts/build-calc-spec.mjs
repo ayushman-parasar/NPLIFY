@@ -75,7 +75,7 @@ const W = {
   cash: [`THB payout in cash: client net ${fmt(DT.clientNet, "THB")} THB, cash_rounding round_up_n 1,000 → ${fmt(DT.payable, "THB")}; residual = ${fmt(DT.clientNet, "THB")} − ${fmt(DT.payable, "THB")} = ${fmt(DT.residual, "THB")} (negative: NPL's cost, EXP_ROUNDING); NPL's pool gets ${fmt(DT.earnings, "THB")} ${fmt(DT.residual, "THB")} = ${fmt(DT.earnings + DT.residual, "THB")}`],
   share: [`Raeen sub-account at Aquanow: 10,000 × 0.9000 = 9,000; sender pays 4 % = ${n(DR.feeSender)}; client net ${n(DR.clientNet)}; Aquanow 0.80 % of 9,000 = ${n(DR.partnerCost)}; delivered ${n(DR.actualOut)}`, `share base = fee parts ${n(DR.grossMargin)} − partner cost ${n(DR.partnerCost)} = ${n(M.shareBase)}; Raeen 50 % = ${n(M.raeenShare)}; NPL remainder ${n(M.nplRemainder)}; the 0.3 % rebate (${n(M.rebateAqn)} USDT) is outside the base`],
   variance: [`partner_calculates: 3,000 USDT expected at 0.8910 = ${n(M.V1.expected)}, booked at 0.8905 = ${n(M.V1.actual)}; variance = ${n(M.V1.variance)} → VAR_CONVERSION; client net ${n(M.V1.priced.clientNet)} unchanged`, `cutoff timing: locked 0.8910, converted next day at 0.8890 → ${n(M.V2.variance)} → VAR_CUTOFF`, `honoured expired rate: 0.8910 honoured, Ali at 0.8860 → ${n(M.V3.variance)} → VAR_RATE_HONOUR`],
-  fx: [`vendor instalment 1: 3,000 EUR ÷ 0.8708 = ${n(paid1)} USDT paid; reserved at the pricing rate 3,000 ÷ 0.8708 = ${n(paid1)}; true-up 0`, `instalment 2: 6,000 EUR ÷ 0.87527 = ${n(paid2)} paid; reserved 6,000 ÷ 0.8708 = ${n(paid2 + fx2)}; true-up = ${n(fx2)} USDT gain → VAR_FX_TIMING (a debit when the rate moves against NPL)`, `margin line: 450 EUR ÷ 0.87527 = ${n(450 / Rd2)}; reserved 450 ÷ 0.8708 = ${n(450 / Rq)}; true-up ${n(fx3)}`],
+  fx: [`invoice_rate = ${(1 / Rq).toFixed(6)} USDT per EUR (0.8708 the other way); instalment 1: 3,000 EUR × ${(1 / Rq).toFixed(6)} = ${n(paid1)} USDT paid at the same rate it was reserved at; true-up 0`, `instalment 2: discharge_rate ${(1 / Rd2).toFixed(6)}; paid 6,000 × ${(1 / Rd2).toFixed(6)} = ${n(paid2)}; reserved 6,000 × ${(1 / Rq).toFixed(6)} = ${n(paid2 + fx2)}; true-up = ${n(fx2)} USDT gain → VAR_FX_TIMING (a debit when the rate moves against NPL)`, `margin line: 450 EUR × ${(1 / Rd2).toFixed(6)} = ${n(450 / Rd2)}; reserved 450 × ${(1 / Rq).toFixed(6)} = ${n(450 / Rq)}; true-up ${n(fx3)}`],
   offset: [`NPL's margin at Jeton (EUR) ${n(offsetEur)} ÷ Ali's rate of the day 0.8910 = ${n(offsetUsdt)} USDT taken from the client's unconverted balance at Ali`, `Ali deal margin ${n(DN_A.earnings)} EUR ÷ 0.8910 = ${n(retainUsdt)} USDT retained (residual_in)`, `Ali converts 100,000 − ${n(offsetUsdt)} − ${n(retainUsdt)} = ${n(convertUsdt)} USDT × 0.8910 = ${n(eurOut)} EUR = client net ${n(DN_A.clientNet)} − ${n(offsetEur)} already delivered at Jeton`],
   square: [`bounce fee 15.00 GBP absorbed with no GBP pool at Ali → pool −15.00; squared at the next conversion: 15.00 ÷ 0.7722 = ${n(squareUsdt)} USDT of NPL's own converted alongside the client's`],
   loss: [`loss ${n(lossAmt)} USDT → EXP_LOSS; split partner ${n(shares.partner)} + sender ${n(shares.sender)} + client ${n(shares.client)} + NPL ${n(shares.npl)} = ${n(lossAmt)}; EXP_LOSS after recoveries = ${n(shares.npl)}`],
@@ -112,7 +112,7 @@ table.vec td,table.vec th{font-size:8.2pt;padding:2pt 3pt}
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Calculation Specification v${VERSION}</title><style>${CSS}</style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Calculation Specification · Draft v${VERSION}</p><p>New XP Technologies Limited</p><p>${DATE} · Confidential</p><p class="small" style="margin-top:14pt">Numbered with the ERD edition it is built against. Supersedes Draft v1.0 (ERD v4.0).</p></div>
 <p><b>Status:</b> Built against ERD &amp; Data Model Draft v${VERSION} (decisions D1–D46) and the Ledger Posting Design v${VERSION}. It states every calculation the engine performs as a precise formula, in the order it is performed, with the rounding rule at each step, and gives acceptance vectors of two kinds: the Ledger Posting Design's worked deals, produced by the same pricing function this document imports, and NPL's own figures from its fee table, recomputed here and compared. The engine passes when it reproduces every vector.<br>
-<b>What changed since v1.0:</b> fee parts are percentages of the principal at the basis rate and never compound (NPL, 11 October); a target-out quote applies the fee as a markup on the target (NPL's sheets); the rate basis is market or agent_rate with the partner's cost inside its rate or stated separately; tiers, the customer-facing figures, the rounding menu, cash rounding, same-currency pairs, the markup-share base, rebates, the four variance kinds, the forex true-up on invoice instalments, earnings retained and offset between partners, loss splits, and the reseller arithmetic are all specified (D20–D46).</p>
+<b>What changed since v1.0:</b> fee parts are percentages of the principal at the basis rate and never compound (NPL, 11 October); a target-out quote applies the fee as a markup on the target (NPL's sheets); the rate basis is market or agent_rate with the partner's cost inside its rate or stated separately; tiers, the customer-facing figures, the rounding menu, cash rounding, same-currency pairs, the markup-share base, rebates, the four variance kinds, the forex true-up on invoice instalments, earnings retained and offset between partners, loss splits, and the reseller arithmetic are all specified (D20–D46, with the same-day amendment of D46: views over postings, the two-invoice links, FX_RESULT, the target-out rule).</p>
 <div class="rule"></div>
 
 <h2>1 · Conventions</h2>
@@ -204,8 +204,7 @@ share_i        = base × pct_i;   Σ pct_i ≤ 100 %;   accrued and posted with 
   npl_pays:      SHARE_PAYABLE to the party, off EARN_GROSS
   party_retains: the party holds the funds; NPL's remainder = base − Σ shares → SHARE_RECEIVABLE
 share_of_earnings: share = earnings × pct;   fixed_pct: priced into the sender rate
-rebate         = amount_in × pct                 (pct_of_amount; Jeton 0.4 %, Aquanow 0.3 %, Novi 0.3 %)
-               = partner_cost × pct              (pct_of_partner_fee), in PARTNER_REBATE_RULE.payout_currency
+rebate         = amount_in × pct                 (basis pct_of_amount, the only basis; Jeton 0.4 %, Aquanow 0.3 %, Novi 0.3 %), in PARTNER_REBATE_RULE.payout_currency
                accrued with the conversion → REBATE_RECEIVABLE / EARN_REBATE; the statement clears it, a difference trues up EARN_REBATE`)}
 ${list(W.share)}
 
@@ -229,14 +228,14 @@ neutral for the client: Σ client entitlement unchanged; NPL's EARN_GROSS for th
 ${list(W.offset)}
 
 <h2>14 · Invoices paid in instalments and the forex true-up (D24, D46)</h2>
-${F(`reserved_i     = obligation_discharged_i ÷ pricing_rate           (USDT set aside for that part of the invoice at the quote's rate)
-paid_i         = obligation_discharged_i ÷ discharge_rate_i
+${F(`reserved_i     = obligation_discharged_i × DEAL_GROUP.invoice_rate   (payout currency per invoice currency at pricing: the stored base)
+paid_i         = obligation_discharged_i × SETTLEMENT_LINE.discharge_rate_i   (same direction, at payment)
 true_up_i      = reserved_i − paid_i                              (+ gain, − loss) → VAR_FX_TIMING against NPL's pool
-INVOICE_BALANCE = amount − Σ obligation_discharged over confirmed lines`)}
+INVOICE_BALANCE = vendor invoice: amount − Σ obligation_discharged over released lines not returned;  resale invoice: amount − Σ DEAL_GROUP.invoice_amount collected`)}
 ${list(W.fx)}
 
 <h2>15 · The reseller project (NPL-GR)</h2>
-${F(`reseller_margin   = resale_invoice − vendor_invoice                          (EUR; fixed when the two invoices are posted)
+${F(`reseller_margin   = resale_invoice − its vendor_invoice (INVOICE.vendor_invoice_id)   (EUR; fixed when the two invoices are posted)
 target_out        = resale_invoice ÷ pricing_rate                            (USDT to deliver)
 amount_in         = target_out × (1 + remittance_markup) ÷ market_rate       (§6; cash-rounded if THB cash)
 remittance_margin = earnings (§8) + Σ true_up_i (§14) − fees                 (NPL's example: 2 % − 1 % Ali − 0.1 % forex = 0.9 %…1.2 %)
