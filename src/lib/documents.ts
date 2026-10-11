@@ -73,10 +73,10 @@ export const DOCS: Doc[] = [
   {
     slug: "calculation",
     title: "Calculation Specification",
-    version: "v5.8",
+    version: "v5.9",
     blurb: "Every calculation the engine performs, in order, with its rounding rule: fee parts on the principal, target-out quotes, tiers, rounding, shares and rebates, the four variance kinds, invoice instalments, earnings offsets and the reseller arithmetic, with acceptance vectors checked against NPL's own figures.",
     audience: "client",
-    files: { html: "NPLify-Calculation-Specification-v5.8.html", pdf: "NPLify-Calculation-Specification-v5.8.pdf", json: "calc-vectors.json" },
+    files: { html: "NPLify-Calculation-Specification-v5.9.html", pdf: "NPLify-Calculation-Specification-v5.9.pdf", json: "calc-vectors.json" },
     group: "design",
   },
   {

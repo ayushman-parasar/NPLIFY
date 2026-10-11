@@ -37,5 +37,5 @@ Companion
 ## Not done, deliberately
 
 - No new worked transactions for the unfunded make-good (MAKEGOOD / LOSS_PAYABLE), a settlement-side loss or a VAR_FX_TIMING loss; they stay prose-only (the check reports the two purposes without a worked line as information). Adding them is design work, not a correction.
-- The Calculation Specification stays at v5.8.
+- The Calculation Specification was regenerated as v5.9 later the same night: no formula change; the status note and the loss-split line (one LOSS_RECOVERY per share) are the only text differences, and the acceptance vectors are unchanged (16 of 17 of NPL's figures match; the one that differs is the sheet's receiver line, as before).
 - App side: the document registry, the knowledge-base preamble, the README and the standalone map now say v5.9; the Calculation Specification entry stays v5.8.
