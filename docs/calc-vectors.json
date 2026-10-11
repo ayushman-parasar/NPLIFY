@@ -197,7 +197,7 @@
    "computed": 25547.87,
    "shown": 25550,
    "ok": false,
-   "note": "NPL's sheet applies 0.60 % to the EUR 25,704 (25,550); on the principal it is 25,547.88 — a 2 EUR difference NPL is asked to confirm (see §3)"
+   "note": "NPL's sheet applies 0.60 % to the EUR 25,704 (25,550); on the principal, the confirmed rule, it is 25,547.88 — the sheet's line is the one to correct (see §3)"
   },
   {
    "name": "Evo selected senders: EUR 50,000 target, market 1 ÷ 0.8652 USDT per EUR, sender pays 1.00 %",

@@ -24,7 +24,7 @@ const add = (name, inputs, computed, shown, note = "") => NPL.push({ name, input
 // 1. Evo USDT → EUR, 1.4 % sender on market, fixed_in (sender side)
 { const Rm = 0.888977323, a = 29325, s = 0.014; const Rs = Rm * (1 - s); add("Evo sender: 29,325 USDT at market 0.888977323, sender pays 1.40 %", "fixed_in; sender rate = market × (1 − 1.40 %) = " + Rs.toFixed(12), rdN(a * Rs, 2), 25704, "NPL's sheet prints the sender rate 0.876531640478 and EUR 25,704 (rounded to the unit)"); }
 // 1b. the receiver's part on the principal (NPL's sheet compounds it on the EUR: 25,704 − 0.6 % = 25,550)
-{ const Rm = 0.888977323, a = 29325; add("Evo receiver: the same deal, receiver pays 0.60 %", "fee parts on the principal: 29,325 × 0.888977323 × (1 − 1.40 % − 0.60 %)", rdN(a * Rm * (1 - 0.02), 2), 25550, "NPL's sheet applies 0.60 % to the EUR 25,704 (25,550); on the principal it is 25,547.88 — a 2 EUR difference NPL is asked to confirm (see §3)"); }
+{ const Rm = 0.888977323, a = 29325; add("Evo receiver: the same deal, receiver pays 0.60 %", "fee parts on the principal: 29,325 × 0.888977323 × (1 − 1.40 % − 0.60 %)", rdN(a * Rm * (1 - 0.02), 2), 25550, "NPL's sheet applies 0.60 % to the EUR 25,704 (25,550); on the principal, the confirmed rule, it is 25,547.88 — the sheet's line is the one to correct (see §3)"); }
 // 2. Evo selected senders, EUR → USDT quoted in_per_out, target 50,000 EUR, 1 % markup
 { const Rin = 1 / 0.8652, t = 50000, s = 0.01; add("Evo selected senders: EUR 50,000 target, market 1 ÷ 0.8652 USDT per EUR, sender pays 1.00 %", "target_out; amount_in = target × (1 + 1.00 %) × market in_per_out = 50,000 × 1.01 × " + Rin.toFixed(12), rdN(t * (1 + s) * Rin, 0), 58368, "NPL prints the final rate 1.16736014794267 = market × 1.01"); }
 // 3. BF-Raeen via Jeton: 200,000 USDT, 1 % on market
@@ -141,7 +141,7 @@ sender_rate        = basis_rate × (1 − sender_pays_pct)                     (
 gross_out          = amount_in × sender_rate              = principal − fee_sender_part
 client_net         = gross_out − fee_receiver_part        = principal × (1 − sender_pays_pct − receiver_pays_pct)`)}
 ${list(W.fixedIn)}
-<div class="box"><b>For NPL to confirm.</b> NPL's fee sheet for Evo prints the receiver side as "EUR 25,704 − 0.6 % = 25,550", which applies the receiver's part to the gross out rather than to the principal; on the principal it is 25,547.88. The difference is 0.6 % × 1.4 % of the principal (about 0.008 %). This document follows NPL's statement of 11 October (both parts on the principal); if the sheet's convention is the intended one, only this formula changes.</div>
+<div class="box"><b>Confirmed rule (NPL, 11 October).</b> Both parts are on the principal. NPL's fee sheet for Evo prints the receiver side as "EUR 25,704 − 0.6 % = 25,550", which takes the receiver's part from the gross out; on the principal it is 25,547.88, a difference of 0.6 % × 1.4 % of the principal (about 0.008 %). The sheet's receiver line is to be brought in line with the rule; the engine follows the rule.</div>
 
 <h2>4 · Fixed and variable fee modes; the minimum-margin check</h2>
 <p>In <b>fixed</b> mode ${code("pct")} is applied as above. In <b>variable</b> mode the fee is whatever leaves NPL its minimum margin after the partner's cost, within a floor and a cap: this is the check that decides whether 2 % is enough when the agent rate is high.</p>
@@ -263,9 +263,9 @@ ${LV.map(lvRow).join("")}
 <h2>19 · Acceptance vectors B — NPL's own figures, recomputed</h2>
 <p>Each row takes the inputs NPL's fee sheet shows, applies this document's formulas, and compares with the figure the sheet prints. "matches" means to the cent, or to the unit where the sheet rounds.</p>
 <table class="vec"><thead><tr><th>Case</th><th>Formula applied</th><th class="n">Computed</th><th class="n">NPL's sheet</th><th>Result</th><th>Note</th></tr></thead><tbody>
-${NPL.map((v) => `<tr><td>${esc(v.name)}</td><td>${esc(v.inputs)}</td><td class="n">${n(v.computed, Number.isInteger(v.shown) ? 0 : (String(v.shown).split(".")[1] || "").length)}</td><td class="n">${n(v.shown, Number.isInteger(v.shown) ? 0 : (String(v.shown).split(".")[1] || "").length)}</td><td>${v.ok ? '<span class="ok">matches</span>' : '<span class="chk">to confirm</span>'}</td><td>${esc(v.note)}</td></tr>`).join("")}
+${NPL.map((v) => `<tr><td>${esc(v.name)}</td><td>${esc(v.inputs)}</td><td class="n">${n(v.computed, Number.isInteger(v.shown) ? 0 : (String(v.shown).split(".")[1] || "").length)}</td><td class="n">${n(v.shown, Number.isInteger(v.shown) ? 0 : (String(v.shown).split(".")[1] || "").length)}</td><td>${v.ok ? '<span class="ok">matches</span>' : '<span class="chk">sheet differs</span>'}</td><td>${esc(v.note)}</td></tr>`).join("")}
 </tbody></table>
-<p class="small">${NPL.filter((v) => v.ok).length} of ${NPL.length} match; the one marked "to confirm" is the receiver-part convention of §3.</p>
+<p class="small">${NPL.filter((v) => v.ok).length} of ${NPL.length} match; the one marked "sheet differs" is the receiver line of NPL's sheet, which compounds the receiver's part on the gross out; the confirmed rule (§3) puts it on the principal.</p>
 </section>
 
 <h2 class="pb">20 · Acceptance</h2>
