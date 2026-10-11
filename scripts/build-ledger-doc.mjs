@@ -29,7 +29,7 @@ const PURPOSES = [
   ["CL", "COLLECTED", "asset", "<PARTNER>", "v5.2", "Client money received at this partner and not yet converted (in the collection currency). In a reseller project the same purpose exists under CO."],
   ["CL", "HELD", "asset", "OWN", "v5.2", "Client money in one of NPL's own wallets: an approved reroute, or a collection bridge waiting to be forwarded (D40). Zero otherwise (invariant 3)."],
   ["CL", "DUE", "asset", "<PARTNER>", "v5.2", "Converted client money resting at this partner, waiting to be settled: one account per project × partner × currency, the PROJECT_BALANCE."],
-  ["CL", "INTRANSIT", "asset", "<PARTNER> / OWN", "v5.2", "Client money released by this partner (or by a bridge wallet on a hop) and not yet confirmed by the receiver."],
+  ["CL", "INTRANSIT", "asset", "<PARTNER> / OWN", "retired", "Not used since v5.6 (NPL, 11 October): once money has left the partner it is out of NPL's hands, so the promise is discharged on release and re-raised only by a return or a short delivery. What is sent and not yet confirmed is read from SETTLEMENT_LINE.outcome, not from a jar."],
   ["CL", "SHORTFALL", "asset", "<RECEIVER>", "v5.2", "Client money delivered short to a receiver and still to be made good at the next settlement."],
   ["CL", "PAYABLE", "liability", "PROJECT", "v5.2", "What NPL must deliver to the project's receivers, in total per currency. The split by receiver group is the GROUP_ENTITLEMENT view, not an account."],
   ["CL", "CREDIT", "liability", "<SENDER>", "v5.2", "Owed back to a sender: an overpayment waiting to be refunded or applied to the next deal (SENDER_CREDIT)."],
@@ -68,6 +68,7 @@ class Ledger {
   tx(title, source, rows, note) {
     // rows: [account, side, amount, ccy, ownership, component, why]; a zero row is simply not posted
     rows = rows.filter((r) => units(r[2]) !== 0);
+    if (rows.length === 0 && !note) throw new Error(`empty transaction without a note: ${title}`);
     const sums = {}, ownerSums = {};
     for (const [acct, side, amt, ccy, owner] of rows) {
       if (amt <= 0) throw new Error(`non-positive amount in ${title}: ${acct} ${amt}`);
@@ -96,6 +97,7 @@ class Ledger {
       const word = { asset: "money", liability: "promise", income: "earned", expense: "cost" }[kind];
       return `<b>${side === "Dr" ? "IN" : "OUT"}</b> · ${word}`;   // debit = value goes TO this account, credit = value comes FROM it
     };
+    if (t.rows.length === 0) return `<div class="tx"><div class="txh"><b>${esc(t.title)}</b> <span class="src">source: ${esc(t.source)}</span></div><p class="txnote"><b>No posting.</b> ${t.note}</p></div>`;
     return `<div class="tx"><div class="txh"><b>${esc(t.title)}</b> <span class="src">source: ${esc(t.source)}</span></div>
 <table class="post"><colgroup><col style="width:22%"><col style="width:9%"><col style="width:9%"><col style="width:12.5%"><col style="width:5.5%"><col style="width:8.5%"><col style="width:9.5%"><col style="width:24%"></colgroup><thead><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th><th>In / Out</th><th>Ccy</th><th>Owner</th><th>Component</th><th>Why</th></tr></thead><tbody>
 ${t.rows.map(([a, s, amt, c, o, comp, why]) => `<tr><td class="mono">${esc(a).replace(/\./g, ".<wbr>")}</td><td class="n">${s === "Dr" ? fmt(amt, c) : ""}</td><td class="n">${s === "Cr" ? fmt(amt, c) : ""}</td><td class="io">${inOut(a, s)}</td><td>${c}</td><td>${o}</td><td>${comp}</td><td>${why}</td></tr>`).join("")}
@@ -114,7 +116,7 @@ ${list.map(([a, c, why]) => `<tr><td class="mono">${esc(a)}</td><td>${c}</td><td
 
 // ------------------------------------------------------------------ pricing (the Calculation Specification's formulas)
 // All rates are OUT units per 1 IN unit. s = sender_pays share, r = receiver_pays share, s + r = the fee pct.
-function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding = "truncate_unit", unit = 1 }) {
+function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding = "exact", unit = 1 }) {
   const rd = (x) => Math.round(x * 10 ** dp + 1e-9) / 10 ** dp;
   const Rb = basis === "market" ? Rm : Rp;                   // market or agent_rate basis
   const Rs = Rb * (1 - s);                                   // sender rate: embeds the sender's part
@@ -127,7 +129,7 @@ function price({ amountIn, Rm, Rp, basis, s, r, partnerFee = 0, dp = 2, rounding
   const actualOut = rd(grossConverted - partnerCost);
   const grossMargin = rd(grossConverted - clientNet);          // = partner cost + NPL earnings
   const earnings = rd(actualOut - clientNet);
-  const payable = rounding === "round_up_n" ? roundUpN(clientNet, unit) : trunc(clientNet);
+  const payable = rounding === "round_up_n" ? roundUpN(clientNet, unit) : rounding === "truncate_unit" ? trunc(clientNet) : clientNet;
   const residual = rd(clientNet - payable);                    // signed (D25): + dropped fraction stays client money, − added by rounding up is NPL's cost
   const inferredPartnerCost = partnerFee ? partnerCost : rd(amountIn * (Rm - Rp));
   return { Rb, Rs, grossOut, feeReceiver, clientNet, feeSender, grossConverted, partnerCost, actualOut, grossMargin, earnings, payable, residual, inferredPartnerCost };
@@ -142,7 +144,7 @@ const DJ = price({ amountIn: 10000, Rm: EX.Rm, Rp: EX.Rm, basis: "market", s: EX
 const THB_M = 32.60, THB_A = 32.27;
 const DT = price({ amountIn: 3000, Rm: THB_M, Rp: THB_A, basis: "market", s: EX.s, r: EX.r, rounding: "round_up_n", unit: 1000 });
 const D4 = price({ amountIn: 2000, Rm: 0.7800, Rp: 0.7722, basis: "market", s: EX.s, r: EX.r });
-const DS = price({ amountIn: 5000, Rm: 1, Rp: 1, basis: "market", s: EX.s, r: EX.r });          // same-currency pass-through
+const DS = price({ amountIn: 5000, Rm: 1, Rp: 1, basis: "market", s: 0.014, r: 0.014 });        // same-currency pass-through: Evo EUR → EUR fee 2.8 %, sender and receiver 50 / 50
 const DR = price({ amountIn: 10000, Rm: 0.9000, Rp: 0.9000, basis: "market", s: 0.04, r: 0, partnerFee: 0.008 }); // Raeen at Aquanow: 4 % sender_pays on market, partner 0.80 %
 
 const L = new Ledger();
@@ -157,8 +159,8 @@ L.tx("T1 · Collection of deal 1: 10,000 USDT arrive at Ali's USDT wallet endpoi
 L.tx(`T2 · Conversion of deal 1 at Ali (fee_in_rate): 10,000 USDT → ${fmt(D1.actualOut)} EUR at ${EX.Rp}`, "Conversion", [
   ["CL.PROJECT.USDT.PAYABLE", "Dr", 10000, USDT, CL, "principal", "the USDT obligation is discharged by the conversion"],
   ["CL.ALI.USDT.COLLECTED", "Cr", 10000, USDT, CL, "principal", "the USDT left the collected position"],
-  ["CL.ALI.EUR.DUE", "Dr", D1.payable, EUR, CL, "principal", "client net in whole euros, waiting to be settled"],
-  ["CL.ALI.EUR.DUE", "Dr", D1.residual, EUR, CL, "rounding", "the cents below one euro (amount_rounding truncate_unit) stay client money"],
+  ["CL.ALI.EUR.DUE", "Dr", D1.payable, EUR, CL, "principal", "client net, waiting to be settled (EUR pairs round exact: cents are paid out)"],
+  ["CL.ALI.EUR.DUE", "Dr", D1.residual, EUR, CL, "rounding", "a pair rounded to a unit would leave the dropped fraction here as client money"],
   ["CO.ALI.EUR.POOL", "Dr", D1.earnings, EUR, CO, "earnings", "NPL's margin, physically still at Ali (EARNINGS_RECEIVABLE)"],
   ["CL.PROJECT.EUR.PAYABLE", "Cr", D1.clientNet, EUR, CL, "principal", "owed to the receiver group, now in EUR"],
   ["CO.NONE.EUR.EARN_GROSS", "Cr", D1.earnings, EUR, CO, "earnings", "margin recognised: the client's claim shrinks from 10,000 USDT to its EUR entitlement, the difference is NPL's"],
@@ -168,7 +170,7 @@ L.tx("T3a · Same-currency collection at Ali: 5,000 EUR by bank transfer (as T1)
   ["CL.ALI.EUR.COLLECTED", "Dr", 5000, EUR, CL, "principal", ""],
   ["CL.PROJECT.EUR.PAYABLE", "Cr", 5000, EUR, CL, "principal", ""],
 ]);
-L.tx(`T3 · Same-currency pass-through (D33): the 5,000 EUR converted at rate 1 — fee ${pct(EX.s + EX.r)} captured, client net ${fmt(DS.clientNet)} EUR (the collection posted as in T1 and is not repeated)`, "Conversion", [
+L.tx(`T3 · Same-currency pass-through (D33): the 5,000 EUR converted at rate 1 — Evo's EUR → EUR fee ${pct(0.028)} (sender pays ${pct(0.014)}, receiver pays ${pct(0.014)}) captured, client net ${fmt(DS.clientNet)} EUR (the collection posted as in T1 and is not repeated)`, "Conversion", [
   ["CL.PROJECT.EUR.PAYABLE", "Dr", 5000, EUR, CL, "principal", "the obligation is re-stated at the sender's price"],
   ["CL.ALI.EUR.COLLECTED", "Cr", 5000, EUR, CL, "principal", ""],
   ["CL.ALI.EUR.DUE", "Dr", DS.payable, EUR, CL, "principal", "client net, available to settle"],
@@ -200,30 +202,25 @@ L.tx(`T6 · Conversion of deal 2 at Ali: 5,000 USDT → ${fmt(D2.actualOut)} EUR
 // ---- Pattern C: settlement, confirmation, bank fees, shortfall, round-up
 const dueTotal = r2(D1.payable + D1.residual + D2.payable + D2.residual + DS.clientNet);
 const dueWhole = trunc(dueTotal), dust = r2(dueTotal - dueWhole);
-const line1 = 8000, line2 = dueWhole - 8000;
-L.tx(`T7 · Settlement from Ali: ${fmt(dueWhole)} EUR in two lines (Entity X1 ${fmt(line1)}, Entity X2 ${fmt(line2)})`, "Settlement", [
-  ["CL.ALI.EUR.INTRANSIT", "Dr", line1, EUR, CL, "principal", "line 1 released by Ali"],
-  ["CL.ALI.EUR.INTRANSIT", "Dr", line2, EUR, CL, "principal", "line 2 released by Ali"],
-  ["CL.ALI.EUR.DUE", "Cr", dueWhole, EUR, CL, "principal", `whole euros leave DUE; ${fmt(dust)} EUR of rounding dust stays`],
-], `Settle to the residual (invariant 4): the client balance at Ali drops from ${fmt(dueTotal)} to ${fmt(dust)} EUR. Both lines pay entities of the same receiver and each names the leg it settles in deal_id, so no offset arises. The transaction posts when the partner releases the money, which for a bank rail is no earlier than execution_due_date (approval before the partner's cutoff → same day, after it → next business day; weekends and HOLIDAY rows skipped, D29, D34). Approval and release are two moments; only the release posts.`);
-L.tx(`T8 · Confirmation, line 1 full: Entity X1 received ${fmt(line1)} EUR`, "Confirmation", [
-  ["CL.PROJECT.EUR.PAYABLE", "Dr", line1, EUR, CL, "principal", "the obligation is discharged"],
-  ["CL.ALI.EUR.INTRANSIT", "Cr", line1, EUR, CL, "principal", "the money reached the receiver"],
-]);
+const line1 = 8000, line2 = r2(dueTotal - 8000);
+L.tx(`T7 · Settlement from Ali: ${fmt(dueTotal)} EUR released in two lines (Entity X1 ${fmt(line1)}, Entity X2 ${fmt(line2)}); the promise is discharged on release`, "Settlement", [
+  ["CL.PROJECT.EUR.PAYABLE", "Dr", dueTotal, EUR, CL, "principal", "once the money has left Ali it is no longer in NPL's hands, so NPL no longer owes it; a return or a short delivery re-raises the promise"],
+  ["CL.ALI.EUR.DUE", "Cr", dueTotal, EUR, CL, "principal", "both lines leave the client's balance at Ali; EUR bank transfers carry the cents (amount_rounding exact)"],
+], `The client balance at Ali drops to zero (invariant 4, settle to the residual: a pair rounded to a unit would leave only the rounding residual). Both lines pay entities of the same receiver and each names the leg it settles in deal_id, so no offset arises. The lines are now in state sent; what is sent and not yet confirmed is read from SETTLEMENT_LINE.outcome, not from a jar. The transaction posts when the partner releases the money, which for a bank rail is no earlier than execution_due_date (approval before the partner's cutoff → same day, after it → next business day; weekends and HOLIDAY rows skipped, D29, D34).`);
+L.tx(`T8 · Confirmation, line 1 full: Entity X1 received ${fmt(line1)} EUR`, "Confirmation", [], "No posting: the promise was discharged when the money left Ali (T7). The line's outcome becomes confirmed, and the control that every released line ends as confirmed, short or returned is read from the lines.");
 const bankFee = 50;
 L.tx(`T9 · Confirmation, line 2 short: Entity X2 received ${fmt(line2 - bankFee)} EUR, the bank took ${fmt(bankFee)} (treatment carry_forward)`, "Confirmation", [
-  ["CL.PROJECT.EUR.PAYABLE", "Dr", line2 - bankFee, EUR, CL, "principal", "delivered part"],
   ["CL.RECEIVER_X.EUR.SHORTFALL", "Dr", bankFee, EUR, CL, "bank_fee", "still owed to the receiver, topped up at the next settlement"],
-  ["CL.ALI.EUR.INTRANSIT", "Cr", line2, EUR, CL, "principal", "nothing is left in transit"],
-], "With treatment <i>waived</i> the second line would instead be <code>Dr CL.PROJECT.EUR.PAYABLE 50</code>: the client bears the fee and its claim falls by 50. With <i>absorbed</i> the fee is expected up front and funded as in T10. A fee <i>covered</i> by a FEE_DECISION (D41: Finance recommends, Management approves) posts exactly as absorbed.");
+  ["CL.PROJECT.EUR.PAYABLE", "Cr", bankFee, EUR, CL, "bank_fee", "the promise is re-raised for the part that did not arrive"],
+], "With treatment <i>waived</i> nothing posts: the client bears the fee and its claim stays discharged. With <i>absorbed</i> the fee is expected up front and funded as in T10. A fee <i>covered</i> by a FEE_DECISION (D41: Finance recommends, Management approves) posts exactly as absorbed.");
 L.tx("T10 · Shortfall top-up funded from NPL's pool at Ali (BANK_FEE_EVENT applied to the next settlement)", "BankFeeEvent", [
   ["CO.NONE.EUR.EXP_BANKFEE", "Dr", bankFee, EUR, CO, "bank_fee", "NPL bears the cost"],
   ["CO.ALI.EUR.POOL", "Cr", bankFee, EUR, CO, "bank_fee", "paid out of NPL's money resting at Ali"],
   ["CL.ALI.EUR.DUE", "Dr", bankFee, EUR, CL, "bank_fee", "the 50 EUR is client money again, in balance at Ali"],
   ["CL.RECEIVER_X.EUR.SHORTFALL", "Cr", bankFee, EUR, CL, "bank_fee", "the shortfall is cleared"],
-], "The 50 EUR now sits in DUE and goes out with the next settlement like any other balance. Company → client transfers like this one are the only way company money becomes client money (besides a loss make-good, Pattern L).");
+], "The 50 EUR now sits in DUE and goes out with the next settlement like any other balance. Company → client transfers like this one are the only way company money becomes client money (besides a loss make-good, Pattern L). <b>If NPL's EUR pool at Ali cannot cover the 50</b> (its earnings there may be in another currency, or already taken out), the posting is the same and the pool goes negative: Ali has fronted the 50 out of the one balance it holds. NPL squares it at the next conversion by having its own USDT converted along with the client's, posted as in T24a.");
 const snapSettled = L.snapshot();
-L.tx(`T11 · Conversion with round-up (D25): 3,000 USDT → ${fmt(DT.actualOut, THB)} THB at ${THB_A} (market ${THB_M}); client net ${fmt(DT.clientNet, THB)}, paid out as ${fmt(DT.payable, THB)} (round_up_n, unit 1,000)`, "Conversion", [
+L.tx(`T11 · Conversion for a cash payout with round-up (D25): 3,000 USDT → ${fmt(DT.actualOut, THB)} THB at ${THB_A} (market ${THB_M}); client net ${fmt(DT.clientNet, THB)}, handed over in cash as ${fmt(DT.payable, THB)} (cash_rounding round_up_n, unit 1,000)`, "Conversion", [
   ["CL.PROJECT.USDT.PAYABLE", "Dr", 3000, USDT, CL, "principal", "(collection of the 3,000 USDT assumed posted as T1)"],
   ["CL.ALI.USDT.COLLECTED", "Cr", 3000, USDT, CL, "principal", ""],
   ["CL.ALI.THB.DUE", "Dr", DT.clientNet, THB, CL, "principal", "client net as priced"],
@@ -232,7 +229,7 @@ L.tx(`T11 · Conversion with round-up (D25): 3,000 USDT → ${fmt(DT.actualOut, 
   ["CO.NONE.THB.EXP_ROUNDING", "Dr", -DT.residual, THB, CO, "rounding", "the cost of rounding up (rounding_residual is negative)"],
   ["CL.PROJECT.THB.PAYABLE", "Cr", DT.payable, THB, CL, "principal", "the obligation is the rounded payout"],
   ["CO.NONE.THB.EARN_GROSS", "Cr", DT.earnings, THB, CO, "earnings", "margin as priced"],
-], `The residual is signed: ${fmt(DT.residual, THB)} THB here, so NPL funds the round-up from its margin and the client's claim is the whole 97,000. With truncate_unit (T2) the sign is positive and the dust stays client money. Every rounding difference therefore has an owner (invariant 24).`);
+], `Rounding to the 1,000 applies to cash hand-overs only; a THB bank transfer goes out exact. The residual is signed: ${fmt(DT.residual, THB)} THB here, so NPL funds the round-up from its margin and the client's claim is the whole ${fmt(DT.payable, THB)}. With a truncating option the sign is positive and the dropped fraction stays client money. Every rounding difference therefore has an owner (invariant 24).`);
 
 // ---- Pattern D: reroute via own wallet; bridge hop
 const recover = 30;
@@ -249,7 +246,7 @@ L.tx(`T13 · Forward to Jeton with recover dues: 10,000 USDT of client money cre
 L.tx(`T14 · Conversion of deal 3 at Jeton (fee_on_market, ${pct(JET)}): 10,000 USDT → ${fmt(DJ.grossConverted)} EUR at market, Jeton keeps ${fmt(DJ.partnerCost)}`, "Conversion", [
   ["CL.PROJECT.USDT.PAYABLE", "Dr", 10000, USDT, CL, "principal", ""],
   ["CL.JETON.USDT.COLLECTED", "Cr", 10000, USDT, CL, "principal", ""],
-  ["CL.JETON.EUR.DUE", "Dr", DJ.payable, EUR, CL, "principal", "client net, whole euros"],
+  ["CL.JETON.EUR.DUE", "Dr", DJ.payable, EUR, CL, "principal", "client net"],
   ["CL.JETON.EUR.DUE", "Dr", DJ.residual, EUR, CL, "rounding", ""],
   ["CO.JETON.EUR.POOL", "Dr", DJ.earnings, EUR, CO, "earnings", "NPL's net margin resting at Jeton"],
   ["CO.NONE.EUR.EXP_PARTNER", "Dr", DJ.partnerCost, EUR, CO, "partner_cost", "Jeton's stated fee, deducted at transaction level"],
@@ -262,16 +259,13 @@ L.tx("T15 · Deal 4 (D40): the sender can only pay on ERC-20, which Ali does not
   ["CL.OWN.USDT.HELD", "Dr", 10000, USDT, CL, "principal", "client money on the bridge (OWN_WALLET.role collection_bridge), to be forwarded within custody_max_hours"],
   ["CL.PROJECT.USDT.PAYABLE", "Cr", 10000, USDT, CL, "principal", ""],
 ]);
-L.tx(`T16 · Hop: the bridge forwards 10,000 USDT to Ali on TRC-20 (a SETTLEMENT_LINE to the partner_transit receiver); network fee ${fmt(gas)} USDT paid by NPL when one applies`, "Settlement", [
-  ["CL.OWN.USDT.INTRANSIT", "Dr", 10000, USDT, CL, "principal", "left the bridge, not yet credited by Ali"],
-  ["CL.OWN.USDT.HELD", "Cr", 10000, USDT, CL, "principal", "custody ends when Ali credits (T17)"],
+L.tx("T16 · Hop sent: the bridge forwards 10,000 USDT to Ali on TRC-20 (a SETTLEMENT_LINE to the partner_transit receiver, state sent)", "Settlement", [], "No posting yet: a hop is not a delivery, so the promise stays and the money stays in the held jar until Ali credits it. The line carries deal_id (invariant 19) so the entitlement view keeps the leg's group.");
+L.tx(`T17 · Ali credits the hop: 10,000 USDT now sit at Ali as collected client money; network fee ${fmt(gas)} USDT paid by NPL when one applies`, "Confirmation", [
+  ["CL.ALI.USDT.COLLECTED", "Dr", 10000, USDT, CL, "principal", "the leg continues at its partner exactly as T1"],
+  ["CL.OWN.USDT.HELD", "Cr", 10000, USDT, CL, "principal", "custody ends"],
   ["CO.NONE.USDT.EXP_NETWORK", "Dr", gas, USDT, CO, "network_fee", "network fee of the hop, in USDT, NPL's cost (project network_fee_policy)"],
   ["CO.OWN.USDT.WALLET", "Cr", gas, USDT, CO, "network_fee", "paid from NPL's own USDT; when no network fee applies these two lines are absent"],
-], "The hop line carries deal_id (invariant 19) so the entitlement view keeps the leg's group; nothing is earned or charged to the client on a hop. A network fee may or may not apply; when it does it is stated in USDT, and when it does not the fee is zero and no line posts.");
-L.tx("T17 · Ali credits the hop: 10,000 USDT now sit at Ali as collected client money", "Confirmation", [
-  ["CL.ALI.USDT.COLLECTED", "Dr", 10000, USDT, CL, "principal", "the leg continues at its partner exactly as T1"],
-  ["CL.OWN.USDT.INTRANSIT", "Cr", 10000, USDT, CL, "principal", ""],
-]);
+], "Nothing is earned or charged to the client on a hop. A network fee may or may not apply; when it does it is stated in USDT, and when it does not the fee is zero and no line posts.");
 
 // ---- Pattern E: reversals and voids
 L.tx("T18 · Erroneous posting: a collection of 2,000 USDT was booked against the wrong deal (as posted)", "Collection", [
@@ -307,18 +301,26 @@ L.tx(`T22 · Conversion of deal 6 at Ali: 2,000 USDT → ${fmt(D4.actualOut)} GB
   ["CL.PROJECT.GBP.PAYABLE", "Cr", D4.clientNet, GBP, CL, "principal", ""],
   ["CO.NONE.GBP.EARN_GROSS", "Cr", D4.earnings, GBP, CO, "earnings", ""],
 ]);
-L.tx(`T23 · Settlement of deal 6: ${fmt(D4.payable)} GBP released to the receiver's bank (the line names deal 6 in deal_id)`, "Settlement", [
-  ["CL.ALI.GBP.INTRANSIT", "Dr", D4.payable, GBP, CL, "principal", ""],
+L.tx(`T23 · Settlement of deal 6: ${fmt(D4.payable)} GBP released to the receiver's bank (the line names deal 6 in deal_id); the promise is discharged on release`, "Settlement", [
+  ["CL.PROJECT.GBP.PAYABLE", "Dr", D4.payable, GBP, CL, "principal", "sent: NPL no longer owes it unless it comes back"],
   ["CL.ALI.GBP.DUE", "Cr", D4.payable, GBP, CL, "principal", ""],
 ]);
 const bounce = 15;
 L.tx(`T24 · The receiving bank rejects the transfer: ${fmt(D4.payable - bounce)} GBP come back to Ali, the bank kept ${fmt(bounce)} (SETTLEMENT_RETURN; line outcome = returned)`, "SettlementReturn", [
   ["CL.ALI.GBP.DUE", "Dr", D4.payable - bounce, GBP, CL, "principal", "back in the client balance at Ali"],
+  ["CL.PROJECT.GBP.PAYABLE", "Cr", D4.payable - bounce, GBP, CL, "principal", "the promise is re-raised: NPL owes it again"],
   ["CO.NONE.GBP.EXP_BANKFEE", "Dr", bounce, GBP, CO, "bank_fee", "bounce fee absorbed by NPL (treatment absorbed)"],
-  ["CL.ALI.GBP.INTRANSIT", "Cr", D4.payable, GBP, CL, "principal", "nothing is in transit any more"],
+  ["CO.ALI.GBP.POOL", "Cr", bounce, GBP, CO, "bank_fee", "funded from NPL's pool at Ali; if the GBP pool cannot cover it, it goes negative until T24a"],
   ["CL.ALI.GBP.DUE", "Dr", bounce, GBP, CL, "bank_fee", "NPL makes the client whole"],
-  ["CO.ALI.GBP.POOL", "Cr", bounce, GBP, CO, "bank_fee", "funded from NPL's pool at Ali"],
+  ["CL.PROJECT.GBP.PAYABLE", "Cr", bounce, GBP, CL, "bank_fee", "and the promise is whole again"],
 ], "The failed line is reversed before anything else happens (invariant 13), so the entitlement of the group deal 6 is attributed to is restored. The money can now stay in balance for a later payout or fund a return leg (T25).");
+const squareUsdt = r2(bounce / 0.7722);
+L.tx(`T24a · Squaring NPL's GBP pool at Ali: with the client's next USDT conversion Ali also converts ${fmt(squareUsdt)} USDT of NPL's own (its USDT pool there) into ${fmt(bounce, GBP)} GBP at 0.7722`, "Conversion", [
+  ["CO.NONE.USDT.FX_CLEARING", "Dr", squareUsdt, USDT, CO, "earnings", "NPL's USDT leave its pool at Ali to be converted"],
+  ["CO.ALI.USDT.POOL", "Cr", squareUsdt, USDT, CO, "earnings", "NPL's earnings kept in USDT at Ali (Pattern N) fund it"],
+  ["CO.ALI.GBP.POOL", "Dr", bounce, GBP, CO, "earnings", "NPL's GBP pool is back to where it was before the bounce"],
+  ["CO.NONE.GBP.FX_CLEARING", "Cr", bounce, GBP, CO, "earnings", "the GBP leg of NPL's own conversion"],
+], "NPL's own money converts at the partner's rate alongside the client's money; the partner sees one conversion. This is how a fee NPL absorbed in a currency where it had no pool is paid for: the pool went negative when the fee was funded, and the next conversion includes the equivalent in USDT. The clearing pair records that NPL turned USDT into GBP.");
 const Rret = 1.2850, retIn = D4.payable, retOut = r2(retIn * Rret);
 L.tx(`T25 · Return leg: ${fmt(retIn)} GBP converted back to ${fmt(retOut)} USDT at Ali (rate ${Rret}); markup waived by FEE_DECISION`, "Conversion", [
   ["CL.PROJECT.GBP.PAYABLE", "Dr", retIn, GBP, CL, "principal", "GBP obligation ends"],
@@ -328,7 +330,7 @@ L.tx(`T25 · Return leg: ${fmt(retIn)} GBP converted back to ${fmt(retOut)} USDT
 ], `NPL's margin from T22 (${fmt(D4.earnings)} GBP) stays in the pool: it was captured at the first conversion and is never at risk from a return. The round trip's rate loss falls on the client's funds. Had the FEE_DECISION applied a markup, part of the ${fmt(retOut)} USDT would have gone to CO.ALI.USDT.POOL and EARN_GROSS exactly as in T2. The return leg inherits its parent's group (D13); the payout to the sender's return receiver follows T23 and T8 with deal_id = the return leg (invariant 19).`);
 
 // ---- Pattern H: balance conversion
-const RsgdUsdt = 0.7400, bcOut = r2(5000 * RsgdUsdt), bcWhole = trunc(bcOut), bcDust = r2(bcOut - bcWhole);
+const RsgdUsdt = 0.7400, bcOut = r2(5000 * RsgdUsdt), bcWhole = bcOut, bcDust = 0;
 L.tx("T26 · Opening position: 5,000 SGD of converted client balance at Ali from earlier deals (summarised)", "Conversion", [
   ["CL.ALI.SGD.DUE", "Dr", 5000, SGD, CL, "principal", "balance built up by earlier SGD deals"],
   ["CL.PROJECT.SGD.PAYABLE", "Cr", 5000, SGD, CL, "principal", ""],
@@ -336,7 +338,7 @@ L.tx("T26 · Opening position: 5,000 SGD of converted client balance at Ali from
 L.tx(`T27 · Balance conversion at Ali: 5,000 SGD of client balance → ${fmt(bcOut)} USDT at ${RsgdUsdt}, no markup (serves Group B)`, "BalanceConversion", [
   ["CL.PROJECT.SGD.PAYABLE", "Dr", 5000, SGD, CL, "principal", "SGD obligation ends"],
   ["CL.ALI.SGD.DUE", "Cr", 5000, SGD, CL, "principal", "SGD balance leaves"],
-  ["CL.ALI.USDT.DUE", "Dr", bcWhole, USDT, CL, "principal", "USDT balance arrives, whole units"],
+  ["CL.ALI.USDT.DUE", "Dr", bcWhole, USDT, CL, "principal", "USDT balance arrives"],
   ["CL.ALI.USDT.DUE", "Dr", bcDust, USDT, CL, "rounding", ""],
   ["CL.PROJECT.USDT.PAYABLE", "Cr", bcOut, USDT, CL, "principal", "same obligation, new currency"],
 ], "No sender, receiver or collection: Finance requests, Management approves. ENTITLEMENT_REATTRIBUTION moves Group B's SGD entitlement into USDT; an excess over Group B's SGD entitlement is another group's flow and is booked as an approved offset. A banking-ready balance (USD, SGD) waits for conversion_due_date like a deal leg (D29); a markup, if any, is a FEE_DECISION and posts as in T2.");
@@ -424,7 +426,7 @@ L.tx(`T40 · Loss event (D32): the account is frozen before conversion and the $
   ["CO.OWN.USDT.WALLET", "Cr", walletPart, USDT, CO, "loss", "the rest is transferred from NPL's own wallet to Ali (partner_agreement_ref)"],
   ["CL.ALI.USDT.COLLECTED", "Cr", lossAmt, USDT, CL, "principal", "the client money that was lost"],
   ["CL.ALI.USDT.COLLECTED", "Dr", lossAmt, USDT, CL, "loss", "replaced by NPL's money: the deal proceeds, the collection part stays verified"],
-], "The client's claim (PAYABLE) is untouched and the deal converts and settles normally. When neither the pool nor an immediate transfer can fund the make-good, the unfunded part is posted as <code>Dr CL.PROJECT.USDT.MAKEGOOD / Cr CO.NONE.USDT.LOSS_PAYABLE</code> instead and the client balance at Ali is restored only when NPL's funds land there (then <code>Dr CL.ALI.USDT.COLLECTED / Cr CL.PROJECT.USDT.MAKEGOOD</code> and <code>Dr CO.NONE.USDT.LOSS_PAYABLE / Cr CO.OWN.USDT.WALLET</code>). A loss on the settlement side credits INTRANSIT instead of COLLECTED and restores DUE, from which a new settlement follows. A collection is moved to state reversed only when Management decides the deal is unwound instead; the make-good then becomes a refund to the sender.");
+], "A partial loss posts the same lines for the lost part only (LOSS_EVENT.amount ≤ the amount verified): if 4,000 of the 10,000 were lost, every line reads 4,000 and the other 6,000 convert normally. The client's claim (PAYABLE) is untouched and the deal converts and settles normally. When neither the pool nor an immediate transfer can fund the make-good, the unfunded part is posted as <code>Dr CL.PROJECT.USDT.MAKEGOOD / Cr CO.NONE.USDT.LOSS_PAYABLE</code> instead and the client balance at Ali is restored only when NPL's funds land there (then <code>Dr CL.ALI.USDT.COLLECTED / Cr CL.PROJECT.USDT.MAKEGOOD</code> and <code>Dr CO.NONE.USDT.LOSS_PAYABLE / Cr CO.OWN.USDT.WALLET</code>). A loss on the settlement side (money released and lost before the receiver had it) re-raises the promise and restores DUE from NPL's pool, from which a new settlement follows. A collection is moved to state reversed only when Management decides the deal is unwound instead; the make-good then becomes a refund to the sender.");
 const shares = { partner: 4000, sender: 2000, client: 1000, npl: 3000 };
 L.tx(`T41 · Management approves the split (approve_loss_split): partner ${fmt(shares.partner)}, sender ${fmt(shares.sender)}, client ${fmt(shares.client)}, NPL ${fmt(shares.npl)} USDT`, "LossEvent", [
   ["CO.ALI.USDT.LOSS_RECEIVABLE", "Dr", shares.partner, USDT, CO, "loss", "Ali's agreed share, now owed to NPL"],
@@ -449,13 +451,14 @@ const VENDOR_INV = 9000, RESALE_INV = 9450;                       // EUR
 const Rq = 0.8708, Rd2 = 0.87527;                                 // EUR per USDT at pricing and at the second instalment (NPL's figures, D24)
 const RmT = 1 / 32.50, RpT = 1 / (32.50 / 0.99);                  // USDT per THB: market and Ali (Ali's 1 % inside its rate)
 const targetOut = r2(RESALE_INV / Rq);                            // USDT the remittance side must deliver for the resale invoice
-const thbIn = r2(targetOut / (RmT * (1 - 0.02)));                 // amount_mode target_out, 2 % remittance markup on market (rate_basis market), bank transfer (no cash rounding)
+const thbExact = r2(targetOut / (RmT * (1 - 0.02)));              // amount_mode target_out, 2 % remittance markup on market (rate_basis market)
+const thbIn = roundUpN(thbExact, 1000);                            // collected as cash: rounded up to the 1,000 (cash_rounding round_up_n)
 const DM = price({ amountIn: thbIn, Rm: RmT, Rp: RpT, basis: "market", s: 0.02, r: 0 });
 const mktValue = r2(thbIn * RmT);
 const inst1Eur = 3000, inst2Eur = 6000, marginEur = RESALE_INV - VENDOR_INV;
 const paid1 = r2(inst1Eur / Rq), reserved1 = r2(inst1Eur / Rq);
 const paid2 = r2(inst2Eur / Rd2), reserved2 = r2(inst2Eur / Rq), fx2 = r2(reserved2 - paid2);   // positive = gain for NPL
-const reserved3 = r2(DM.clientNet - reserved1 - reserved2), paid3 = r2(marginEur * (1 / Rd2)), fx3 = r2(reserved3 - paid3);
+const reserved3 = r2(marginEur / Rq), surplus = r2(DM.clientNet - reserved1 - reserved2 - reserved3), paid3 = r2(marginEur / Rd2 + surplus), fx3 = r2(reserved3 - r2(marginEur / Rd2));
 const hop = r2(DM.clientNet - paid1);
 L.tx(`T44 · NPL-GR receives the vendor's invoice: ${fmt(VENDOR_INV)} EUR at NPL's preferential price (INVOICE kind vendor)`, "Invoice", [
   ["CO.NONE.EUR.RESELL_COST", "Dr", VENDOR_INV, EUR, CO, "resale", "NPL-GR's cost, in the invoice currency, when received"],
@@ -465,12 +468,12 @@ L.tx(`T45 · NPL-GR issues the resale invoice to its customer: ${fmt(RESALE_INV)
   ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", "Dr", RESALE_INV, EUR, CO, "resale", "owed by the customer"],
   ["CO.NONE.EUR.RESELL_REVENUE", "Cr", RESALE_INV, EUR, CO, "resale", "NPL-GR's revenue, in the invoice currency, when issued"],
 ], `RESELL_REVENUE − RESELL_COST = ${fmt(marginEur)} EUR, and no later posting touches either account. The deal group that collects this invoice names it (DEAL_GROUP.invoice_id = the resale invoice).`);
-L.tx(`T46 · The customer pays the resale invoice in THB by bank transfer to Ali: ${fmt(thbIn, THB)} THB = ${fmt(RESALE_INV)} EUR at the sender rate with the ${pct(0.02, 0)} remittance markup (amount_mode target_out)`, "Collection", [
+L.tx(`T46 · The customer pays the resale invoice in THB cash to Ali: ${fmt(thbExact, THB)} THB = ${fmt(RESALE_INV)} EUR at the sender rate with the ${pct(0.02, 0)} remittance markup, rounded up to ${fmt(thbIn, THB)} THB in cash (cash_rounding, unit 1,000)`, "Collection", [
   ["CL.ALI.THB.COLLECTED", "Dr", thbIn, THB, CL, "principal", "client money at Ali — the client of this remittance project is NPL-GR"],
   ["CL.PROJECT.THB.PAYABLE", "Cr", thbIn, THB, CL, "principal", "the remittance side owes it onward on NPL-GR's behalf"],
   ["CO.PROJECT.EUR.REMIT_CLAIM", "Dr", RESALE_INV, EUR, CO, "resale", "reseller books: the customer has paid, the remittance side now holds the value for NPL-GR"],
   ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", "Cr", RESALE_INV, EUR, CO, "resale", "the customer's debt is settled"],
-], "The remittance side posts exactly like any client project (T1): Evo's sender is a customer of NPL-GR's here, and NPL-GR is the client. The two EUR lines are the reseller books recording that the customer paid; each owner's lines balance in their own currency.");
+], "The remittance side posts exactly like any client project (T1): the sender is a customer of NPL-GR's here, and NPL-GR is the client. The cash is counted and verified by Ali (D30) and the deal's amount is the rounded cash amount; the small surplus over the invoice equivalent is NPL-GR's and goes out with the margin line (T51). The two EUR lines are the reseller books recording that the customer paid; each owner's lines balance in their own currency.");
 L.tx(`T47 · Conversion at Ali (fee_in_rate, markup on market): ${fmt(thbIn, THB)} THB → ${fmt(DM.actualOut)} USDT at ${(32.50 / 0.99).toFixed(2)} (market 32.50); client net ${fmt(DM.clientNet)} USDT (= ${fmt(RESALE_INV)} EUR at ${Rq}), NPL's earnings ${fmt(DM.earnings)} USDT`, "Conversion", [
   ["CL.PROJECT.THB.PAYABLE", "Dr", thbIn, THB, CL, "principal", ""],
   ["CL.ALI.THB.COLLECTED", "Cr", thbIn, THB, CL, "principal", ""],
@@ -479,25 +482,19 @@ L.tx(`T47 · Conversion at Ali (fee_in_rate, markup on market): ${fmt(thbIn, THB
   ["CL.PROJECT.USDT.PAYABLE", "Cr", DM.clientNet, USDT, CL, "principal", ""],
   ["CO.NONE.USDT.EARN_GROSS", "Cr", DM.earnings, USDT, CO, "earnings", `${pct(DM.earnings / mktValue)} of the market value: the 2 % markup less Ali's 1 % inside its rate`],
 ], `The markup is applied on the market rate because the price is built from the EUR invoice; Ali's agent rate is used for the THB → USDT conversion and only decides whether 2 % leaves enough: the fee structure's minimum margin is checked against the spread between market and agent rate (FEE_STRUCTURE mode variable, min_margin_pct, floor and cap), and when Ali's rate leaves less, the markup rises within the cap or Finance asks for a better rate. The markup pays for the remittance service and carries the rate risk of the instalments, so the ${fmt(marginEur)} EUR reseller revenue is never diluted. Had the customer paid in USDT, the pair would be USDT → USDT at rate 1 (D33) and the same lines would post in USDT.`);
-L.tx(`T48 · Instalment 1 paid by Ali: ${fmt(paid1)} USDT to the vendor, discharging ${fmt(inst1Eur)} EUR of the vendor invoice at discharge_rate ${Rq} (settlement and confirmation shown together)`, "Confirmation", [
-  ["CL.ALI.USDT.INTRANSIT", "Dr", paid1, USDT, CL, "principal", "released by Ali on NPL's instruction"],
+L.tx(`T48 · Instalment 1 paid by Ali: ${fmt(paid1)} USDT to the vendor, discharging ${fmt(inst1Eur)} EUR of the vendor invoice at discharge_rate ${Rq} (release; the vendor's confirmation posts nothing more)`, "Settlement", [
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid1, USDT, CL, "principal", "released by Ali on NPL's instruction: the promise is discharged"],
   ["CL.ALI.USDT.DUE", "Cr", paid1, USDT, CL, "principal", ""],
-  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid1, USDT, CL, "principal", "the vendor confirms: the obligation is discharged"],
-  ["CL.ALI.USDT.INTRANSIT", "Cr", paid1, USDT, CL, "principal", ""],
   ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", "Dr", inst1Eur, EUR, CO, "resale", "reseller books: the vendor is owed 3,000 EUR less (INVOICE_BALANCE 6,000)"],
   ["CO.PROJECT.EUR.REMIT_CLAIM", "Cr", inst1Eur, EUR, CO, "resale", "the remittance side holds 3,000 EUR less for NPL-GR"],
 ], `The line names the vendor invoice (SETTLEMENT_LINE.invoice_id, obligation_discharged ${fmt(inst1Eur)} EUR, discharge_rate ${Rq}). Paid on the pricing day, so the USDT reserved for these 3,000 EUR (${fmt(reserved1)}) equals the USDT paid: no forex line.`);
-L.tx(`T49 · Variant route: the remaining ${fmt(hop)} USDT of NPL-GR's balance hop from Ali to NPL's own desk (LT Sub at Aquanow; a SETTLEMENT_LINE to the partner_transit receiver; release and credit shown together)`, "Confirmation", [
-  ["CL.ALI.USDT.INTRANSIT", "Dr", hop, USDT, CL, "principal", "released by Ali"],
-  ["CL.ALI.USDT.DUE", "Cr", hop, USDT, CL, "principal", ""],
+L.tx(`T49 · Variant route: the remaining ${fmt(hop)} USDT of NPL-GR's balance hop from Ali to NPL's own desk (LT Sub at Aquanow; a SETTLEMENT_LINE to the partner_transit receiver, posted when the own desk credits)`, "Confirmation", [
   ["CL.OWNDESK.USDT.DUE", "Dr", hop, USDT, CL, "principal", "credited at the own desk: an ordinary partner-coded account with the own-desk configuration as holder (D23), reported by the custody view"],
-  ["CL.ALI.USDT.INTRANSIT", "Cr", hop, USDT, CL, "principal", ""],
+  ["CL.ALI.USDT.DUE", "Cr", hop, USDT, CL, "principal", "left Ali; a hop is not a delivery, so the promise is untouched"],
 ], "Whether Ali or the own desk pays the vendor depends on the vendor; the postings that follow are identical apart from the holder. Nothing is earned or charged on the hop; a network fee NPL bears posts as in T16.");
-L.tx(`T50 · Instalment 2 paid by the own desk four days later: ${fmt(paid2)} USDT discharge the remaining ${fmt(inst2Eur)} EUR at ${Rd2}; ${fmt(reserved2)} USDT had been reserved at ${Rq}, so ${fmt(fx2)} USDT are a forex gain for the remittance side`, "Confirmation", [
-  ["CL.OWNDESK.USDT.INTRANSIT", "Dr", paid2, USDT, CL, "principal", "released"],
+L.tx(`T50 · Instalment 2 paid by the own desk four days later: ${fmt(paid2)} USDT discharge the remaining ${fmt(inst2Eur)} EUR at ${Rd2}; ${fmt(reserved2)} USDT had been reserved at ${Rq}, so ${fmt(fx2)} USDT are a forex gain for the remittance side`, "Settlement", [
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid2, USDT, CL, "principal", "released: the promise is discharged"],
   ["CL.OWNDESK.USDT.DUE", "Cr", paid2, USDT, CL, "principal", ""],
-  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid2, USDT, CL, "principal", "the vendor confirms"],
-  ["CL.OWNDESK.USDT.INTRANSIT", "Cr", paid2, USDT, CL, "principal", ""],
   ["CL.PROJECT.USDT.PAYABLE", "Dr", fx2, USDT, CL, "fx_timing", "forex true-up: the 6,000 EUR cost fewer USDT than reserved, the surplus is not NPL-GR's"],
   ["CL.OWNDESK.USDT.DUE", "Cr", fx2, USDT, CL, "fx_timing", "it leaves NPL-GR's balance"],
   ["CO.OWNDESK.USDT.POOL", "Dr", fx2, USDT, CO, "fx_timing", "and becomes NPL's, resting at the own desk"],
@@ -505,11 +502,9 @@ L.tx(`T50 · Instalment 2 paid by the own desk four days later: ${fmt(paid2)} US
   ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", "Dr", inst2Eur, EUR, CO, "resale", "reseller books: the vendor invoice is settled (INVOICE_BALANCE 0)"],
   ["CO.PROJECT.EUR.REMIT_CLAIM", "Cr", inst2Eur, EUR, CO, "resale", ""],
 ], "The forex true-up is the one place where the remittance side's USDT obligation to NPL-GR is re-measured: NPL-GR is entitled to EUR value, the markup absorbs the rate movement either way (NPL's 1.3 % less a 0.1 % forex loss gives 1.2 % in NPL's own example), and the reseller books never see it.");
-L.tx(`T51 · The margin line: ${fmt(marginEur)} EUR of the resale invoice are paid to NPL-GR's own wallet, ${fmt(paid3)} USDT at ${Rd2}; ${fmt(reserved3)} USDT had been reserved, ${fmt(fx3)} USDT forex gain`, "Confirmation", [
-  ["CL.OWNDESK.USDT.INTRANSIT", "Dr", paid3, USDT, CL, "principal", "released to NPL-GR's wallet (a receiver of the project)"],
+L.tx(`T51 · The margin line: ${fmt(marginEur)} EUR of the resale invoice (${fmt(r2(marginEur / Rd2))} USDT at ${Rd2}) plus the ${fmt(surplus)} USDT cash-rounding surplus are paid to NPL-GR's own wallet, ${fmt(paid3)} USDT in all; ${fmt(reserved3)} USDT had been reserved for the margin, ${fmt(fx3)} USDT forex gain`, "Settlement", [
+  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid3, USDT, CL, "principal", "released to NPL-GR's wallet (a receiver of the project): the resale invoice is fully discharged (INVOICE_BALANCE 0) and the balance is empty"],
   ["CL.OWNDESK.USDT.DUE", "Cr", paid3, USDT, CL, "principal", ""],
-  ["CL.PROJECT.USDT.PAYABLE", "Dr", paid3, USDT, CL, "principal", "confirmed: the resale invoice is fully discharged (INVOICE_BALANCE 0)"],
-  ["CL.OWNDESK.USDT.INTRANSIT", "Cr", paid3, USDT, CL, "principal", ""],
   ["CL.PROJECT.USDT.PAYABLE", "Dr", fx3, USDT, CL, "fx_timing", "forex true-up on the margin line"],
   ["CL.OWNDESK.USDT.DUE", "Cr", fx3, USDT, CL, "fx_timing", ""],
   ["CO.OWNDESK.USDT.POOL", "Dr", fx3, USDT, CO, "fx_timing", ""],
@@ -518,7 +513,7 @@ L.tx(`T51 · The margin line: ${fmt(marginEur)} EUR of the resale invoice are pa
   ["CO.NONE.USDT.FX_CLEARING", "Cr", paid3, USDT, CO, "resale", "the USDT leg of a EUR claim settled in USDT"],
   ["CO.NONE.EUR.FX_CLEARING", "Dr", marginEur, EUR, CO, "resale", "the EUR leg"],
   ["CO.PROJECT.EUR.REMIT_CLAIM", "Cr", marginEur, EUR, CO, "resale", "nothing is held for NPL-GR any more"],
-], `NPL-GR may instead leave its margin in the project balance to fund the next vendor payment (settlement_policy hold_allowed): then nothing in T51 posts, REMIT_CLAIM keeps ${fmt(marginEur)} EUR, the remittance side keeps the matching USDT payable, and the forex true-up of the margin waits for the line that pays it. FX_CLEARING carries ${fmt(marginEur)} EUR against ${fmt(paid3)} USDT, NPL's own currency position, valued through REPORTING_VALUE and closed when NPL converts or reports.`);
+], `NPL-GR may instead leave its margin in the project balance to fund the next vendor payment (settlement_policy hold_allowed): then nothing in T51 posts, REMIT_CLAIM keeps ${fmt(marginEur)} EUR, the remittance side keeps the matching USDT payable, and the forex true-up of the margin waits for the line that pays it. The ${fmt(surplus)} USDT surplus comes from the cash having been rounded up at collection; it is NPL-GR's, has no EUR invoice behind it, and simply arrives in the wallet. FX_CLEARING carries ${fmt(marginEur)} EUR against ${fmt(paid3)} USDT, NPL's own currency position, valued through REPORTING_VALUE and closed when NPL converts or reports.`);
 const snapReseller = L.snapshot();
 const remitMargin = r2(DM.earnings + fx2 + fx3);
 
@@ -577,15 +572,16 @@ const snapAfterN = L.snapshot();
 
 // ------------------------------------------------------------------ identities
 const identities = [
-  ["Client assets = client liabilities, per currency", "Σ COLLECTED + Σ HELD + Σ DUE + Σ INTRANSIT + Σ SHORTFALL + MAKEGOOD = PAYABLE + Σ CREDIT. Holds after every transaction because every transaction balances per owner as well as per currency."],
+  ["Client assets = client liabilities, per currency", "Σ COLLECTED + Σ HELD + Σ DUE + Σ SHORTFALL + MAKEGOOD = PAYABLE + Σ CREDIT. Holds after every transaction because every transaction balances per owner as well as per currency. Money released to a receiver is in neither side: it is out of NPL's hands and the promise for it is discharged."],
   ["PAYABLE = Σ GROUP_ENTITLEMENT", "Per project and currency (invariant 7). Every payout line resolves to one group — the paid receiver's for a counterparty, the paying leg's via deal_id otherwise — so the identity is checked line by line (invariant 19)."],
   ["PROJECT_BALANCE(partner) = CL.<PARTNER>.<CCY>.DUE", "The view and the account agree; the pending converted value of a locked, not yet converted leg (D29) is shown by the view and is not posted."],
   ["Pool per partner = the partner's statement", "Per partner and currency, client balances plus NPL's pool equal the one balance the partner reports; a partner never sees the split. Σ EARNINGS_RECEIVABLE outstanding ≤ POOL, and an EARNINGS_OFFSET recovers receivables at one partner into a pool at another."],
   ["Rebates and shares agree to statements", "Σ REBATE_RECEIVABLE = Σ PARTNER_REBATE_ACCRUAL expected − received, per partner; Σ SHARE_RECEIVABLE / SHARE_PAYABLE = Σ MARKUP_SHARE_ACCRUAL not yet settled, per party."],
   ["Loss accounting closes", "Per LOSS_EVENT: EXP_LOSS net of recoveries = npl_share once every share is settled; Σ LOSS_RECEIVABLE = agreed shares not yet received."],
-  ["Exposure ≤ ceiling", "Σ DUE + Σ INTRANSIT at a partner is within the project's exposure ceiling; Σ PROJECT_BALANCE across a client's projects, as REPORTING_VALUE, within CLIENT.exposure_ceiling (invariant 35)."],
+  ["Exposure ≤ ceiling", "Σ DUE at a partner, plus its lines sent and not yet confirmed, is within the project's exposure ceiling; Σ PROJECT_BALANCE across a client's projects, as REPORTING_VALUE, within CLIENT.exposure_ceiling (invariant 35)."],
   ["Own wallets hold client money only in three cases", "CL.OWN.<CCY>.HELD is zero except for rows the custody view can name: an open reroute, a bridge collection within custody_max_hours, an own-desk leg (invariant 3)."],
-  ["Each confirmation = its released amount", "Confirmed + shortfall + fees booked = the amount released on the line."],
+  ["Every released line is accounted for", "Per SETTLEMENT_LINE: confirmed + shortfall re-raised + returned + fees booked = the amount released; a line never stays in state sent beyond the rail's expected time without an exception."],
+  ["A pool may be negative only between a top-up and the next conversion", "CO.<PARTNER>.<CCY>.POOL below zero means the partner fronted a fee NPL absorbed in a currency where NPL held nothing; it is squared at the next conversion by converting NPL's own USDT alongside the client's (T24a)."],
   ["Reseller revenue is intact", "Per resale invoice: RESELL_REVENUE − RESELL_COST is set when the two invoices are posted and no later transaction touches either account. Σ VENDOR_PAYABLE = Σ INVOICE_BALANCE of vendor invoices; Σ RESALE_RECEIVABLE = resale invoices not yet paid; REMIT_CLAIM = the resale invoices paid by customers and not yet discharged by payout lines, in EUR."],
   ["Remittance margin per deal", "EARN_GROSS − EXP_PARTNER ± VAR_FX_TIMING − fees on the deal's lines, in the converted currency; the forex result of the instalments lands here and nowhere else."],
   ["Every figure shown is a sum", "No screen stores a balance; all are sums over postings or deals (invariant 10). A converted total is a REPORTING_VALUE: an estimate at the latest platform-pair rate, never posted (invariant 38)."],
@@ -646,13 +642,14 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <li><b>Earnings may be kept in the collection currency and offset between partners.</b> A conversion may keep the deal's margin unconverted (residual_in) and an approved EARNINGS_OFFSET may swap NPL's margin at one partner for the same value of unconverted client money at another, at a stated rate; the client's entitlement never changes, and NPL's currency swap is recorded in FX_CLEARING (Pattern N).</li>
 <li><b>Append-only.</b> A correction is a reversing transaction that names what it reverses (${code("reversal_of_id")}) followed by the correct posting (invariant 2).</li>
 <li><b>Amounts stay in their own currency.</b> A converted total (volumes, earnings, balances, custody in the reporting currency) is a REPORTING_VALUE: computed at read time from the latest platform-pair market rate, carrying that rate and its time, flagged when stale, and never posted, quoted or settled (invariant 38).</li>
-<li><b>Rounding has an owner.</b> A dropped fraction stays client money in the balance; an amount added by rounding up is NPL's cost in EXP_ROUNDING (invariant 24).</li>
+<li><b>Sent is discharged.</b> A settlement line discharges the promise when the partner releases the money; the receiver's confirmation posts nothing, a short delivery re-raises the promise for the missing part, and a return re-raises it for what came back. What is sent and unconfirmed is a line state, not a jar.</li>
+<li><b>Rounding has an owner.</b> Bank transfers go out exact, cents included (amount_rounding exact); rounding to a unit applies where the pair says so, in practice to cash hand-overs. A dropped fraction stays client money in the balance; an amount added by rounding up is NPL's cost in EXP_ROUNDING (invariant 24).</li>
 </ol>
 
 <h2>3 · Chart of accounts</h2>
 <p>Account codes read <code>OWNER.HOLDER.CURRENCY.PURPOSE</code>. The owner is <code>CL</code> for client funds or <code>CO</code> for company. The holder says where the money is or whom it concerns: a partner code such as <code>ALI</code>, <code>JETON</code> or <code>AQN</code> (a ${code("PARTNER_CONFIG")}, so always within one project), <code>OWNDESK</code> for the own-desk configuration of the reseller project, <code>OWN</code> for NPL's own wallets, a receiver, a sender, a markup-share party, <code>PROJECT</code> for the project as a whole, or <code>NONE</code> for income, expense and clearing accounts. One account exists per combination actually used; accounts are created on first posting (${code("LEDGER_ACCOUNT")}: code, ownership, holder_type, holder_id, currency, purpose, kind). Purposes marked <span class="new">proposed (D46)</span> are asked of the ERD by this draft and listed in Section 24.</p>
 <table><thead><tr><th>Code</th><th>Kind</th><th>Since</th><th>What the balance means</th></tr></thead><tbody>
-${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${esc(p)}</td><td>${k}</td><td>${since === "D46" ? '<span class="new">proposed (D46)</span>' : since}</td><td>${esc(w)}</td></tr>`).join("")}
+${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${esc(p)}</td><td>${k}</td><td>${since === "D46" ? '<span class="new">proposed (D46)</span>' : since === "retired" ? '<span class="new">retired (D46)</span>' : since}</td><td>${esc(w)}</td></tr>`).join("")}
 </tbody></table>
 <p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. A variance account with a credit balance is a gain. <code>ADVANCE</code> does not exist because NPL never advances money to a receiver (invariant 16). The former single <code>VARIANCE</code> purpose is replaced by the four VAR_ accounts; the former referral payable is <code>SHARE_PAYABLE</code> (D37).</p>
 
@@ -683,7 +680,7 @@ ${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.
 <tr><td>Client net (entitlement)</td><td class="n">${fmt(D1.clientNet)} EUR</td><td>gross out − receiver part</td></tr>
 <tr><td>Converted at Ali</td><td class="n">${fmt(D1.actualOut)} EUR</td><td>10,000 × ${EX.Rp} (Ali's own rate; its spread against market is ${fmt(D1.inferredPartnerCost)} EUR)</td></tr>
 <tr><td>NPL earnings</td><td class="n">${fmt(D1.earnings)} EUR</td><td>converted − client net = fee parts ${fmt(r2(D1.feeSender + D1.feeReceiver))} (sender ${fmt(D1.feeSender)} + receiver ${fmt(D1.feeReceiver)}) − Ali's spread ${fmt(D1.inferredPartnerCost)}</td></tr>
-<tr><td>Paid out in whole euros / dust</td><td class="n">${fmt(D1.payable)} / ${fmt(D1.residual)} EUR</td><td>amount_rounding truncate_unit; the dust stays client money</td></tr>
+<tr><td>Paid out</td><td class="n">${fmt(D1.payable)} EUR</td><td>amount_rounding exact: a EUR bank transfer carries the cents; only cash hand-overs round to a unit</td></tr>
 </tbody></table>
 
 <h2 class="pb">6 · Pattern A — direct collection, conversion and accumulation</h2>
@@ -699,7 +696,7 @@ ${L.html("T4")}${L.html("T5")}${L.html("T6")}
 <h2>8 · Pattern C — settlement, confirmation, bank fees, shortfalls, rounding</h2>
 <p>A settlement drains a partner's holding into one or many lines; each line is confirmed by its receiver in full or short. The bank-fee treatment of the project or of a FEE_DECISION decides who bears a fee the bank took.</p>
 ${L.html("T7")}${L.html("T8")}${L.html("T9")}${L.html("T10")}
-${L.balancesHtml([["CL.ALI.EUR.DUE", EUR, "dust plus the topped-up 50 EUR, out with the next settlement"], ["CL.ALI.EUR.INTRANSIT", EUR, "nothing in transit"], ["CL.PROJECT.EUR.PAYABLE", EUR, "the 50 EUR still owed to Receiver X plus the dust"], ["CL.RECEIVER_X.EUR.SHORTFALL", EUR, "cleared"], ["CO.ALI.EUR.POOL", EUR, "NPL's margin at Ali after funding the top-up"], ["CO.NONE.EUR.EXP_BANKFEE", EUR, "bank fees NPL bore"]], "Balances after settlement and confirmation", snapSettled)}
+${L.balancesHtml([["CL.ALI.EUR.DUE", EUR, "the topped-up 50 EUR, out with the next settlement"], ["CL.PROJECT.EUR.PAYABLE", EUR, "the 50 EUR still owed to Receiver X"], ["CL.RECEIVER_X.EUR.SHORTFALL", EUR, "cleared"], ["CO.ALI.EUR.POOL", EUR, "NPL's margin at Ali after funding the top-up"], ["CO.NONE.EUR.EXP_BANKFEE", EUR, "bank fees NPL bore"]], "Balances after settlement and confirmation", snapSettled)}
 ${L.html("T11")}
 
 <h2>9 · Pattern D — contingency routes and the bridge wallet</h2>
@@ -712,7 +709,7 @@ ${L.html("T15")}${L.html("T16")}${L.html("T17")}
 ${L.html("T18")}${L.html("T19")}${L.html("T20")}${L.html("T21")}
 
 <h2>11 · Pattern F — rejected payout and return leg</h2>
-${L.html("T22a")}${L.html("T22")}${L.html("T23")}${L.html("T24")}${L.html("T25")}
+${L.html("T22a")}${L.html("T22")}${L.html("T23")}${L.html("T24")}${L.html("T24a")}${L.html("T25")}
 
 <h2>12 · Pattern G — inter-group offsets</h2>
 <p>An offset is not an account. It arises only when a counterparty receiver of one group is paid from a leg attributed to another group (invariant 17): the settlement posts exactly as T7 and T8, and the ${code("OFFSET")} view, reading ${code("GROUP_ENTITLEMENT")}, shows one group owed and the other holding its flow. A project with a single group never has an offset; a cross-group payout needs Management approval (cross_group_payout) and tighter aging. No ledger line differs, which is the point: the money and the claim are right, only the attribution needs watching.</p>
@@ -741,8 +738,8 @@ ${L.balancesHtml([["CO.NONE.USDT.EXP_LOSS", USDT, "NPL's own share of the loss, 
 <p>NPL-GR, a business unit of NPL, buys from vendors at a preferential price and sells to its customers at a retail price (D23, D24). There are two invoices per deal: the vendor's invoice to NPL-GR, and NPL-GR's resale invoice to its customer, both in the vendor's currency. The difference is the game reseller revenue, and it must stay intact whatever happens afterwards. The customer pays the resale invoice through the remittance service with NPL's remittance markup on top; that markup pays for the remittance work, covers the partner's cost and absorbs the forex result of paying the vendor in instalments at different days' rates, and what is left is remittance earnings (NPL, 10 October).</p>
 <p>The ledger therefore keeps three things apart. <b>The reseller books</b> are two postings per deal in the invoice currency, one per invoice, plus a claim on the remittance side. <b>The remittance deal</b> posts exactly like any client project, with NPL-GR as the client (holder PROJECT = the NPL-GR remittance project) and the resale invoice as the obligation the deal group pays. <b>The forex result</b> of each discharging line is a true-up between NPL-GR's USDT balance and NPL's pool, booked to VAR_FX_TIMING. The example uses NPL's own figures: a 9,000 EUR vendor invoice resold at 9,450 EUR, collected in THB, paid to the vendor in USDT in two instalments at ${Rq} and ${Rd2}. Both payout routes are shown: Ali pays the first instalment; the balance hops to NPL's own desk, which pays the second and the margin line.</p>
 ${L.html("T44")}${L.html("T45")}${L.html("T46")}${L.html("T47")}${L.html("T48")}${L.html("T49")}${L.html("T50")}${L.html("T51")}
-${L.balancesHtml([["CO.NONE.EUR.RESELL_REVENUE", EUR, "resale invoice, untouched since issue"], ["CO.NONE.EUR.RESELL_COST", EUR, "vendor invoice, untouched since receipt"], ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", EUR, "vendor settled"], ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", EUR, "customer paid"], ["CO.PROJECT.EUR.REMIT_CLAIM", EUR, "nothing held for NPL-GR"], ["CL.OWNDESK.USDT.DUE", USDT, "NPL-GR's balance at the own desk, fully paid out"], ["CO.OWNDESK.USDT.POOL", USDT, "the forex gains, resting at the own desk (the 143.66 USDT of earnings rest in NPL's pool at Ali, which this example's loss pattern also touched)"], ["CO.NONE.USDT.EARN_GROSS", USDT, "remittance earnings on the deal"], ["CO.NONE.USDT.VAR_FX_TIMING", USDT, "forex result (negative = gain)"], ["CO.NONE.EUR.FX_CLEARING", EUR, "NPL-GR's margin claim settled in USDT: the EUR leg"], ["CO.NONE.USDT.FX_CLEARING", USDT, "the USDT leg (negative = credit)"]], "Balances after the resale invoice is fully discharged", snapReseller)}
-<p>Reseller revenue ${fmt(marginEur)} EUR, intact. Remittance margin on the deal ${fmt(remitMargin)} USDT = earnings ${fmt(DM.earnings)} + forex ${fmt(r2(fx2 + fx3))}, which is ${pct(remitMargin / mktValue)} of the market value of the THB collected. Bank fees on a vendor payment, a bounced vendor transfer, a loss event and a rebate from Ali post exactly as in the other patterns, with NPL-GR as the client. A loss on NPL-GR's funds is made good like any client's (Pattern L) and the client share, if any, is NPL-GR's.</p>
+${L.balancesHtml([["CO.NONE.EUR.RESELL_REVENUE", EUR, "resale invoice, untouched since issue"], ["CO.NONE.EUR.RESELL_COST", EUR, "vendor invoice, untouched since receipt"], ["CO.VENDOR_V.EUR.VENDOR_PAYABLE", EUR, "vendor settled"], ["CO.CUSTOMER_C.EUR.RESALE_RECEIVABLE", EUR, "customer paid"], ["CO.PROJECT.EUR.REMIT_CLAIM", EUR, "nothing held for NPL-GR"], ["CL.OWNDESK.USDT.DUE", USDT, "NPL-GR's balance at the own desk, fully paid out"], ["CO.OWNDESK.USDT.POOL", USDT, "the forex gains, resting at the own desk (the remittance earnings rest in NPL's pool at Ali, which this example's loss and squaring patterns also touched)"], ["CO.NONE.USDT.EARN_GROSS", USDT, "remittance earnings on the deal"], ["CO.NONE.USDT.VAR_FX_TIMING", USDT, "forex result (negative = gain)"], ["CO.NONE.EUR.FX_CLEARING", EUR, "NPL-GR's margin claim settled in USDT: the EUR leg"], ["CO.NONE.USDT.FX_CLEARING", USDT, "the USDT leg (negative = credit)"]], "Balances after the resale invoice is fully discharged", snapReseller)}
+<p>Reseller revenue ${fmt(marginEur)} EUR, intact. Remittance margin on the deal ${fmt(remitMargin)} USDT = earnings ${fmt(DM.earnings)} + forex ${fmt(r2(fx2 + fx3))}, which is ${pct(remitMargin / mktValue)} of the market value of the THB collected; the ${fmt(surplus)} USDT cash-rounding surplus is NPL-GR's, not the remittance side's. Bank fees on a vendor payment, a bounced vendor transfer, a loss event and a rebate from Ali post exactly as in the other patterns, with NPL-GR as the client. A loss on NPL-GR's funds is made good like any client's (Pattern L) and the client share, if any, is NPL-GR's.</p>
 
 <h2 class="pb">19 · Pattern N — earnings kept in the unconverted balance and offset between partners</h2>
 <p>Partners convert everything they receive, so NPL's margin is converted along with the client's money and rests at the partner in the payout currency, invisible to the partner (EARNINGS_RECEIVABLE, Pattern A). NPL's practice (10 October) is to take its earnings out of collections that are not yet converted instead, and to offset between partners: where Jeton has converted a large collection in full, and Ali holds a collection that converts tomorrow, NPL leaves in Ali's USDT balance the USDT equivalent of its margin at Jeton and of its margin on the Ali deal, and converts only the rest. Jeton's EUR balance is then entirely the client's; at Ali the USDT balance is NPL's and the EUR balance the client's.</p>
@@ -792,15 +789,15 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <tr><td>Collection</td><td>COLLECTED or HELD, PAYABLE, CREDIT; in NPL-GR also REMIT_CLAIM and RESALE_RECEIVABLE</td><td>client (and company)</td><td>principal, resale</td></tr>
 <tr><td>Conversion (deal leg)</td><td>COLLECTED / PAYABLE in the in-currency; DUE, PAYABLE, POOL, EARN_GROSS, EXP_PARTNER, EXP_ROUNDING, SHARE_RECEIVABLE, a VAR_ account in the out-currency</td><td>client and company</td><td>principal, rounding, earnings, partner_cost, share, variance, cutoff_timing</td></tr>
 <tr><td>BalanceConversion</td><td>DUE and PAYABLE in both currencies; POOL and EARN_GROSS if a markup is decided</td><td>client (and company)</td><td>principal, rounding, earnings</td></tr>
-<tr><td>Settlement</td><td>INTRANSIT, DUE; EXP_BANKFEE and POOL when a fee is absorbed up front; EXP_NETWORK and WALLET on a hop. Each line names the leg it settles (deal_id) and, in NPL-GR, the invoice it discharges</td><td>client (and company)</td><td>principal, bank_fee, network_fee</td></tr>
-<tr><td>SettlementReturn</td><td>DUE, INTRANSIT; EXP_BANKFEE and POOL for the bounce fee</td><td>client and company</td><td>principal, bank_fee</td></tr>
-<tr><td>Confirmation</td><td>PAYABLE, INTRANSIT, SHORTFALL; a hop: COLLECTED or DUE at the partner; a line discharging an invoice: VENDOR_PAYABLE or REMIT_CLAIM, and the forex true-up PAYABLE / DUE / POOL / VAR_FX_TIMING</td><td>client and company</td><td>principal, bank_fee, resale, fx_timing</td></tr>
+<tr><td>Settlement</td><td>PAYABLE and DUE on release (the promise is discharged); EXP_BANKFEE and POOL when a fee is absorbed up front. A hop posts nothing on release. Each line names the leg it settles (deal_id) and, in NPL-GR, the invoice it discharges</td><td>client (and company)</td><td>principal, bank_fee</td></tr>
+<tr><td>SettlementReturn</td><td>DUE and PAYABLE (the promise is re-raised); EXP_BANKFEE and POOL for the bounce fee</td><td>client and company</td><td>principal, bank_fee</td></tr>
+<tr><td>Confirmation</td><td>Nothing on a full delivery; SHORTFALL and PAYABLE on a short one; a hop credited: COLLECTED or DUE at the partner from HELD or DUE, with EXP_NETWORK and WALLET for a network fee</td><td>client (and company)</td><td>principal, bank_fee, network_fee</td></tr>
 <tr><td>BankFeeEvent</td><td>EXP_BANKFEE, POOL, DUE, SHORTFALL</td><td>company and client</td><td>bank_fee</td></tr>
 <tr><td>Reroute</td><td>HELD, COLLECTED at the alternate partner; WALLET and POOL for recovered dues; VAR_CONVERSION for basis variance</td><td>client and company</td><td>principal, earnings, variance</td></tr>
 <tr><td><span class="new">EarningsOffset</span></td><td>DUE and POOL at the partner holding NPL's margin; COLLECTED and POOL at the partner holding unconverted client money; PAYABLE in both currencies; FX_CLEARING</td><td>client and company</td><td>earnings</td></tr>
 <tr><td>MarkupShare</td><td>EARN_GROSS, SHARE_PAYABLE or SHARE_RECEIVABLE; WALLET or POOL on settlement</td><td>company</td><td>share</td></tr>
 <tr><td>Rebate</td><td>REBATE_RECEIVABLE, EARN_REBATE; WALLET on receipt</td><td>company</td><td>rebate</td></tr>
-<tr><td>LossEvent</td><td>EXP_LOSS, POOL or WALLET (or LOSS_PAYABLE), COLLECTED / INTRANSIT / DUE (or MAKEGOOD); then LOSS_RECEIVABLE, PAYABLE for the recoveries</td><td>company and client</td><td>loss, principal</td></tr>
+<tr><td>LossEvent</td><td>EXP_LOSS, POOL or WALLET (or LOSS_PAYABLE), COLLECTED / DUE (or MAKEGOOD), PAYABLE re-raised on a settlement-side loss; then LOSS_RECEIVABLE, PAYABLE for the recoveries</td><td>company and client</td><td>loss, principal</td></tr>
 <tr><td>Adjustment</td><td>any, always as a reversal plus a correct re-posting, a Management-approved disposition, or a cross-currency clearing through FX_CLEARING</td><td>as reversed</td><td>as reversed</td></tr>
 </tbody></table>
 
@@ -821,13 +818,14 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <li><b>Reseller project.</b> ${code("INVOICE.kind")} vendor / resale, with ${code("receiver_id")} for the vendor and ${code("sender_id")} for the customer of a resale invoice; ${code("DEAL_GROUP.invoice_id")} names the resale invoice the deal collects; ${code("SETTLEMENT_LINE.invoice_id")} names the invoice a line discharges (vendor invoice for a vendor line, resale invoice for the margin line), with ${code("obligation_discharged")} and ${code("discharge_rate")} as today; purposes RESELL_REVENUE, RESELL_COST, VENDOR_PAYABLE, RESALE_RECEIVABLE, REMIT_CLAIM; source Invoice; cost component resale; views ${code("RESELLER_MARGIN")}(resale invoice) = resale − vendor amount and ${code("REMITTANCE_MARGIN")}(deal) = earnings − partner cost ± fx timing − fees. D24's forex line is the true-up of T50 and T51; D23 stands: own-desk balances are ordinary partner-coded client accounts with the own-desk configuration as holder.</li>
 <li><b>Earnings retention and offset.</b> ${code("CONVERSION.residual_in")} (already in the model) is the margin kept in the collection currency, with EARN_GROSS recognised in that currency; a table ${code("EARNINGS_OFFSET")} (project, from partner config and currency and amount, to partner config and currency and amount, the market rate or partner rate version used, the EARNINGS_RECEIVABLE rows recovered, requested_by Finance, approved_by Management, state) as the source of an EarningsOffset transaction; ${code("EARNINGS_RECEIVABLE.recovered_by_offset_id")} beside recovered_by_deal_id; ROLE_RIGHT action earnings_offset. Invariant 16 adds the offset as a movement of ownership in both directions at one stated rate.</li>
 <li><b>Cross-currency company settlements.</b> Purpose FX_CLEARING (holder None), used when a company balance in one currency is settled in another: an earnings offset between partners (its routine use), a rebate, share or loss share paid in another currency, or NPL-GR's EUR claim paid to its wallet in USDT; its balances are NPL's open currency position, reported through REPORTING_VALUE and closed by a Finance adjustment when NPL converts.</li>
+<li><b>Payout mechanics.</b> INTRANSIT retired for client money: the promise is discharged on release (SETTLEMENT released_at), re-raised by SETTLEMENT_RETURN or a short CONFIRMATION; invariant 7 already subtracts sent lines from the entitlement, so the ledger now matches it. ${code("CURRENCY_PAIR.amount_rounding")} gains the value exact (the default for bank transfers; the unit options apply to cash hand-overs). A pool may be negative between a top-up NPL funded and the next conversion, which then includes NPL's own USDT (a conversion with a company part, posted through FX_CLEARING).</li>
 <li><b>Holder types.</b> ${code("LEDGER_ACCOUNT.holder_type")} keeps Sender for LOSS_RECEIVABLE and RESALE_RECEIVABLE and Receiver for VENDOR_PAYABLE; the own desk is a PARTNER_CONFIG, not a new type.</li>
 </ol>
 <p class="small"><i>Draft v${DOC_VERSION} — for review with NPL. Figures are worked examples, not NPL data, except the invoice amounts and instalment rates of Pattern M, which are NPL's.</i></p>
 </body></html>`;
 
 // ------------------------------------------------------------------ write + print (only when run directly; the companion imports this module)
-export { L, PURPOSES, KIND, fmt, pct, r2, esc, code, CSS, DOC_VERSION, ERD_VERSION, DATE, EX, JET, D1, D2, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas, V1, V2, V3, identities };
+export { L, PURPOSES, KIND, fmt, pct, r2, esc, code, CSS, squareUsdt, surplus, thbExact, DOC_VERSION, ERD_VERSION, DATE, EX, JET, D1, D2, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas, V1, V2, V3, identities };
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   fs.mkdirSync(outDir, { recursive: true });
   const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
