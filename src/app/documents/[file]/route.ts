@@ -39,7 +39,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ file: string }
       "content-type": CONTENT_TYPES[hit.format],
       "content-length": String(body.byteLength),
       "content-disposition": `${inline ? "inline" : "attachment"}; filename="${name}"`,
-      "cache-control": "private, max-age=3600",
+      "cache-control": "private, no-cache",
       "x-robots-tag": "noindex",
     },
   });

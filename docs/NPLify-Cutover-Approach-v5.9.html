@@ -6,7 +6,8 @@ h2{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:18pt 0 6pt;brea
 h3{font:700 11pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:14pt 0 4pt;break-after:avoid}
 p{margin:0 0 7pt} ul,ol{margin:0 0 8pt 16pt;padding:0} li{margin:0 0 3pt}
 code,.mono{font:8.8pt Menlo,Consolas,monospace}
-table{border-collapse:collapse;width:100%;margin:4pt 0 8pt;font-size:9.2pt}
+table{border-collapse:collapse;width:100%;table-layout:fixed;margin:4pt 0 8pt;font-size:9.2pt}
+td,th{overflow-wrap:anywhere}
 th{text-align:left;font-weight:600;border-bottom:1px solid #333;padding:3pt 5pt;vertical-align:bottom;background:#f3f6fb}
 td{padding:3pt 5pt;border-bottom:1px solid #ddd;vertical-align:top}
 tr{break-inside:avoid}
@@ -19,7 +20,7 @@ tr{break-inside:avoid}
 .warn{border:1px solid #b8860b;background:#fff8e6;padding:6pt 9pt;margin:8pt 0;font-size:9.8pt}
 .small{font-size:9pt;color:#444}
 figure.chart{margin:8pt 0 12pt;break-inside:avoid} figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
-td.k{font-weight:700;white-space:nowrap}
+td.k{font-weight:700}
 </style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 9 — Cutover Approach</p><p class="org">New XP Technologies Limited</p><p class="date">11 October 2026 · Confidential</p></div>
 <p>NPL runs on spreadsheets today. The plan is to start using NPLify on a staging instance: after every change to a spreadsheet the team makes the same change in the app, for three to four weeks, to see that things go in the right direction; earlier deals are entered as well so the history is in one place and the ledger's balances are built from real entries; when everything is right the database is copied to production and the production app is used from a quiet day, chosen a couple of days before. This document gives that plan its steps, its checks and its sign-off.</p>
@@ -80,7 +81,7 @@ td.k{font-weight:700;white-space:nowrap}
 
 <h2>5 · Reconciliation checks</h2>
 <p>Run by Finance every evening of the parallel run, at the end of every backfill batch, and once more before go-live against the frozen sheets. Each check names what the app shows, what the sheet shows and the tolerance; a check outside tolerance is a discrepancy-log entry with an owner and a resolution before the next day.</p>
-<table><thead><tr><th style="width:20%">Check</th><th style="width:24%">In the app</th><th style="width:24%">In the sheets</th><th style="width:16%">Tolerance</th><th>Owner</th></tr></thead><tbody>
+<table><thead><tr><th style="width:21%">Check</th><th style="width:25%">In the app</th><th style="width:24%">In the sheets</th><th style="width:15%">Tolerance</th><th style="width:15%">Owner</th></tr></thead><tbody>
 <tr><td class="k">Balance at each partner, per currency</td><td>PROJECT_BALANCE per project × partner × currency</td><td>The sheet's partner balance for the same project and currency</td><td>Exact</td><td>Finance</td></tr><tr><td class="k">Money collected and not yet converted</td><td>Σ CL.&lt;PARTNER&gt;.&lt;CCY&gt;.COLLECTED</td><td>Open collections on the sheet</td><td>Exact</td><td>Finance</td></tr><tr><td class="k">Owed to receivers, per group</td><td>GROUP_ENTITLEMENT</td><td>The sheet's outstanding payouts by receiver</td><td>Exact</td><td>Finance</td></tr><tr><td class="k">Open deals and their states</td><td>DEAL_GROUP / DEAL lists by state</td><td>The sheet's deal register</td><td>Same set of references; states agree</td><td>Operations</td></tr><tr><td class="k">Today's deals</td><td>Every deal group created today</td><td>Every row added to the sheet today</td><td>One-to-one, same amounts, same partner</td><td>Operations</td></tr><tr><td class="k">Sender credits and shortfalls</td><td>CL.&lt;SENDER&gt;.CREDIT, CL.&lt;RECEIVER&gt;.SHORTFALL</td><td>The sheet's notes column</td><td>Exact</td><td>Finance</td></tr><tr><td class="k">NPL's money at partners and in own wallets</td><td>CO.&lt;PARTNER&gt;.POOL, CO.OWN.WALLET, CUSTODY</td><td>The sheet's pool and wallet lines; the wallet's on-chain balance</td><td>Exact; on-chain within pending transfers</td><td>Finance</td></tr><tr><td class="k">Margin of the day</td><td>EARN_GROSS postings of the day, per deal</td><td>The sheet's margin column (or the Calculation Specification's vectors where the sheet has none)</td><td>Within the pair's rounding</td><td>Finance</td></tr><tr><td class="k">Rebates and shares accrued</td><td>PARTNER_REBATE_ACCRUAL, MARKUP_SHARE_ACCRUAL</td><td>The sheet's monthly rebate and share working</td><td>Exact at month end</td><td>Finance</td></tr><tr><td class="k">Invoices (NPL-GR)</td><td>INVOICE_BALANCE</td><td>The reseller workbook's open invoices and instalments</td><td>Exact</td><td>Finance</td></tr><tr><td class="k">Ledger rules</td><td>The ledger's balance rules as database checks (balanced per currency and per owner; every balance a sum over postings)</td><td>—</td><td>Zero violations</td><td>Engineering</td></tr><tr><td class="k">Visibility</td><td>A sample of screens and exports per role</td><td>Roles &amp; Visibility Matrix</td><td>All pass</td><td>Engineering with Management</td></tr>
 </tbody></table>
 <p class="small">The discrepancy log is a sheet of its own: date, check, project, app figure, sheet figure, cause (app entry · sheet error · method · policy), resolution, who closed it. It is the evidence the go/no-go is signed on, and it is kept after go-live.</p>

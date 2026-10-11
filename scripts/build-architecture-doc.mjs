@@ -71,7 +71,8 @@ h2{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:18pt 0 6pt;brea
 h3{font:700 11pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:14pt 0 4pt;break-after:avoid}
 p{margin:0 0 7pt} ul,ol{margin:0 0 8pt 16pt;padding:0} li{margin:0 0 3pt}
 code,.mono{font:8.8pt Menlo,Consolas,monospace}
-table{border-collapse:collapse;width:100%;margin:4pt 0 8pt;font-size:9.2pt}
+table{border-collapse:collapse;width:100%;table-layout:fixed;margin:4pt 0 8pt;font-size:9.2pt}
+td,th{overflow-wrap:anywhere}
 th{text-align:left;font-weight:600;border-bottom:1px solid #333;padding:3pt 5pt;vertical-align:bottom;background:#f3f6fb}
 td{padding:3pt 5pt;border-bottom:1px solid #ddd;vertical-align:top}
 tr{break-inside:avoid}
@@ -84,7 +85,7 @@ tr{break-inside:avoid}
 .warn{border:1px solid #b8860b;background:#fff8e6;padding:6pt 9pt;margin:8pt 0;font-size:9.8pt}
 .small{font-size:9pt;color:#444}
 figure.chart{margin:8pt 0 12pt;break-inside:avoid} figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
-td.k{font-weight:700;white-space:nowrap}
+td.k{font-weight:700}
 `;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Architecture &amp; Stack Note v${V}</title><style>${CSS}</style></head><body>
