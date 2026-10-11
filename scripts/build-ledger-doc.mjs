@@ -1,5 +1,5 @@
 // Build the client deliverable
-//   docs/NPLify-Ledger-Posting-Design-v5.6.{html,pdf}   (chart of accounts + worked postings; numbered with the ERD edition it is built against)
+//   docs/NPLify-Ledger-Posting-Design-v5.7.{html,pdf}   (chart of accounts + worked postings; numbered with the ERD edition it is built against)
 // Every number in the worked examples is computed here; every transaction is checked to balance
 // per currency and per owner before the document is written.   node scripts/build-ledger-doc.mjs
 import fs from "node:fs";
@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const outDir = path.join(root, "docs");
-const DOC_VERSION = "5.6", ERD_VERSION = "5.6", DATE = "11 October 2026";
+const DOC_VERSION = "5.7", ERD_VERSION = "5.7", DATE = "11 October 2026";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 // ------------------------------------------------------------------ money helpers (exact to a millionth)
@@ -29,7 +29,7 @@ const PURPOSES = [
   ["CL", "COLLECTED", "asset", "<PARTNER>", "v5.2", "Client money received at this partner and not yet converted (in the collection currency). In a reseller project the same purpose exists under CO."],
   ["CL", "HELD", "asset", "OWN", "v5.2", "Client money in one of NPL's own wallets: an approved reroute, or a collection bridge waiting to be forwarded (D40). Zero otherwise (invariant 3)."],
   ["CL", "DUE", "asset", "<PARTNER>", "v5.2", "Converted client money resting at this partner, waiting to be settled: one account per project × partner × currency, the PROJECT_BALANCE."],
-  ["CL", "INTRANSIT", "asset", "<PARTNER> / OWN", "retired", "Not used since v5.6 (NPL, 11 October): once money has left the partner it is out of NPL's hands, so the promise is discharged on release and re-raised only by a return or a short delivery. What is sent and not yet confirmed is read from SETTLEMENT_LINE.outcome, not from a jar."],
+  ["CL", "INTRANSIT", "asset", "<PARTNER> / OWN", "retired", "Retired in v5.7 (NPL, 11 October): once money has left the partner it is out of NPL's hands, so the promise is discharged on release and re-raised only by a return or a short delivery. What is sent and not yet confirmed is read from SETTLEMENT_LINE.outcome, not from a jar."],
   ["CL", "SHORTFALL", "asset", "<RECEIVER>", "v5.2", "Client money delivered short to a receiver and still to be made good at the next settlement."],
   ["CL", "PAYABLE", "liability", "PROJECT", "v5.2", "What NPL must deliver to the project's receivers, in total per currency. The split by receiver group is the GROUP_ENTITLEMENT view, not an account."],
   ["CL", "CREDIT", "liability", "<SENDER>", "v5.2", "Owed back to a sender: an overpayment waiting to be refunded or applied to the next deal (SENDER_CREDIT)."],
@@ -428,7 +428,7 @@ L.tx(`T40 · Loss event (D32): the account is frozen before conversion and the $
   ["CL.ALI.USDT.COLLECTED", "Dr", lossAmt, USDT, CL, "loss", "replaced by NPL's money: the deal proceeds, the collection part stays verified"],
 ], "A partial loss posts the same lines for the lost part only (LOSS_EVENT.amount ≤ the amount verified): if 4,000 of the 10,000 were lost, every line reads 4,000 and the other 6,000 convert normally. The client's claim (PAYABLE) is untouched and the deal converts and settles normally. When neither the pool nor an immediate transfer can fund the make-good, the unfunded part is posted as <code>Dr CL.PROJECT.USDT.MAKEGOOD / Cr CO.NONE.USDT.LOSS_PAYABLE</code> instead and the client balance at Ali is restored only when NPL's funds land there (then <code>Dr CL.ALI.USDT.COLLECTED / Cr CL.PROJECT.USDT.MAKEGOOD</code> and <code>Dr CO.NONE.USDT.LOSS_PAYABLE / Cr CO.OWN.USDT.WALLET</code>). A loss on the settlement side (money released and lost before the receiver had it) re-raises the promise and restores DUE from NPL's pool, from which a new settlement follows. A collection is moved to state reversed only when Management decides the deal is unwound instead; the make-good then becomes a refund to the sender.");
 const shares = { partner: 4000, sender: 2000, client: 1000, npl: 3000 };
-L.tx(`T41 · Management approves the split (approve_loss_split): partner ${fmt(shares.partner)}, sender ${fmt(shares.sender)}, client ${fmt(shares.client)}, NPL ${fmt(shares.npl)} USDT`, "LossEvent", [
+L.tx(`T41 · Management approves the split (approve_loss_split): partner ${fmt(shares.partner)}, sender ${fmt(shares.sender)}, client ${fmt(shares.client)}, NPL ${fmt(shares.npl)} USDT`, "LossRecovery", [
   ["CO.ALI.USDT.LOSS_RECEIVABLE", "Dr", shares.partner, USDT, CO, "loss", "Ali's agreed share, now owed to NPL"],
   ["CO.SENDER_A.USDT.LOSS_RECEIVABLE", "Dr", shares.sender, USDT, CO, "loss", "the sender's agreed share"],
   ["CO.ALI.USDT.POOL", "Dr", shares.client, USDT, CO, "loss", "NPL takes back the part of its make-good the client bears"],
@@ -436,11 +436,11 @@ L.tx(`T41 · Management approves the split (approve_loss_split): partner ${fmt(s
   ["CL.PROJECT.USDT.PAYABLE", "Dr", shares.client, USDT, CL, "loss", "the client's claim falls by the share it bears"],
   ["CL.ALI.USDT.COLLECTED", "Cr", shares.client, USDT, CL, "loss", "and the restored balance with it"],
 ], "Each share is a separate recovery posting against the loss; the shares sum to the amount (invariant 31). The client-share lines are the partial reversal of the make-good in T40, which is why invariant 16 is restated in Section 24.");
-L.tx(`T42 · Ali settles its share: ${fmt(shares.partner)} USDT credited to NPL's pool at Ali`, "LossEvent", [
+L.tx(`T42 · Ali settles its share: ${fmt(shares.partner)} USDT credited to NPL's pool at Ali`, "LossRecovery", [
   ["CO.ALI.USDT.POOL", "Dr", shares.partner, USDT, CO, "loss", "received (LOSS_RECOVERY, Section 24)"],
   ["CO.ALI.USDT.LOSS_RECEIVABLE", "Cr", shares.partner, USDT, CO, "loss", ""],
 ]);
-L.tx(`T43 · The sender settles its share: ${fmt(shares.sender)} USDT paid to NPL's own wallet`, "LossEvent", [
+L.tx(`T43 · The sender settles its share: ${fmt(shares.sender)} USDT paid to NPL's own wallet`, "LossRecovery", [
   ["CO.OWN.USDT.WALLET", "Dr", shares.sender, USDT, CO, "loss", "a payment to NPL, never a netting against a sender credit (client money)"],
   ["CO.SENDER_A.USDT.LOSS_RECEIVABLE", "Cr", shares.sender, USDT, CO, "loss", ""],
 ]);
@@ -620,8 +620,8 @@ table.bal caption{text-align:left;font:700 9.5pt Helvetica,Arial,sans-serif;marg
 const code = (s) => `<code>${esc(s)}</code>`;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Ledger Posting Design &amp; Chart of Accounts v${DOC_VERSION}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Posting Design &amp; Chart of Accounts · Draft v${DOC_VERSION}</p><p class="small">Numbered with the ERD edition it is built against (was Draft v1.2)</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
-<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${ERD_VERSION} (decisions D1–D45) and NPL's answers of 10 October on accrual timing, loss events, the reseller project and variance accounts. Every worked example was produced by a small posting engine that refuses any transaction whose debits and credits do not match per currency and per owner, so the figures add up by construction. Supersedes Draft v1.1 (ERD v5.2); the document is now numbered with the ERD edition it is built against.<br>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Posting Design &amp; Chart of Accounts · Draft v${DOC_VERSION}</p><p class="small">Numbered with the ERD edition it is built against</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
+<p><b>Status:</b> Built against ERD &amp; Data Model Draft v${ERD_VERSION} (decisions D1–D46), which carries every decision of this document as D46. Every worked example was produced by a small posting engine that refuses any transaction whose debits and credits do not match per currency and per owner, so the figures add up by construction. Supersedes Draft v1.1 (ERD v5.2); the document is numbered with the ERD edition it is built against.<br>
 <b>Audience:</b> NPL Finance and Management, and the New XP engineering team. Written in plain language; the account codes and field names are the ones in the ERD, with NPL's vocabulary (settlement, partner entity, markup share, sender pays / receiver pays, fee on market / fee in rate, agent rate).</p>
 <div class="box"><b>What changed since v1.1.</b> The chart of accounts grows with the v5.3–v5.6 purposes (EARN_REBATE, SHARE_RECEIVABLE, EXP_ROUNDING, EXP_LOSS) and with the purposes this draft proposes (Section 22): four variance accounts in place of one, loss receivables and the unfunded make-good pair, the reseller revenue and cost accounts, and a clearing account for company balances settled in another currency. Rebates and markup shares are accrued at conversion. A loss is booked to NPL in full and recovered share by share. NPL's earnings may be kept in the unconverted balance and offset between partners (Pattern N). The NPL-GR project keeps a full reseller P&amp;L inside NPLify: the vendor and resale invoices are posted in the invoice currency, the remittance deal posts like any client project with NPL-GR as the client, and the forex result of instalments lands on the remittance margin. New worked patterns: same-currency pass-through, round-up rounding, bridge-wallet hop, party-retains share with rebate, cutoff and honoured-rate variances, loss event with recoveries, the reseller deal with its two invoices and instalments.</div>
 <div class="rule"></div>
@@ -647,9 +647,9 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 </ol>
 
 <h2>3 · Chart of accounts</h2>
-<p>Account codes read <code>OWNER.HOLDER.CURRENCY.PURPOSE</code>. The owner is <code>CL</code> for client funds or <code>CO</code> for company. The holder says where the money is or whom it concerns: a partner code such as <code>ALI</code>, <code>JETON</code> or <code>AQN</code> (a ${code("PARTNER_CONFIG")}, so always within one project), <code>OWNDESK</code> for the own-desk configuration of the reseller project, <code>OWN</code> for NPL's own wallets, a receiver, a sender, a markup-share party, <code>PROJECT</code> for the project as a whole, or <code>NONE</code> for income, expense and clearing accounts. One account exists per combination actually used; accounts are created on first posting (${code("LEDGER_ACCOUNT")}: code, ownership, holder_type, holder_id, currency, purpose, kind). Purposes marked <span class="new">proposed (D46)</span> are asked of the ERD by this draft and listed in Section 24.</p>
+<p>Account codes read <code>OWNER.HOLDER.CURRENCY.PURPOSE</code>. The owner is <code>CL</code> for client funds or <code>CO</code> for company. The holder says where the money is or whom it concerns: a partner code such as <code>ALI</code>, <code>JETON</code> or <code>AQN</code> (a ${code("PARTNER_CONFIG")}, so always within one project), <code>OWNDESK</code> for the own-desk configuration of the reseller project, <code>OWN</code> for NPL's own wallets, a receiver, a sender, a markup-share party, <code>PROJECT</code> for the project as a whole, or <code>NONE</code> for income, expense and clearing accounts. One account exists per combination actually used; accounts are created on first posting (${code("LEDGER_ACCOUNT")}: code, ownership, holder_type, holder_id, currency, purpose, kind). Purposes marked <span class="new">v5.7 (D46)</span> entered the ERD with this edition; Section 24 lists the decision.</p>
 <table><thead><tr><th>Code</th><th>Kind</th><th>Since</th><th>What the balance means</th></tr></thead><tbody>
-${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${esc(p)}</td><td>${k}</td><td>${since === "D46" ? '<span class="new">proposed (D46)</span>' : since === "retired" ? '<span class="new">retired (D46)</span>' : since}</td><td>${esc(w)}</td></tr>`).join("")}
+${PURPOSES.map(([o, p, k, h, since, w]) => `<tr><td class="mono">${o}.${esc(h)}.&lt;CCY&gt;.${esc(p)}</td><td>${k}</td><td>${since === "D46" ? '<span class="new">v5.7 (D46)</span>' : since === "retired" ? '<span class="new">retired v5.7 (D46)</span>' : since}</td><td>${esc(w)}</td></tr>`).join("")}
 </tbody></table>
 <p class="small">Debit-normal accounts (assets, expenses) grow with debits; credit-normal accounts (liabilities, income) grow with credits. A variance account with a credit balance is a gain. <code>ADVANCE</code> does not exist because NPL never advances money to a receiver (invariant 16). The former single <code>VARIANCE</code> purpose is replaced by the four VAR_ accounts; the former referral payable is <code>SHARE_PAYABLE</code> (D37).</p>
 
@@ -780,7 +780,7 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <li><b>Partner commissions.</b> Per partner and period: margin captured there, dues outstanding (EARNINGS_RECEIVABLE), rebates expected, reconciled and received (statement_ref).</li>
 <li><b>Markup shares.</b> Per party and period: base, share, direction, settled and open amounts; a party never sees a rebate.</li>
 <li><b>Variance and loss.</b> The four variance kinds by partner and month, each line traceable to its leg; loss events with their shares and recovery state.</li>
-<li><b>Reseller and remittance margins, kept apart.</b> Per resale invoice: revenue, cost and game reseller revenue in EUR, intact. Per NPL-GR deal: remittance earnings, partner cost, forex result and fees in the converted currency. INVOICE_BALANCE per vendor and resale invoice.</li>
+<li><b>Reseller and remittance margins, kept apart, and NPL's profit.</b> Per resale invoice: revenue, cost and game reseller revenue in EUR, intact (RESELLER_MARGIN). Per NPL-GR deal: remittance earnings, partner cost, forex result and fees in the converted currency (REMITTANCE_MARGIN). NPL's profit (NPL_PROFIT) is remittance earnings plus reseller earnings, each callable on its own and together, per currency and as one figure through REPORTING_VALUE.</li>
 </ul>
 
 <h2>22 · Transaction sources and what they post</h2>
@@ -809,8 +809,8 @@ ${identities.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></t
 <li><b>Management</b> approves the actions the ledger patterns depend on: approve_loss_split, balance_conversion, recover_dues, cross_group_payout, cover_bank_fee, raise_fee_cap, enable_own_desk, settlements above limit and past the cutoff, own-wallet outbound transfers, and post-money voids. Every controlled action is audited with actor, time, reason and record version.</li>
 </ul>
 
-<h2>24 · What this design asks of the ERD (proposed D46)</h2>
-<p>The patterns above need the following additions to Draft v${ERD_VERSION}. Each is small; none changes an existing posting. They are listed for NPL's agreement and will be cut into the next ERD edition together.</p>
+<h2>24 · What this design put into the ERD (D46, applied in v5.7)</h2>
+<p>The patterns above required the following additions, agreed with NPL on 10–11 October and cut into ERD Draft v5.7 as decision D46. Recovery postings use the source LossRecovery; the reseller books the source Invoice; the offset the source EarningsOffset. An offset records the to-partner's rate of the day (NPL's choice over the market rate), and the reseller books are postings rather than invoice records with views, so that NPL's profit (NPL_PROFIT) can be asked for as remittance earnings, reseller earnings, or both.</p>
 <ol>
 <li><b>Variance by kind.</b> ${code("LEDGER_ACCOUNT.purpose")}: VARIANCE replaced by VAR_CONVERSION, VAR_CUTOFF, VAR_RATE_HONOUR, VAR_FX_TIMING. Invariants 28 and 39 and decisions D24, D29, D45 then name the account they post to.</li>
 <li><b>Loss first, recover later.</b> Purposes LOSS_RECEIVABLE (holder Partner or Sender), and the pair MAKEGOOD (client asset, holder Project) / LOSS_PAYABLE (company liability) for an unfunded make-good. A table ${code("LOSS_RECOVERY")} (loss_event_id, party kind sender / partner / client, amount, state agreed / received, received_at, reference, approved_by) as the source record of each recovery posting, under source LossEvent. ${code("COLLECTION.state")} reversed is used only when the deal is unwound. Invariant 16 restated: ownership moves between client and company at margin recognition, at the forex true-up of a line that discharges an invoice obligation (either way), and by partial reversal of a make-good when a Management-approved loss share is borne by the client.</li>

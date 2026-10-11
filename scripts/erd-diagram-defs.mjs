@@ -16,16 +16,16 @@ export const DIAGRAMS = [
       "~PROJECT", "~SENDER", "~RECEIVER_GROUP", "~RECEIVER", "~PARTNER_PAIR", "~PARTNER_ENTITY", "~FEE_STRUCTURE", "~FEE_OVERRIDE", "~FEE_TIER",
       "~COLLECTION_SENDING_ENTITY", "~COLLECTION_RECEIVING_ENDPOINT", "~WALLET_SCREENING", "~MESSAGE_TEMPLATE"],
     noSelf: ["QUOTE_PACKAGE"] },
-  { id: "3b", title: "Deal lifecycle — conversion, reroute, earnings receivable, balance conversion, entitlement re-attribution", nodes: [
-      "CONVERSION", "REROUTE", "EARNINGS_RECEIVABLE", "BALANCE_CONVERSION", "ENTITLEMENT_REATTRIBUTION",
+  { id: "3b", title: "Deal lifecycle — conversion, reroute, earnings receivable and offset, balance conversion, entitlement re-attribution", nodes: [
+      "CONVERSION", "REROUTE", "EARNINGS_RECEIVABLE", "EARNINGS_OFFSET", "BALANCE_CONVERSION", "ENTITLEMENT_REATTRIBUTION",
       "~DEAL", "~PROJECT", "~RECEIVER_GROUP", "~OWN_WALLET", "~PARTNER_CONFIG", "~PARTNER_PAIR", "~PARTNER_RATE_VERSION", "~MARKET_RATE"] },
-  { id: "3c", title: "Settlement, return, confirmation, fees, referrals, rebates and loss events", nodes: [
-      "SETTLEMENT", "SETTLEMENT_LINE", "BANK_FEE_EVENT", "SETTLEMENT_RETURN", "CONFIRMATION", "SHORTFALL", "FEE_DECISION", "MARKUP_SHARE_ACCRUAL", "PARTNER_REBATE_ACCRUAL", "LOSS_EVENT",
+  { id: "3c", title: "Settlement, return, confirmation, fees, shares, rebates, loss events and recoveries", nodes: [
+      "SETTLEMENT", "SETTLEMENT_LINE", "BANK_FEE_EVENT", "SETTLEMENT_RETURN", "CONFIRMATION", "SHORTFALL", "FEE_DECISION", "MARKUP_SHARE_ACCRUAL", "PARTNER_REBATE_ACCRUAL", "LOSS_EVENT", "LOSS_RECOVERY",
       "~PROJECT", "~PARTNER_CONFIG", "~SETTLEMENT_SENDING_ENTITY", "~SETTLEMENT_RAIL", "~DESTINATION_APPROVAL", "~RECEIVER", "~DEAL", "~COLLECTION", "~INVOICE", "~MARKET_RATE", "~BALANCE_CONVERSION", "~MARKUP_SHARE_RULE", "~PARTNER_REBATE_RULE"] },
   { id: "4", title: "Ledger & controls", nodes: [
       "LEDGER_TRANSACTION", "LEDGER_POSTING", "LEDGER_ACCOUNT", "ROLE", "ROLE_RIGHT", "USER", "APPROVAL", "AUDIT_LOG", "RECORD_LOCK",
       "~COLLECTION", "~CONVERSION", "~BALANCE_CONVERSION", "~SETTLEMENT", "~SETTLEMENT_RETURN", "~CONFIRMATION", "~BANK_FEE_EVENT", "~REROUTE",
-      "~MARKUP_SHARE_ACCRUAL", "~PARTNER_REBATE_ACCRUAL", "~LOSS_EVENT", "~PARTNER_CONFIG", "~OWN_WALLET", "~RECEIVER", "~SENDER", "~MARKUP_SHARE_PARTY"] },
+      "~MARKUP_SHARE_ACCRUAL", "~PARTNER_REBATE_ACCRUAL", "~LOSS_EVENT", "~LOSS_RECOVERY", "~INVOICE", "~EARNINGS_OFFSET", "~PARTNER_CONFIG", "~OWN_WALLET", "~RECEIVER", "~SENDER", "~MARKUP_SHARE_PARTY"] },
 ];
 export const homeOf = {};
 for (const dg of DIAGRAMS) for (const n of dg.nodes) if (!n.startsWith("~")) homeOf[n] = dg.id;
