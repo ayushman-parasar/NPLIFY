@@ -74,7 +74,7 @@ td.k{font-weight:700}
 `;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Cutover Approach v${V}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 9 — Cutover Approach · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Cutover Approach · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <p>NPL runs on spreadsheets today. The plan is to start using NPLify on a staging instance: after every change to a spreadsheet the team makes the same change in the app, for three to four weeks, to see that things go in the right direction; earlier deals are entered as well so the history is in one place and the ledger's balances are built from real entries; when everything is right the database is copied to production and the production app is used from a quiet day, chosen a couple of days before. This document gives that plan its steps, its checks and its sign-off.</p>
 <div class="rule"></div>
 

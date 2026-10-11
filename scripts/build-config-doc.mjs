@@ -348,7 +348,7 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 `;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Configuration Schema Specification v${V}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 5 — Configuration Schema Specification · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Configuration Schema Specification · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
 <h2>1 · How configuration is organised</h2>

@@ -141,7 +141,7 @@ tr{break-inside:avoid}
 
 <div class="title">
 <h1>NPLify · P0 Technical Baseline</h1>
-<p class="sub">Deliverable 1 — Entity-Relationship Diagram &amp; Data Model · Draft v${V}</p>
+<p class="sub">Entity-Relationship Diagram &amp; Data Model · Draft v${V}</p>
 <p class="org">New XP Technologies Limited</p>
 <p class="date">${DATE} · Confidential</p>
 </div>

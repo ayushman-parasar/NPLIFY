@@ -89,7 +89,7 @@ td.k{font-weight:700}
 `;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Architecture &amp; Stack Note v${V}</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Deliverable 8 — Architecture &amp; Stack Note · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Architecture &amp; Stack Note · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
 <h2>1 · In one paragraph</h2>
