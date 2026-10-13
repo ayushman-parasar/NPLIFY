@@ -98,15 +98,6 @@ export const DOCS: Doc[] = [
     group: "design",
   },
   {
-    slug: "operating-procedures",
-    title: "Operating Procedures",
-    version: "v5.9",
-    blurb: "One standard operating procedure per project — BF, BF Sub, BF Withdrawal, Evo, NPL-GR, YN Remit, 66 Group, GDC, Peru, JTN, Jonas, AK Personal — on top of the ten common procedures for collecting and paying out and the standing procedures of the day.",
-    audience: "client",
-    files: { html: "NPLify-Operating-Procedures-v5.9.html", pdf: "NPLify-Operating-Procedures-v5.9.pdf" },
-    group: "design",
-  },
-  {
     slug: "gaps",
     title: "Model Gaps & Proposals",
     version: "v1.0",
@@ -137,7 +128,7 @@ export const DOCS: Doc[] = [
 
 export const GROUPS: { id: Doc["group"]; title: string; blurb: string }[] = [
   { id: "model", title: "The model", blurb: "Start here: the diagram itself." },
-  { id: "design", title: "Design specifications", blurb: "How the model behaves and how it is built: postings, lifecycle, roles, arithmetic, configuration, architecture, cutover and the operating procedures per project." },
+  { id: "design", title: "Design specifications", blurb: "How the model behaves and how it is built: postings, lifecycle, roles, arithmetic, configuration, architecture and cutover." },
   { id: "working", title: "Working papers", blurb: "Internal material behind the decisions. Staff only." },
 ];
 
