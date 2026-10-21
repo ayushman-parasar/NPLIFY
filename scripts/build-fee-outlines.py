@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build docs/NPLify-Fee-Outlines-v0.2.xlsx from data/remittance-fees-2026-10.xlsx and NPL's answers.
+"""Build docs/NPLify-Fee-Outlines-v0.3.xlsx from data/remittance-fees-2026-10.xlsx and NPL's answers.
 
 One 'All fee lines' sheet with a fill-in row per line of NPL's fee table, and one outline sheet per
 transaction pattern: configuration slots, a simulation that computes what the system would quote,
@@ -18,7 +18,8 @@ from openpyxl.utils import get_column_letter
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data/remittance-fees-2026-10.xlsx"
 ANSWERS = ROOT / "data/fee-outlines-v0.1-answers.xlsx"   # the workbook NPL returned on 8 October
-OUT = ROOT / "docs/NPLify-Fee-Outlines-v0.2.xlsx"
+OUT = ROOT / "docs/NPLify-Fee-Outlines-v0.3.xlsx"
+VECTORS = ROOT / "docs/vectors-v5.9.csv"   # the acceptance vectors published with the Calculation Specification v6.0
 
 FONT = "Arial"
 F_IN = Font(name=FONT, size=10, color="0000FF")          # input taken from the sheet or NPL's answers
@@ -110,8 +111,9 @@ def widths(ws, spec):
 # ------------------------------------------------------------------ Read me
 ws = wb.create_sheet("Read me")
 widths(ws, {"A": 30, "B": 110})
-header(ws, "A1", "NPLify — Fee outlines for simulation · v0.2 (8 October 2026)")
+header(ws, "A1", "NPLify — Fee outlines for simulation · v0.3 (22 October 2026)")
 lines = [
+    ("What changed in v0.3", "Status at ERD v6.0 (22 October 2026): every outline in this workbook is applied in the model — the thirteen proposals A–M as decisions D20–D32 (9 October), the ledger design as D46 (10–11 October) and the design review of 19–21 October as D47–D57; see 'Model Gaps & Proposals v2.0'. Two corrections from NPL are folded in: the Evo receiver line of the fee sheet is now (29,325 − 2 %) × 0.888977323 = 25,548, the receiver's part on the principal (NPL's corrected sheet of 21 October; the 8 October sheet read 25,704 − 0.6 % = 25,550), and NPL supplied its own figures for the five cases the sheet had no line for (vectors B19–B23). The new last sheet, 'Acceptance vectors B', lists all 23 vector B rows with the sheet figure, the recomputed figure and the result: 23 of 23 match. Nothing is left for NPL to fill in this edition; the yellow and pink cells are kept as the record of what was asked and answered."),
     ("What changed in v0.2", "Your answers of 8 October are folded in (blue cells marked 'your answer'): how each partner pays NPL its share, the real rates behind the quotes, the Evo receiver groups, the GDC volume rule, the Raeen sub-account split, NPL-GR as the client for the game reseller, the rounding conventions, and the bank and name used on each payout. Questions you answered are gone from 'Please confirm'; the few places where two of your figures disagree are listed there as a choice (pink cells). Your 'Project Context' and 'Payment methods' tabs are carried over unchanged. Two things were renamed because the old words did not land: 'lowest / highest fee' is now 'lowest / highest markup', and the approval question now reads 'has the partner approved this account: yes / pending'."),
     ("What this is", "Every line of NPL's 'Table of Remittance Customers Fees' turned into a fill-in outline: who sends, who gets paid, which partner, which currencies, what fee, who pays it, how NPL's share reaches NPL, and how amounts are rounded. Each pattern sheet also has a worked calculation: change the amount or any value and it shows what the customer would be quoted, what the partner delivers, what NPL earns, what is paid out, and the bookkeeping entries — and compares the result with the figure in your sheet."),
     ("How to fill", "Yellow cells are still open — please fill them. Pink cells are a choice between two of your own figures. Blue cells were copied from your sheet or from your answers — correct them if they are wrong. Black cells are calculations; please do not type over them. 'Where it comes from' says how we got a value."),
@@ -410,7 +412,7 @@ pattern_sheet("P03", PATTERN_NAMES["P03"], [21, 22, 23, 24],
                notes={"Rp": "assumed 0.85 % below market — you confirmed the example is a simulated Ali deal (the real one went via Jeton); replace with an actual Ali rate when convenient"}),
     [("Rate quoted to the sender (final rate)", 0.876531640478, "Rate quoted to the sender", "sheet row 21: 0.888977 × 0.986 — matches the 0.87653 on your customer-facing message"),
      ("EUR to the Evo balance (gross)", 25704, "Amount the sender is promised", "sheet row 21"),
-     ("EUR after Evo's 0.6 % fee", 25550, "Amount the receiver is owed", "sheet row 21: 25,704 − 0.6 %")],
+     ("EUR after Evo's 0.6 % fee", 25548, "Amount the receiver is owed", "sheet row 21, corrected by NPL on 21 October: (29,325 − 2 %) × 0.888977323 = 25,548 — the receiver's part on the principal (the 8 October sheet read 25,704 − 0.6 % = 25,550)")],
     ["After the 2.30 pm cutoff the sender's calculation keeps the morning's figures but Ali converts the next business day at that day's rate. Who bears the difference between the two rates — NPL (as a variance), or is the sender re-quoted?",
      "Some Evo senders pay what they can (collect first), others pay the exact invoice (quote first): both exist in the system. Please list which senders are which when you fill 'All fee lines'."])
 
@@ -610,6 +612,31 @@ for col, field in [("Client / product", "PROJECT"), ("Who sends the money", "SEN
                    ("Bank or EMI that pays out", "SETTLEMENT_RAIL"), ("Name shown on the transfer", "SETTLEMENT_SENDING_ENTITY"), ("Has the partner approved the receiver's account?", "SETTLEMENT_REGISTRATION (D16 details)"),
                    ("Fee by monthly volume", "proposal B (FEE_TIER, calendar month)")]:
     cell(ws, f"A{r}", col, F_TXT, wrap=True); cell(ws, f"C{r}", field, F_TXT, wrap=True); r += 1
+
+# ------------------------------------------------------------------ Acceptance vectors B (v6.0): NPL's own figures recomputed
+import csv
+ws = wb.create_sheet("Acceptance vectors B")
+widths(ws, {"A": 8, "B": 70, "C": 16, "D": 16, "E": 22, "F": 70})
+header(ws, "A1", "Acceptance vectors B — NPL's own figures recomputed (Calculation Specification v6.0, §19, 19b, 19c; vectors-v5.9.csv)")
+cell(ws, "A2", "B1 to B17 from the fee sheet of 8 October (B2 against the corrected sheet of 21 October); B18 the receiver side of the Evo selected-senders deal; B19 to B23 NPL's figures of 21 October for the cases the sheet had no line for. 23 of 23 match. The identifiers are frozen (D51).", F_NOTE, wrap=True, border=False)
+ws.merge_cells("A2:F2"); ws.row_dimensions[2].height = 40
+for j, h in enumerate(["Id", "Case", "Sheet figure", "Recomputed", "Result", "Note"], 1):
+    cell(ws, f"{get_column_letter(j)}4", h, F_B, FILL_HEAD)
+r = 5
+with open(VECTORS, newline="", encoding="utf-8") as fh:
+    for row in csv.DictReader(fh):
+        if row["set"] != "B": continue
+        # the recomputed figure the sheet's figure is compared with: the one that equals it (to the unit), else the delivered amount
+        def num(v):
+            try: return float(str(v).replace(",", ""))
+            except ValueError: return None
+        targets = [num(x) for x in str(row["sheet_figure"]).split("/")]
+        cands = [row[k] for k in ("delivered", "client_net", "gross_out", "payable", "amount_in", "sender_rate") if row[k]]
+        picked = [c for t in targets if t is not None for c in cands if num(c) is not None and abs(num(c) - t) < 1]
+        recomputed = " / ".join(dict.fromkeys(picked)) if picked else (row["delivered"] or row["client_net"] or row["sender_rate"])
+        cell(ws, f"A{r}", row["id"], F_B); cell(ws, f"B{r}", row["case"], F_TXT, wrap=True); cell(ws, f"C{r}", row["sheet_figure"], F_IN, wrap=True)
+        cell(ws, f"D{r}", recomputed, F_TXT, wrap=True); cell(ws, f"E{r}", row["result"], F_TXT); cell(ws, f"F{r}", row["note"], F_TXT, wrap=True)
+        ws.row_dimensions[r].height = 30; r += 1
 
 # ------------------------------------------------------------------ save
 wb.calculation.fullCalcOnLoad = True

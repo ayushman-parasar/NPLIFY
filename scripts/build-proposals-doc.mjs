@@ -1,7 +1,9 @@
-// Build docs/NPLify-Model-Gaps-and-Proposals-v1.0.pdf: every gap found between NPL's fee practice
+// Build docs/NPLify-Model-Gaps-and-Proposals-v2.0.pdf: every gap found between NPL's fee practice
 // (fee table, NPL’s answers of 8 October, New XP’s clarifications) and ERD v5.2, each with a plain-
 // language account, why the model cannot say it, the proposed fix and its exact ERD footprint.
-// Nothing here is applied; the document is the specification for a v5.3.   node scripts/build-proposals-doc.mjs
+// v1.0 (8 October) was the specification for v5.3. v2.0 (22 October) keeps that record and adds Section 0: where every gap
+// stands at ERD v6.0 — all thirteen applied, the design-review gaps of 19–21 October applied, every question answered.
+//   node scripts/build-proposals-doc.mjs
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -158,6 +160,32 @@ const QUESTIONS = [
   ["C", "When the BF displayed-fee rule changes to \"partner rate + markup\", tell us — the displayed-fee setting is simply cleared."],
 ];
 
+// ------------------------------------------------------------------ status at v6.0 (22 October 2026)
+const APPLIED = { A: "D20 — FEE_OVERRIDE with its own split", B: "D21 — FEE_TIER per calendar month, DEAL_FEE_TIER portions; the month-volume counter and the crossed tier worked in Calculation Specification 5a, L12, L13, B21, B22", C: "D22 — the displayed fee on FEE_STRUCTURE and DEAL_GROUP", D: "D23 — NPL-GR as an own-desk project (confirmed by NPL)", E: "D24 — INVOICE and per-line discharge, INVOICE_BALANCE; the forex true-up per instalment (D46)", F: "D25 — a rounding menu per pair with a signed residual", G: "D26 — MARKUP_SHARE_RULE as a share of the net markup, settled by the party", H: "D27 — rebates as their own stream EARN_REBATE", I: "D28 — partner rates stored as quoted with direction (B17)", J: "D29 — the partner's bank cutoff with per-day overrides; the rate difference is NPL's variance VAR_CUTOFF (D46); Ali's cutoff at GMT+8 (D52)", K: "D30 — cash by token with rates per city", L: "D31 — WALLET_SCREENING as an Operations action with endpoint risk bands", M: "D32 — single-use endpoints and accounts; LOSS_EVENT with a shared, possibly partial loss, booked to NPL first (D46)" };
+const REVIEW = [
+  ["Emergency controls (suspend a partner, freeze a destination, override a cutoff)", "D47 · EMERGENCY_ACTION; controlled action emergency_suspend; Lifecycle 2b"],
+  ["A partner that cannot pay out after conversion", "D47 · REROUTE.phase post_conversion, Pattern O (T56–T58); fourth own-wallet custody case"],
+  ["Rate breach checks with a thin or unusable history", "D57 · Calculation Specification 2a; THRESHOLD kinds rate_min_observations, rate_fallback_spread_abs, rate_abs_tolerance"],
+  ["Duplicate execution, stale approvals, abandoned locks", "D49 · Lifecycle 6a; RECORD_LOCK expiry and clearance; APPROVAL.record_version; idempotency keys (rule 1a)"],
+  ["Money released but not yet confirmed", "D50 · the named state on SETTLEMENT_LINE (released_at, expected_confirmation_by, confirmed_at); rule 13a"],
+  ["Reconciling the partner's actual balance with the ledger", "Pattern Q (T59) and PARTNER_STATEMENT_RECONCILIATION; invariant 50"],
+  ["Opening balances at cutover", "D55 · OPENING_ENTRY, Pattern R (T60, T61), OPENING_BALANCE; Cutover Approach 4"],
+  ["Test data reaching production", "D53 · PROJECT.is_test, dummy twin projects, the pre-copy filter"],
+  ["Recovery after go-live, single points of failure", "D54 · Multi-AZ database, two tasks, cross-region copy, fallback workbook; Cutover 8a"],
+  ["Rules enforced only in prose", "D56 · ERD Appendix C; the generic type-plus-id trigger"],
+  ["Identifiers that could drift between documents and tests", "D51 · frozen T, L, B, W, X, F, C, A, D identifiers; the Companion's register"],
+  ["Corrections that move a reported month", "D57 · rule 11a; LEDGER_TRANSACTION.corrects_period"],
+];
+const ANSWERS = {
+  "B": "Answered: the tier is counted per project per calendar month; a deal that crosses the threshold is split into two portions (DEAL_FEE_TIER); worked as L12 / L13 and confirmed by NPL's figures B21 / B22 (21 October).",
+  "G": "Answered: 3.2 % via Aquanow confirmed (D26); the direct-downlines row stays as configured (75/25 of 0.2 %).",
+  "J": "Answered: NPL bears the difference as a variance (VAR_CUTOFF, D29 and D46); the sender keeps the morning's figures.",
+  "D": "Answered: NPL-GR runs inside NPLify as an own-desk project (D23).",
+  "F / K": "Answered: the rounding option is a per-pair setting with a signed residual (D25); cash rounding units per currency and city are configuration (D30).",
+  "—": "Answered or needs no structure: NPL's figures stand as the fee sheet states them and are carried in the scenario catalogue; a below-margin quote warns and is never refused (Calculation Specification 4a; NPL, 9 October); BF withdrawals go through Jeton only (NPL's answer of 8 October); Novi's 0.3 % confirmed, the Jeton route dormant; same-currency pass-through is in scope, converted at rate 1 (D33; L3, B23).",
+  "C": "Standing instruction: when the BF displayed-fee rule changes, the displayed-fee setting is cleared (D22).",
+};
+
 // ------------------------------------------------------------------ html
 const CSS = `
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
@@ -191,14 +219,24 @@ const section = (p) => `<section class="prop"><h3>${p.id} · ${esc(p.title)}</h3
 <p class="lbl">The fix, and how it closes the gap</p><p>${code(p.fix)}</p>
 <p class="lbl">ERD footprint</p><ul>${p.erd.map((e) => `<li>${code(e)}</li>`).join("")}</ul></section>`;
 
-const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Model Gaps &amp; Proposals v1.0</title><style>${CSS}</style></head><body>
-<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Model Gaps &amp; Proposals — candidate changes for ERD v5.3 · Draft v1.0</p><p class="org">New XP Technologies Limited</p><p class="date">8 October 2026 · Internal</p></div>
+const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Model Gaps &amp; Proposals v2.0</title><style>${CSS}</style></head><body>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Model Gaps &amp; Proposals — the record of v1.0, and where every gap stands at ERD v6.0 · Draft v2.0</p><p class="org">New XP Technologies Limited</p><p class="date">8 October 2026 · Internal</p></div>
 <p><b>Status:</b> Written against ERD &amp; Data Model Draft v5.2. Sources: NPL's "Table of Remittance Customers Fees" (October 2026), the Fee Outlines v0.1 workbook as returned by NPL on 8 October with its two new tabs "Project Context" and "Payment methods", and New XP’s clarifications of the same day on the Raeen split and on rebates. <b>Nothing in this document is applied.</b> Each proposal is a self-contained change with its exact footprint; approved items become decisions D20 onward and ship together as v5.3 with the dependent documents regenerated.<br>
 <b>Audience:</b> New XP engineering and, for Section 4, NPL Management. Each proposal reads in three steps — what is happening in plain terms, why the current model cannot express it, the fix and how it resolves it — followed by the ERD footprint in the model's own names.</p>
 <div class="box"><b>How to read the footprints.</b> <i>Gains</i> means a new column on an existing table; <i>new table</i> adds a box to a diagram and one to the count (54 tables + 4 views in v5.2); <i>rule</i> is a write-time check; <i>invariant</i> is a standing statement the daily checks assert; <i>purpose</i> is a value in the chart of accounts. Diagram numbers refer to the ERD baseline (1a configuration, 1b partner configuration, 2 rates, 3a deal, 3b collection and settlement, 4 ledger).</div>
 <div class="rule"></div>
 
-<h2>1 · The thirteen proposals at a glance</h2>
+<h2>0 · Where every gap stands at v6.0 (22 October 2026)</h2>
+<div class="status"><b>No open gap.</b> The thirteen proposals below were applied in v5.3 (decisions D20–D32, 9 October 2026) and refined by the ledger design of 10–11 October (D46). The design review of 19–21 October (Andrew's recommendations and Pete's design-document review) found a second set of gaps; all of them are applied in v6.0 (decisions D47–D57). Every question of Section 6 has its answer. The one item still awaiting NPL is not a model gap: which workflow names to change (Scenario Catalogue, Part 2).</div>
+<table><thead><tr><th style="width:4%">#</th><th style="width:30%">Proposal of v1.0</th><th>Applied as</th></tr></thead><tbody>
+${P.map((p) => `<tr><td><b>${p.id}</b></td><td>${esc(p.title)}</td><td>${esc(APPLIED[p.id])}</td></tr>`).join("")}
+</tbody></table>
+<table><thead><tr><th style="width:34%">Gap found in the design review (19–21 October)</th><th>Applied in v6.0 as</th></tr></thead><tbody>
+${REVIEW.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join("")}
+</tbody></table>
+<p class="small">Sections 1 to 6 are the v1.0 record, kept as written on 8 October so that each decision can be read against the gap it closed; the answers of Section 6 are added in the last column.</p>
+
+<h2 class="pb">1 · The thirteen proposals at a glance</h2>
 <table><thead><tr><th style="width:4%">#</th><th style="width:30%">Proposal</th><th style="width:16%">Source</th><th>Where it stands with NPL</th></tr></thead><tbody>
 ${P.map((p) => `<tr><td><b>${p.id}</b></td><td>${esc(p.title)}</td><td>${p.id <= "F" ? "Fee table (7 Oct)" : "NPL’s workbook and New XP’s clarifications (8 Oct)"}</td><td>${esc(p.status.split(". ")[0])}.</td></tr>`).join("")}
 </tbody></table>
@@ -222,16 +260,16 @@ ${P.map((p) => `<tr><td><b>${p.id}</b></td><td>${esc(p.title)}</td><td>${esc(p.f
 
 <h2>5 · Dependent documents touched by v5.3</h2><p> ERD baseline (all), Configuration Schema (A, B, C, D, F, G, H, I, J, K, M), Calculation Specification (A, C, F, I, J), Ledger Posting Design (D, E, F, G, H, M), Lifecycle &amp; Approvals (D, J, K, L, M), Roles &amp; Visibility Matrix (C, G, H, L), ERD Reading Guide (every diagram that gains a box), Fee Outlines (the "needs a system change" notes become "configured").</p>
 
-<h2>6 · Questions still open with NPL</h2>
-<p>Consolidated from the "Please confirm" lists of Fee Outlines v0.2; the first column names the proposal the answer feeds.</p>
-<table><thead><tr><th style="width:8%">Feeds</th><th>Question</th></tr></thead><tbody>
-${QUESTIONS.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td></tr>`).join("")}
+<h2>6 · Questions of 8 October, and their answers</h2>
+<p>Consolidated from the "Please confirm" lists of Fee Outlines v0.2; the first column names the proposal the answer feeds; the last column (v2.0) says what NPL answered and where it landed.</p>
+<table><thead><tr><th style="width:8%">Feeds</th><th style="width:46%">Question (8 October)</th><th>Answer, and where it landed</th></tr></thead><tbody>
+${QUESTIONS.map(([a, b]) => `<tr><td><b>${esc(a)}</b></td><td>${esc(b)}</td><td>${esc(ANSWERS[a] ?? "")}</td></tr>`).join("")}
 </tbody></table>
-<p class="small"><i>Draft v1.0 — internal. On approval, each proposal is recorded as a decision (D20 onward) in the decision record, applied to data/erd.v5.json, the map and the knowledge base, and the ERD baseline and dependent documents are regenerated as v5.3.</i></p>
+<p class="small"><i>Draft v2.0 — internal; v1.0 of 8 October kept as the record. On approval, each proposal is recorded as a decision (D20 onward) in the decision record, applied to data/erd.v5.json, the map and the knowledge base, and the ERD baseline and dependent documents are regenerated as v5.3.</i></p>
 </body></html>`;
 
 fs.mkdirSync(outDir, { recursive: true });
-const h = path.join(outDir, "NPLify-Model-Gaps-and-Proposals-v1.0.html"), p = path.join(outDir, "NPLify-Model-Gaps-and-Proposals-v1.0.pdf");
+const h = path.join(outDir, "NPLify-Model-Gaps-and-Proposals-v2.0.html"), p = path.join(outDir, "NPLify-Model-Gaps-and-Proposals-v2.0.pdf");
 fs.writeFileSync(h, html);
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
