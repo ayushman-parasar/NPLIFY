@@ -16,7 +16,7 @@ const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"
 const outDir = path.join(root, "docs");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const c = (s) => `<code>${esc(s)}</code>`;
-const V = D.version, DATE = "11 October 2026";
+const V = D.version, DATE = "22 October 2026";
 
 // ------------------------------------------------------------------ field groups
 // Every field of every table belongs to exactly one group; the group decides who may see it.
@@ -45,7 +45,8 @@ const ENTITY_GROUP = {
   // settlement
   SETTLEMENT: "OPS", SETTLEMENT_RETURN: "OPS", CONFIRMATION: "OPS", SHORTFALL: "OPS", MARKUP_SHARE_ACCRUAL: "ECON", PARTNER_REBATE_ACCRUAL: "ECON", LOSS_RECOVERY: "ECON",
   // ledger and controls
-  LEDGER_TRANSACTION: "LEDGER", LEDGER_POSTING: "LEDGER", LEDGER_ACCOUNT: "LEDGER", USER: "CTRL", APPROVAL: "CTRL", AUDIT_LOG: "CTRL", RECORD_LOCK: "CTRL", ROLE: "CTRL", ROLE_RIGHT: "CTRL",
+  LEDGER_TRANSACTION: "LEDGER", LEDGER_POSTING: "LEDGER", LEDGER_ACCOUNT: "LEDGER", OPENING_ENTRY: "LEDGER", PARTNER_STATEMENT_RECONCILIATION: "LEDGER",
+  USER: "CTRL", APPROVAL: "CTRL", AUDIT_LOG: "CTRL", RECORD_LOCK: "CTRL", ROLE: "CTRL", ROLE_RIGHT: "CTRL", EMERGENCY_ACTION: "CTRL",
   // views
   PROJECT_BALANCE: "LEDGER", GROUP_ENTITLEMENT: "LEDGER", OFFSET: "LEDGER", CUSTODY: "LEDGER", INVOICE_BALANCE: "OPS", PROJECT_MONTH_VOLUME: "PRICE", CLIENT_POSITION: "LEDGER", WALLET_REGISTRY: "OPS",
   REPORTING_VALUE: "ECON", RESELLER_MARGIN: "ECON", REMITTANCE_MARGIN: "ECON", NPL_PROFIT: "ECON",
@@ -124,14 +125,14 @@ const MATRIX = [
     ["The two invoices as obligations: amounts, parties, what each line discharged", "OPS", "INVOICE (kind, amount, currency, vendor_invoice_id), INVOICE_BALANCE, DEAL_GROUP.invoice_amount"],
     ["Reseller and remittance margins, forex true-ups, NPL's profit", "ECON", "RESELLER_MARGIN, REMITTANCE_MARGIN, NPL_PROFIT, VAR_FX_TIMING and RESELL_* postings"]]],
   ["Ledger and reconciliation", [
-    ["Accounts, transactions, postings, balances, identities, the client roll-up", "LEDGER", "LEDGER_ACCOUNT, LEDGER_TRANSACTION, LEDGER_POSTING, PROJECT_BALANCE, GROUP_ENTITLEMENT, OFFSET, CUSTODY, CLIENT_POSITION"],
+    ["Accounts, transactions, postings, balances, identities, the client roll-up; opening entries and partner statement reconciliations", "LEDGER", "LEDGER_ACCOUNT, LEDGER_TRANSACTION, LEDGER_POSTING, OPENING_ENTRY, PARTNER_STATEMENT_RECONCILIATION, PROJECT_BALANCE, GROUP_ENTITLEMENT, OFFSET, CUSTODY, CLIENT_POSITION"],
     ["Figures in the reporting currency", "ECON", "REPORTING_VALUE (any per-currency figure converted at the latest platform-pair rate, D43)"]]],
   ["Reports, exports and messages", [
     ["Operational reports and sender-facing documents", "OPS", "deal lists, collection and settlement reports, quote packages rendered from MESSAGE_TEMPLATE (sender-facing fields only, D36), partner instructions, the client journal"],
     ["Economic reports: margin, pool, cost breakdown, variances, earnings, offsets, losses, reseller margins, Finance Log", "ECON", "every report, export, message or notification that carries a value from groups REF, ECON or LEDGER"]]],
   ["Administration", [
     ["Approvals: request, approve, reject, escalate", "CTRL", "APPROVAL"],
-    ["Audit log and record locks", "CTRL", "AUDIT_LOG, RECORD_LOCK"],
+    ["Audit log, record locks and emergency actions", "CTRL", "AUDIT_LOG, RECORD_LOCK, EMERGENCY_ACTION"],
     ["Users, roles and rights per controlled action", "CTRL", "USER (role_id), ROLE (sees_economics), ROLE_RIGHT (may_initiate, may_approve, escalates_to_role_id)"]]],
 ];
 
@@ -227,6 +228,9 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Roles &amp; Visibility Matrix · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
+<h2>How to read this pack</h2>
+<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
+
 <h2>1 · The model in one page</h2>
 <p>Three roles, three nested rings. <b>Operations</b> runs deals: quotes and extends quotes, screens wallets, verifies collections, instructs conversions, prepares settlements, enters partner rates as quoted, requests reroutes, records destination approvals and loss events. <b>Finance</b> sees everything Operations sees plus the economics, approves what Operations initiates, resolves exceptions, recommends covered fees, requests balance conversions, dues recovery, earnings offsets and loss splits, proposes configuration and owns reconciliation. <b>Management</b> sees everything and approves the heavier actions, every configuration change and every user change. Visibility is <i>cumulative</i> — a wider role never loses a narrower role's view — and approval is <i>maker-checker</i>: the person who initiates an action is never the person who approves it, enforced by the server from the ROLE_RIGHT rows, not by convention.</p>
 ${nest}
@@ -266,13 +270,26 @@ ${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""
 </ol>
 <div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate). If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
 
+<h2>5a · Absence cover, scoped rights and delegation</h2>
+<p>Three questions from the design review, answered with NPL's decisions of 19 and 20 October. None of them adds a role or a per-user right; rule 1 of Section 5 stands.</p>
+<h3>10. Cover for staff absence is the role, not a delegation</h3>
+<p>Rights belong to the role, so any user holding a role may do what that role permits; nothing is handed from one person to another when someone is on leave, off shift or unreachable. If a whole role is unavailable, a user of a wider role may work a narrower role's steps through an account of that role (a Finance user takes an Operations-role account for the Operations steps and returns to the Finance account for the Finance steps). One safeguard makes this safe: the “approver is not the initiator” check of rule 5 is made on the person, not the account. Every USER row names the natural person behind it (${c("USER.person_ref")}, ERD Appendix B.5), the two accounts of one person carry the same person_ref, and APPROVAL refuses an approver whose person_ref equals the initiator's. The Management countersignature when only one Finance user is on shift (rule 5) is unchanged.</p>
+<h3>Scoped rights: documented, not built</h3>
+<p>A per-user, per-project scope (a user limited to named projects, approved by Management) is a possible later addition for an unusually sensitive counterparty. It is recorded here as an option and is not built unless NPL chooses it; until then there are no per-user exceptions and visibility is by role only.</p>
+<h3>Time-limited delegation: not in P0</h3>
+<p>The reviewer's revised recommendation is adopted as written: “Define backup approval arrangements for staff absence, holidays and emergencies, ensuring maker-checker controls remain intact. Automated temporary delegation can be considered in a later phase.” Rule 10 is that arrangement. No delegation feature, no expiring rights and no delegation records exist in the P0 model.</p>
+<h3>Periodic access review</h3>
+<p>Management reviews users, roles, dormant accounts and leavers once a quarter and records the review; the procedure is A.10 of the Client Operating Procedures, and the users-and-access report that supports it is built in Phase 2 (M6).</p>
+
 <h2 class="pb">Appendix A · Every field, its group, its rights</h2>
 <p class="small">Generated from the data model: ${Object.keys(D.E).length} tables and views, ${totalFields} fields. Rights per role as in Section 2; "view · enter" means Operations creates or edits the record in the normal course; actor fields (who approved, verified, posted, screened, recorded) belong to the approvals group.</p>
 ${appendix}
 </body></html>`;
 
 const h = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.html`), p = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.pdf`);
-fs.writeFileSync(h, clientFacing(html));
+// The client-facing pass knows the v1–v5 edition tokens; this edition's own token and draft marker are removed here.
+const thisEdition = (s) => s.replace(/\s*[·—–-]\s*Draft v6\.0\b/g, "").replace(/\bDraft v6\.0\b/g, "").replace(/\(v6\.0,\s*/g, "(").replace(/\bv6\.0[,:]?\s*/g, "");
+fs.writeFileSync(h, thisEdition(clientFacing(html)));
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
 console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "fields:", totalFields, "hidden from Operations:", hiddenFromOps, JSON.stringify(counts));

@@ -1,5 +1,5 @@
-// Build docs/NPLify-Lifecycle-and-Approvals-v5.9.{html,pdf}: transaction state machines and the approval
-// (maker-checker) workflows, from the agreed model at ERD v5.9 (D1–D46 and the corrections of v5.9).
+// Build docs/NPLify-Lifecycle-and-Approvals-v6.0.{html,pdf}: transaction state machines and the approval
+// (maker-checker) workflows, from the agreed model at ERD v6.0 (D1–D46, the corrections of v5.9 and the design review of October 2026).
 //   node scripts/build-lifecycle-doc.mjs
 import fs from "node:fs";
 import path from "node:path";
@@ -13,7 +13,7 @@ const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
 const outDir = path.join(root, "docs");
 fs.mkdirSync(outDir, { recursive: true });
-const V = D.version, DATE = "11 October 2026";
+const V = D.version, DATE = "22 October 2026";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const code = (s) => `<code>${esc(s)}</code>`;
 
@@ -57,6 +57,11 @@ function chart({ w, h, nodes, edges, title }) {
   }
   for (const n of Object.values(N)) {
     if (n.kind === "note") { parts.push(`<text x="${n.x}" y="${n.y}" class="note">${esc(n.label)}</text>`); continue; }
+    if (n.kind === "ponr") { // a point of no return: a short red bar across the edge, labelled below it
+      if (n.horiz) parts.push(`<line x1="${n.x - 11}" y1="${n.y}" x2="${n.x + 11}" y2="${n.y}" stroke="#a33" stroke-width="3"/><text x="${n.x + 14}" y="${n.y + 3}" text-anchor="start" class="el" fill="#a33">${esc(n.label)}</text>`);
+      else parts.push(`<line x1="${n.x}" y1="${n.y - 11}" x2="${n.x}" y2="${n.y + 11}" stroke="#a33" stroke-width="3"/><text x="${n.x}" y="${n.y + 26}" text-anchor="middle" class="el" fill="#a33">${esc(n.label)}</text>`);
+      continue;
+    }
     parts.push(`<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="${n.kind === "end" ? 17 : 6}" fill="${fill[n.kind]}" stroke="${stroke[n.kind]}" stroke-width="${n.kind === "start" ? 2 : 1.2}"/>`);
     const ls = n.label.split("\n");
     ls.forEach((l, i) => parts.push(`<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 3.5 - (ls.length - 1) * 5 + i * 10.5}" text-anchor="middle" class="st">${esc(l)}</text>`));
@@ -73,12 +78,14 @@ ${labels.join("\n")}</svg><figcaption>${esc(title)}</figcaption></figure>`;
 // ------------------------------------------------------------------ Figure 1: deal leg lifecycle
 const r1 = 44, r2 = 160, r3 = 290, r4 = 410, r5 = 500;
 const X = [20, 168, 316, 464, 612];
-const dealChart = chart({ w: 760, h: 600, title: "Figure 1 — Deal leg lifecycle. Blue: normal path. Orange: exceptions. Rounded: end states. Collect-first and return legs enter at Collected; estimate-first enters at Collecting.", nodes: [
+const dealChart = chart({ w: 760, h: 600, title: "Figure 1 — Deal leg lifecycle. Blue: normal path. Orange: exceptions. Rounded: end states. Red bars: the points of no return (Section 7a). Collect-first and return legs enter at Collected; estimate-first enters at Collecting; a reroute after conversion (Section 2b) returns the leg to Converted at the alternate partner.", nodes: [
   { id: "inq", label: "Inquiry", x: X[0], y: r1, kind: "start" }, { id: "quo", label: "Quoted", x: X[1], y: r1 }, { id: "sent", label: "Sent", x: X[2], y: r1 }, { id: "acc", label: "Accepted", x: X[3], y: r1 }, { id: "colg", label: "Collecting", x: X[4], y: r1 },
   { id: "cold", label: "Collected", x: X[4], y: r2 }, { id: "cvg", label: "Converting", x: X[3], y: r2 }, { id: "cvd", label: "Converted", x: X[2], y: r2 }, { id: "stl", label: "Settled", x: X[1], y: r2, kind: "end" },
   { id: "grace", label: "Expired /\nin grace", x: X[2], y: r3, kind: "exception" }, { id: "req", label: "Requoted\n(new deal group)", x: X[1], y: r3, kind: "end" }, { id: "void", label: "Voided\n(no money moved)", x: X[0], y: r3, kind: "end" },
   { id: "vam", label: "Voided after\ncollection", x: X[4], y: r3, kind: "exception" }, { id: "disp", label: "Refunded / credited\n/ held", x: X[4], y: r4, kind: "end" },
   { id: "rr", label: "Rerouted", x: X[3], y: r3, kind: "exception" },
+  { id: "rrc", label: "Rerouted after\nconversion", x: X[2], y: r4, kind: "exception" },
+  { id: "p1", label: "money landed", x: X[4] + 59, y: r1 + 86, kind: "ponr", horiz: true }, { id: "p2", label: "partner booked", x: X[3] - 15, y: r2 + 17, kind: "ponr" }, { id: "p3", label: "partner released", x: X[2] - 15, y: r2 + 17, kind: "ponr" },
   { id: "lock", label: "Rate locked, awaiting\nconversion_due_date", x: X[3], y: r4, kind: "exception" },
   { id: "loss", label: "Loss event:\nNPL stands in", x: X[4], y: r5, kind: "exception" },
   { id: "n1", label: "collect-first and return legs are born at Collected; estimate-first legs enter Collecting with an indicative figure", x: 20, y: r4 + 62, kind: "note" },
@@ -94,23 +101,27 @@ const dealChart = chart({ w: 760, h: 600, title: "Figure 1 — Deal leg lifecycl
   { from: "cold", to: "vam", label: "void after money", kind: "exception" }, { from: "vam", to: "disp", label: "Management approves\ndisposition", kind: "exception" },
   { from: "cvg", to: "rr", label: "partner unavailable", kind: "exception" }, { from: "rr", to: "cold", label: "alternate partner\n(Finance approval)", kind: "exception", via: [[X[4] - 20, r3 + 17], [X[4] - 20, r2 + 17]], lx: 592, ly: 262 },
   { from: "cold", to: "lock", label: "bank-channel pair,\nlocked after the cutoff (D29)", kind: "exception", via: [[598, r3 + 17]], lx: 598, ly: 350 },
-  { from: "lock", to: "cvg", label: "converts on the due date;\ndeferred if the rate breaches the margin", kind: "exception", via: [[450, r4 + 17], [450, r2 + 17]], lx: 450, ly: 350 },
+  { from: "lock", to: "cvg", label: "converts on the due date;\ndeferred if the rate breaches the margin", kind: "exception", via: [[458, r4 + 17], [458, r2 + 17]], lx: 458, ly: 350 },
+  { from: "cvd", to: "rrc", label: "partner cannot\npay out (2b)", kind: "exception", via: [[300, r2 + 17], [300, r4 + 17]], lx: 300, ly: 250 },
+  { from: "rrc", to: "cvd", label: "converted at the\nalternate partner", kind: "exception", via: [[444, r4 + 17], [444, r2 + 17]], lx: 444, ly: 396 },
   { from: "cold", to: "loss", label: "money lost after\nverification (D32)", kind: "exception", via: [[745, r2 + 17], [745, r5 + 17]], lx: 705, ly: 398 },
   { from: "loss", to: "cold", label: "loss booked to NPL,\nclient made whole;\ndeal continues", kind: "exception", via: [[598, r5 + 17], [598, r4 - 20]], lx: 598, ly: 405 },
 ] });
 
 // ------------------------------------------------------------------ Figure 2: settlement, lines, confirmation
-const settleChart = chart({ w: 760, h: 350, title: "Figure 2 — Settlement: a run and its lines. The promise is discharged when the partner releases the money; a return or a short delivery re-raises it. A run completes when every line is confirmed, short or returned.", nodes: [
+const settleChart = chart({ w: 760, h: 350, title: "Figure 2 — Settlement: a run and its lines. The promise is discharged when the partner releases the money; a line is then “sent, not yet confirmed” until the receiver confirms, the bank deducts a fee or the bank rejects; a return or a short delivery re-raises the promise. A run completes when every line is confirmed, short or returned. Red bar: the point of no return.", nodes: [
   { id: "prep", label: "Prepared\n(Ops)", x: 20, y: 30, kind: "start" }, { id: "appr", label: "Approved\n(Finance)", x: 168, y: 30 }, { id: "rel", label: "Released by partner\n(execution_due_date)", x: 316, y: 30 }, { id: "done", label: "Completed", x: 612, y: 30, kind: "end" },
   { id: "wait", label: "Approved after cutoff:\nnext business day", x: 20, y: 140, kind: "exception" },
   { id: "rej", label: "Rejected →\nback to Ops", x: 168, y: 140, kind: "exception" },
-  { id: "lsent", label: "Line: sent\n(promise discharged)", x: 316, y: 140 }, { id: "lconf", label: "Line: confirmed\n(no posting)", x: 464, y: 140, kind: "end" }, { id: "lshort", label: "Line: short\n(promise re-raised)", x: 464, y: 240, kind: "exception" }, { id: "sf", label: "SHORTFALL open →\ntopped up next run", x: 612, y: 240, kind: "end", w: 130 }, { id: "lret", label: "Line: returned\n(promise re-raised)", x: 316, y: 240, kind: "exception" },
+  { id: "lsent", label: "Line: sent,\nnot yet confirmed\n(promise discharged)", x: 308, y: 135, w: 134, h: 44 },
+  { id: "p1", label: "partner released", x: 301, y: 47, kind: "ponr" }, { id: "lconf", label: "Line: confirmed\n(no posting)", x: 464, y: 140, kind: "end" }, { id: "lshort", label: "Line: short\n(promise re-raised)", x: 464, y: 240, kind: "exception" }, { id: "sf", label: "SHORTFALL open →\ntopped up next run", x: 612, y: 240, kind: "end", w: 130 }, { id: "lret", label: "Line: returned\n(promise re-raised)", x: 316, y: 240, kind: "exception" },
   { id: "n1", label: "Management approves when: above settlement limit · third same-day slot · counterparty paid from another group's leg (never a refund or hop line) · only one Finance user on shift (countersign)", x: 20, y: 325, kind: "note" },
   { id: "n2", label: "a hop line (partner_transit) posts nothing on release and only when the far side credits (D40); every released line ends confirmed, short or returned (invariant 40, SETTLEMENT_LINE.outcome)", x: 20, y: 339, kind: "note" },
+  { id: "n3", label: "a sent line shows released_at and expected_confirmation_by; past its expected time it is on the exception list (state table, Section 7)", x: 20, y: 311, kind: "note" },
 ], edges: [
   { from: "prep", to: "appr", label: "approve" }, { from: "appr", to: "rel", label: "partner executes" }, { from: "appr", to: "rej", label: "reject with reason", kind: "reject" }, { from: "rej", to: "prep", label: "re-prepare", kind: "reject", via: [[150, 120]], lx: 120, ly: 112 },
   { from: "appr", to: "wait", label: "approved after the\npartner's cutoff (D29, D34)", kind: "exception", lx: 120, ly: 100 }, { from: "wait", to: "rel", label: "", kind: "exception" },
-  { from: "rel", to: "lsent", label: "each line" }, { from: "lsent", to: "lconf", label: "receiver confirms" }, { from: "lsent", to: "lshort", label: "bank fee deducted", kind: "exception" }, { from: "lshort", to: "sf", label: "carry-forward\n(Management)", kind: "exception" },
+  { from: "rel", to: "lsent", label: "each line" }, { from: "lsent", to: "lconf", label: "receiver confirms", lx: 453, ly: 128 }, { from: "lsent", to: "lshort", label: "bank fee deducted", kind: "exception" }, { from: "lshort", to: "sf", label: "carry-forward\n(Management)", kind: "exception" },
   { from: "lsent", to: "lret", label: "bank rejects", kind: "exception" }, { from: "lconf", to: "done", label: "all lines closed" }, { from: "lret", to: "done", label: "funds back in balance\nor fund a return leg", kind: "exception", via: [[375, 302], [671, 302]], lx: 530, ly: 298 },
 ] });
 
@@ -122,11 +133,16 @@ const rateChart = chart({ w: 760, h: 195, title: "Figure 3 — Partner rate vers
 ] });
 
 // ------------------------------------------------------------------ Figure 4: reroute and custody
-const rerouteChart = chart({ w: 760, h: 180, title: "Figure 4 — Reroute. Client money rests in NPL's own wallet in three cases only — an approved reroute, a bridge collection awaiting its hop, an own-desk leg (invariant 3) — and every resting balance carries deal, reason and age.", nodes: [
+const rerouteChart = chart({ w: 760, h: 200, title: "Figure 4 — Reroute, with the entry after conversion (phase post_conversion, Section 2b). Client money rests in NPL's own wallet in four cases only — an approved reroute before conversion, a reroute after conversion, a bridge collection awaiting its hop, an own-desk leg (invariant 3) — and every resting balance carries deal, reason and age. Red bar: the point of no return for an own-wallet transfer.", nodes: [
   { id: "req", label: "Requested\n(Ops, trigger)", x: 20, y: 30, kind: "start" }, { id: "appr", label: "Approved\n(Finance)", x: 168, y: 30 }, { id: "cust", label: "In custody\n(own wallet)", x: 316, y: 30 }, { id: "fwd", label: "Forwarded to\nalternate partner", x: 464, y: 30 }, { id: "done", label: "Completed", x: 612, y: 30, kind: "end" },
   { id: "rej", label: "Rejected →\nroute unchanged", x: 168, y: 120, kind: "end" }, { id: "rec", label: "Dues recovered\n(Management)", x: 464, y: 120, kind: "exception" },
+  { id: "cvd", label: "From Converted\n(phase post_conversion)", x: 20, y: 120, kind: "exception" },
+  { id: "recv", label: "Reconverted: first partner\nconverts back, no markup", x: 316, y: 120, kind: "exception", w: 134 },
+  { id: "p1", label: "signers broadcast", x: 449, y: 47, kind: "ponr" },
+  { id: "n1", label: "a reroute after conversion is approved by Finance, then Management; the leg's client net is write-once and the alternate partner's cost and rate difference are NPL's (Section 2b)", x: 20, y: 190, kind: "note" },
 ], edges: [
   { from: "req", to: "appr", label: "reason recorded" }, { from: "appr", to: "rej", label: "reject", kind: "reject" }, { from: "appr", to: "cust", label: "collection lands\nin own wallet" }, { from: "cust", to: "fwd", label: "outbound: Finance +\nManagement, signers" }, { from: "fwd", to: "done", label: "alternate partner\nconverts (margin\ncaptured there)" }, { from: "fwd", to: "rec", label: "forward_and_recover_dues", kind: "exception" }, { from: "rec", to: "done", label: "receivable ↓, wallet ↑", kind: "exception", via: [[671, 137]] },
+  { from: "cvd", to: "req", label: "partner cannot\npay out", kind: "exception" }, { from: "appr", to: "recv", label: "after conversion:\nManagement added", kind: "exception", lx: 290, ly: 102 }, { from: "recv", to: "cust", label: "paid to the\nown wallet", kind: "exception", lx: 410, ly: 100 },
 ] });
 
 // ------------------------------------------------------------------ Figure 5: approval record
@@ -166,9 +182,11 @@ const STATES = [
   ["CONVERSION", "Expected → Booked → Approved; Variance exception (Booked, beyond tolerance) → Resolved", "The booked figure is what the partner did; the difference posts to VAR_CONVERSION (partner_calculates), VAR_CUTOFF (after the cutoff) or VAR_RATE_HONOUR (an honoured expired rate); the exception is resolved by Finance; the deal does not wait. residual_in keeps the deal's margin unconverted, EARN_GROSS recognised in the collection currency (D46)."],
   ["BALANCE_CONVERSION", "Requested (Finance) → Approved (Management) → Booked; Rejected. A banking-ready balance waits for conversion_due_date (D29)", "Owns exactly one CONVERSION; entitlement re-attributed to the served group on booking."],
   ["REROUTE", "Requested → Approved → In custody → Forwarded → Completed; Rejected", "Phase pre_collection or post_collection; outcome via_own_wallet or refund_sender; forward_full or forward_and_recover_dues."],
+  ["REROUTE, phase post_conversion", "Requested → Approved (Finance, Management) → Reconverted → In custody → Forwarded → Completed; Rejected", "Trigger as for any reroute; outcome via_own_wallet only; the reroute owns the balance conversion back and names the second conversion; the leg returns to Converted at the alternate partner."],
   ["EARNINGS_OFFSET", "requested (Finance) → approved (Management) → posted", "Recovers EARNINGS_RECEIVABLE rows at the from-partner; the swap is recorded for NPL in FX_RESULT (D46)."],
   ["SETTLEMENT", "Prepared → Approved → Released → Completed; Rejected (back to Prepared). A bank-rail run approved after the cutoff is released on execution_due_date (D29, D34)", "Completed when every line is confirmed, short or returned."],
   ["SETTLEMENT_LINE (outcome)", "sent → confirmed | short | returned", "The promise is discharged on release; a short confirmation re-raises it for the missing part and a return for what came back (invariant 40). A line paying a group-less receiver carries deal_id (D17) and is never an offset; a hop line posts only when the far side credits (D40). short added v5.9."],
+  ["SETTLEMENT_LINE, “sent, not yet confirmed”", "sent (released by the partner, released_at set) → confirmed | short | returned", "NPL Finance confirmed on 20 October that this state is shown by name on the settlement screens and on the Finance log report of released, unconfirmed lines (Phase 2, M7). A line whose expected_confirmation_by has passed is on the exception list; the promise was discharged on release (Ledger Posting Design, rule 13) and nothing posts until the line ends confirmed, short or returned."],
   ["CONFIRMATION (result)", "full | short", "Full posts nothing; short opens a SHORTFALL unless the treatment is waived (D46)."],
   ["SHORTFALL", "open → topped_up", "Top-up funded from the pool, Management approval, paid with the next settlement."],
   ["SETTLEMENT_RETURN", "recorded (terminal)", "Funds a return leg or stays in balance; the bounce fee is a BANK_FEE_EVENT."],
@@ -219,6 +237,9 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Transaction Lifecycle &amp; Approval State Machines · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
+<h2>How to read this pack</h2>
+<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
+
 <h2>1 · Three roles, one principle</h2>
 <p>Every controlled action is <b>maker-checker</b>: one person initiates, a different person in the approving role approves, and the system refuses an approval by the initiator. Since D44 the rights are configuration, not code: ${code("ROLE")} holds the three roles of today and ${code("ROLE_RIGHT")} says per controlled action which role may initiate, which may approve and which is added on escalation; the approver's role must hold ${code("may_approve")} for the action (invariant 9). Visibility is cumulative: Operations sees the least, Finance sees everything Operations sees plus the economics, Management sees everything.</p>
 <table><thead><tr><th style="width:16%">Role</th><th>Does</th><th>Sees</th><th>Never sees</th></tr></thead><tbody>
@@ -250,7 +271,27 @@ ${dealChart}
 <tr><td>Inquiry … Collecting</td><td>Voided</td><td>Void before money moved</td><td>Reason recorded; no postings</td><td>Ops; Finance</td></tr>
 <tr><td>Collected / Converted</td><td>Voided after collection</td><td>Void after money moved</td><td>Disposition: refund (network-fee policy), sender credit, or hold</td><td>Ops; Management</td></tr>
 <tr><td>Converting / Collected</td><td>Rerouted → Collected at the alternate partner</td><td>Partner unavailable, limit reached, holiday, compliance hold</td><td>Approved REROUTE; alternate partner in the applicable set</td><td>Ops; Finance</td></tr>
+<tr><td>Converted</td><td>Rerouted after conversion → Converted at the alternate partner</td><td>The converting partner cannot pay out (suspended, limit reached, holiday, bank down) and NPL chooses not to wait: the balance is converted back, held in NPL's wallet, forwarded and converted again</td><td>Approved REROUTE with phase post_conversion; alternate partner in the applicable set; Management approval; custody within custody_max_hours; the client net stays as priced</td><td>Ops; Finance; Management</td></tr>
 </tbody></table>
+
+<h2>2a · Effective-date rules</h2>
+<p>Pricing stamps are write-once, and configuration is versioned by effective date (Configuration Schema, section 1). The four rules below say which version a deal uses; they are the same rules as in the Configuration Schema.</p>
+<table><thead><tr><th style="width:34%">Rule</th><th>What happens</th></tr></thead><tbody>
+<tr><td>1. New versions apply to new pricing only</td><td>An approved configuration change takes effect for deals priced on or after its effective date. A deal priced before that date is not re-priced.</td></tr>
+<tr><td>2. A priced deal keeps its versions</td><td>The fee structure version, the tier, the rate basis, the rounding options, the partner configuration and the policy versions stamped at pricing stay with the deal to the end of its life, including through settlement, return and loss handling.</td></tr>
+<tr><td>3. A re-quote uses the configuration of the new pricing time</td><td>An expired or requoted leg is priced afresh on the versions in force when the new quote is made (a new deal group); the original leg keeps its stamp.</td></tr>
+<tr><td>4. A collect-first deal uses the configuration in force when it is priced</td><td>A collect-first leg is priced at conversion, so it uses the versions effective at that time, not at the time the money arrived, unless a documented client agreement names a different rule for that project.</td></tr>
+</tbody></table>
+
+<h2>2b · Emergencies in the middle of a deal: the three cases</h2>
+<p>When a partner must be suspended, a destination frozen or a cutoff overridden (the emergency actions of Section 5), the deals already in flight are in one of three positions. The table says what can be done in each.</p>
+<table><thead><tr><th style="width:20%">Case</th><th>What can be done</th><th style="width:20%">Who</th><th style="width:22%">What posts</th></tr></thead><tbody>
+<tr><td>1. Collection started, not completed (Accepted or Collecting)</td><td>Void before money moves: the leg is voided, the instructions withdrawn, a single-use endpoint released. If the sender has already paid part, the deal is in case 2 for that part.</td><td>Operations starts, Finance approves</td><td>Nothing; no money has moved.</td></tr>
+<tr><td>2. Collected, not converted (Collected or Rate locked)</td><td>Reroute with phase post_collection: the unconverted money goes through NPL's own wallet to an alternate partner in the applicable set, or is refunded to the sender (a post-money void).</td><td>Operations requests; Finance approves the reroute; Management approves a refund</td><td>Existing Pattern D of the Ledger Posting Design (T12, T13): HELD, then COLLECTED at the alternate partner.</td></tr>
+<tr><td>3. Converted, sitting at the partner (Converted)</td><td>Reroute after conversion, phase post_conversion (NPL decision, 20 October): the converting partner converts the client's balance back to the collection currency at its rate of the day, pays it to NPL's own wallet, NPL forwards it to the alternate partner, and that partner converts at its own rate of the day. The client's entitlement is unchanged; the rate difference and the second partner's cost are NPL's.</td><td>Operations requests; Finance approves; Management approves, because NPL's wallet holds client money in the meantime</td><td>New Pattern O of the Ledger Posting Design (T56 to T58): a balance conversion back, custody, the forward, the second conversion with VAR_CONVERSION and the pool.</td></tr>
+</tbody></table>
+<h3>Reroute after conversion (phase post_conversion)</h3>
+<p>Figure 4 gains one entry point. A REROUTE with phase post_conversion starts from a leg in Converted, not from Collected: Requested (Operations, trigger recorded) → Approved (Finance, then Management) → Reconverted (the converting partner has converted the balance back; a BALANCE_CONVERSION owned by the reroute, no markup) → In custody (own wallet) → Forwarded to alternate partner → Completed when the alternate partner has converted and the leg is back in Converted there. The leg's client net is write-once and is what the alternate partner must deliver into the client's balance; what it actually delivers, less its stated cost, differs from that by the rate difference, which is posted to VAR_CONVERSION against NPL's pool at the alternate partner. NPL's margin captured at the first conversion stays where it was earned. Custody is bounded by custody_max_hours and shown on the custody view like any reroute. The first partner's transfer to NPL's wallet and NPL's forward to the alternate partner are both outbound transfers under the controls of Section 5.</p>
 
 <h2 class="pb">3 · Settlement, rates, reroute and approval records</h2>
 ${settleChart}
@@ -269,6 +310,7 @@ ${offsetChart}
 <table style="font-size:8.2pt"><thead><tr><th style="width:19%">Controlled action</th><th style="width:9%">Initiates</th><th style="width:10%">Approves</th><th style="width:30%">Escalates to Management when</th><th style="width:20%">On rejection</th><th>ROLE_RIGHT</th></tr></thead><tbody>
 ${ACTIONS.map((a) => `<tr>${a.map((c, i) => `<td${i === 5 ? ' class="mono"' : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")}
 </tbody></table>
+<p>Deals in flight when an emergency action is applied are handled by the three cases of the table after Figure 4.</p>
 </section>
 
 <h2>6 · Rejection handling, the same way everywhere</h2>
@@ -281,13 +323,49 @@ ${ACTIONS.map((a) => `<tr>${a.map((c, i) => `<td${i === 5 ? ' class="mono"' : ""
 <li><b>Escalation never skips a level.</b> Management approves in addition to Finance; when only one Finance user is on shift, Management's countersignature stands in for the second Finance user.</li>
 </ol>
 
+<h2>6a · Concurrency rules</h2>
+<p>Section 5 of the Architecture note already gives every money-moving action a unique key, so a retried request cannot post twice, and locks the record a person is editing. Three rules complete that protection.</p>
+<table><thead><tr><th style="width:30%">Rule</th><th>What the system does</th></tr></thead><tbody>
+<tr><td>1. An approval is valid only for the state the approver saw</td><td>An APPROVAL carries the record version it was requested on. If the record changed between request and approval (another user edited it, a job moved it, a second approval landed), the approval is refused and the approver is shown the current state; a fresh request is needed. Two approvers acting on the same request at once: the first commit wins, the second is refused.</td></tr>
+<tr><td>2. Two runs of a job never overlap</td><td>Each background job of the Architecture note (Section 4) takes a lock row before it runs and releases it at the end; a run that finds the lock held exits at once and is recorded as skipped. After a restart the job catches up from where the last run finished, so nothing is processed twice.</td></tr>
+<tr><td>3. A record lock expires</td><td>RECORD_LOCK is released on save or cancel; it expires after a fixed idle time (THRESHOLD kind lock_idle_minutes, default 15) so a closed laptop does not block a record for the day; Management can clear a lock; the lock, its release, its expiry and any clearance are written to AUDIT_LOG. The lock row carries lock_expires_at (ERD Appendix B.5).</td></tr>
+</tbody></table>
+<p>These rules are built in Phase 1 (M3 to M5) and tested with the concurrency, duplicate-submission and outage cases of the go-live acceptance tests (Cutover Approach, exit criteria 9 to 13).</p>
+
 <h2>7 · State tables by entity</h2>
 <table><thead><tr><th style="width:22%">Entity</th><th>States and transitions</th><th style="width:34%">Notes</th></tr></thead><tbody>
 ${STATES.map((s) => `<tr><td class="mono">${esc(s[0])}</td><td>${esc(s[1])}</td><td>${esc(s[2])}</td></tr>`).join("")}
 </tbody></table>
 
+<h2>7a · The point of no return, and what can still be done after it</h2>
+<p>Rule 3 of Section 6 says that money which has moved is never rolled back. The table names the moment in each stage after which that holds, and the only recovery actions that remain. The same points are marked on Figures 1 to 4.</p>
+<table><thead><tr><th style="width:14%">Stage</th><th style="width:24%">Point of no return</th><th style="width:26%">Before it</th><th>After it, the only recovery actions</th></tr></thead><tbody>
+<tr><td>Collection</td><td>The sender's money lands on the endpoint (hash confirmed, slip received, cash counted)</td><td>Void before money moved: no posting, instructions withdrawn (Operations, Finance)</td><td>Post-money void with a disposition: refund to the sender's return receiver, sender credit, or hold (Management); a loss event if the money is lost after verification</td></tr>
+<tr><td>Conversion</td><td>The partner books the conversion</td><td>Conversion instruction withdrawn; deal stays Collected</td><td>The booked figure stands; a variance beyond tolerance is a Finance decision and, if needed, a reversing entry; a reroute after conversion (Section 2b) moves the balance, never the booking</td></tr>
+<tr><td>Settlement</td><td>The partner releases the payout (execution)</td><td>Rejected back to Prepared; lines changed and re-submitted</td><td>Nothing is cancelled: the line ends confirmed, short or returned; a return funds a return leg or stays in balance; a duplicate instruction is refused by its idempotency key</td></tr>
+<tr><td>Own-wallet transfer</td><td>NPL's signers broadcast the transaction</td><td>Management rejects; funds stay in custody</td><td>The transfer is final on chain; a wrong destination is a loss event; the hop or forward is recorded when the far side credits</td></tr>
+</tbody></table>
+
 <h2>8 · Aging and the daily exception list</h2>
 <p>These things age and are reported daily with deal, reason and hours since the event: client money in NPL's own wallet (custody — reroutes, bridge collections awaiting their hop, own-desk balances), open offsets across receiver groups, open shortfalls, open variance exceptions, a pool below zero awaiting the next conversion (invariant 41), an unfunded make-good (MAKEGOOD / LOSS_PAYABLE), loss recoveries agreed and not received, and settlement lines sent beyond the rail's expected time. Breached rate versions, frozen partner × pairs and quotes past their validity appear on the same list. Time limits for each are project configuration (THRESHOLD, OWN_WALLET.custody_max_hours) and are not fixed by this document.</p>
+<h2>8a · Next action and time limits</h2>
+<p>NPL's decision (19 October): pending items belong to the role, not to a named person. Two things are therefore required of every pending item, and one time limit per stage.</p>
+<table><thead><tr><th style="width:22%">Requirement</th><th>What every pending item shows or does</th></tr></thead><tbody>
+<tr><td>Visible to the whole role</td><td>Every pending approval, collection, conversion, settlement or exception is on the list of every user in the role that must act, whoever started it; the initiator's absence changes nothing.</td></tr>
+<tr><td>Self-explanatory</td><td>Each item shows its state, why it is pending, the last action with its time and user, the next action required, the role that must act, how long it has been pending, and the cutoff it is running against (the per-role lists gain a next-action column in Phase 1).</td></tr>
+<tr><td>Time limit per stage</td><td>THRESHOLD kind approval_time_limit, one row per stage, in minutes, with an escalation role (Configuration Schema). When the limit passes, the item appears on the escalation role's list as overdue and raises an alert (Phase 3, M8). NPL maintains the values: Finance proposes, Management approves. A cutoff warning is raised a configurable number of minutes before a partner's cutoff for any item still pending against it.</td></tr>
+</tbody></table>
+<h3>Default time limits (illustrative, from the design review)</h3>
+<table><thead><tr><th style="width:26%">Stage</th><th style="width:18%">Role that acts</th><th style="width:28%">Default limit</th><th>Escalates to</th></tr></thead><tbody>
+<tr><td>Collection verification</td><td>Operations</td><td>15 minutes from the partner's confirmation</td><td>Finance</td></tr>
+<tr><td>Partner rate confirmation</td><td>Finance</td><td>15 minutes from the rate being entered</td><td>Management</td></tr>
+<tr><td>Conversion approval</td><td>Finance</td><td>15 minutes from the request</td><td>Management, at once if the cutoff is within 30 minutes</td></tr>
+<tr><td>Settlement approval</td><td>Finance</td><td>30 minutes from the request</td><td>Management</td></tr>
+<tr><td>Partner execution confirmation</td><td>Operations</td><td>the rail's expected time (Section 8)</td><td>Finance; the partner is chased</td></tr>
+<tr><td>End-of-day reconciliation</td><td>Finance</td><td>before the day is closed</td><td>Management, if a discrepancy stays open</td></tr>
+<tr><td>Cutoff warning</td><td>the role holding the item</td><td>60 minutes before the partner's cutoff; a second warning at 30</td><td>Management at the second warning</td></tr>
+</tbody></table>
+<p>These are the values proposed in the review; NPL sets the real ones per project before the parallel run. Where the delay affects a client (a missed cutoff, a reroute, a changed settlement date), the Operating Procedures say when and how the client is told.</p>
 <p class="small"><i>Draft v${V} — for review with NPL. State names are the proposal for the state columns the ERD leaves as free text; once agreed they become the enumerations of those columns.</i></p>
 </body></html>`;
 

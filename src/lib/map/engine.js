@@ -28,7 +28,7 @@ const IC = {
 export const SKELETON = `
 <div id="app">
   <header>
-    <h1>NPLify Unified ERD <small>P0 data model · draft v5.8 · 70 tables + 12 views</small></h1>
+    <h1>NPLify Unified ERD <small>P0 data model · draft v6.0 · 73 tables + 12 views</small></h1>
     <div class="tools">
       <div class="search">${IC.search}<input id="q" type="search" placeholder="Find an entity or field…" aria-label="Find entity or field" autocomplete="off"><kbd>/</kbd></div>
       <div class="selwrap"><select id="walkSel" aria-label="Walkthrough"><option value="">Walk a data flow…</option></select>${IC.chev}</div>
@@ -110,7 +110,7 @@ export const SKELETON = `
           <button class="btn primary" id="chatSend" type="submit">Ask</button>
           <button class="btn" id="chatStop" type="button" hidden>Stop</button>
         </form>
-        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v5.8, the review decision record (D1–D46), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
+        <div id="chatMeta"><span id="chatNote">Answers come only from the ERD v6.0, the review decision record (D1–D57), the Understanding document, NPL’s fee-practice notes and the scenario catalogue. Conversations are recorded so New XP can see what is asked and answered.</span><button class="btn ghost" id="chatClear" type="button" style="padding:3px 8px">New chat</button></div>
       </div>
       <div id="oq" hidden></div>
     </aside>
@@ -509,7 +509,7 @@ function openFlag(name){const box=$('flagbox');if(!box)return;box.hidden=false;
 
 /* ------------------------------------------------------------------ chat (server-backed) */
 const chatLog=$('chatLog'),chatIn=$('chatIn'),chatForm=$('chatForm'),chatSend=$('chatSend'),chatStop=$('chatStop'),chatSug=$('chatSug'),chatNote=$('chatNote');
-const SUGGEST=['How does a BF Sub deal via Aquanow work end to end, and where does the Aquanow rebate go?','Which projects belong to the Betfair client, and how do I see the client-level balance?','How does a GDC transaction that crosses USD 500,000 in a month get priced?','What happens when a one-time local deposit account is frozen after the deposit?','How does the 14:30 cutoff change a deal collected in the evening?','What changed in v5.3 and v5.4, and which NPL fee practice does each decision come from?','How does money flow from a collection to the receiver’s confirmation?','What must exist before a quote-first deal can leave Inquiry?','What is a receiver group and when do offsets arise?','How is a rejected payout handled?','How does a two-leg route across two partners work?','Which figures are never stored, and how is each computed?','What changes on a reroute, and what stays fixed?','When is a partner rate version breached, and what happens then?','List every entity that hangs off PARTNER_CONFIG.','Which open questions are still unresolved?'];
+const SUGGEST=['How does a BF Sub deal via Aquanow work end to end, and where does the Aquanow rebate go?','Which projects belong to the Betfair client, and how do I see the client-level balance?','How does a GDC transaction that crosses USD 500,000 in a month get priced?','What happens when a one-time local deposit account is frozen after the deposit?','How does the 14:30 cutoff change a deal collected in the evening?','What changed in v6.0 after the design review of 19–21 October, and which NPL decision does each change come from?','What is an emergency action, who applies it and what happens if Management does not ratify it?','How are opening entries posted on the opening date, and what is OPENING_BALANCE?','How does money flow from a collection to the receiver’s confirmation?','What must exist before a quote-first deal can leave Inquiry?','What is a receiver group and when do offsets arise?','How is a rejected payout handled?','How does a two-leg route across two partners work?','Which figures are never stored, and how is each computed?','What changes on a reroute, and what stays fixed?','When is a partner rate version breached, and what happens then?','List every entity that hangs off PARTNER_CONFIG.','Which open questions are still unresolved?'];
 (cfg.visitor?SUGGEST.filter(q=>!/v5\.|open question/i.test(q)):SUGGEST).forEach((q,i)=>{const b=document.createElement('button');b.type='button';b.textContent=q;b.style.animationDelay=(i*25)+'ms';b.addEventListener('click',()=>{chatIn.value=q;ask()});chatSug.appendChild(b)});
 let turns=[],ctl=null,busy=false,sessionId=cfg.sessionId||(crypto.randomUUID?crypto.randomUUID():String(Date.now()));
 const ENT_RE=new RegExp('\\b('+Object.keys(E).sort((a,b)=>b.length-a.length).join('|')+')\\b','g');

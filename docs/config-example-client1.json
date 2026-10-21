@@ -88,7 +88,7 @@
         "local_deposit"
       ],
       "bank_cutoff_time": "14:30",
-      "cutoff_timezone": "Asia/Jakarta",
+      "cutoff_timezone": "Asia/Hong_Kong",
       "status": "active",
       "holidays": [
         {

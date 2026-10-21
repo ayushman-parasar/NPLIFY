@@ -83,10 +83,10 @@ def main(erd_pdf, post_pdf, comp_pdf):
             if n:
                 problems += 1; print(f'  {name:9s} {n:2d}  {label}')
     erd = ws(docs['ERD'])
-    m = re.search(r'purpose string (.*?) kind string asset', erd)
+    m = re.search(r'purpose string (COLLECTED.*?) kind string asset', erd)   # v6.0: diagram 4's column text also contains 'purpose string'
     purposes = [p.strip() for p in re.sub(r'\(.*?\)', '', m.group(1)).split('/')] if m else []
     m = re.search(r'source_type string (.*?)(?: \(v5|source_id)', erd)
-    sources = [s.strip() for s in m.group(1).split('/')] if m else []
+    sources = [s.strip() for s in re.sub(r'\(.*?\)', '', m.group(1)).split('/')] if m else []   # v6.0: the note carries a parenthetical on Opening
     m = re.search(r'cost_component string (.*?)(?: \(v5|LEDGER_ACCOUNT|receiver_group_id)', erd)
     comps = [c.strip() for c in m.group(1).split('/')] if m else []
     print('\n== Cross-check against the ERD enumerations')
@@ -110,13 +110,15 @@ def main(erd_pdf, post_pdf, comp_pdf):
         problems += 1
         print('  worked-transaction headings differ:', sorted(set(tcount['POSTING']) ^ set(tcount['COMPANION'])))
     print(f"  worked transactions: posting {len(set(tcount['POSTING']))}, companion {len(set(tcount['COMPANION']))}")
-    lines = docs['ERD'].split('\n')
-    tables = 0
+    lines = text(erd_pdf, False).split('\n')   # reading order, not layout: a heading and its field table stay on consecutive lines
+    seen = set()
     for i, l in enumerate(lines):
-        if re.fullmatch(r'[A-Z][A-Z_]{2,}', l.strip()) and ' '.join(x.strip() for x in lines[i+1:i+4]).startswith('Field'):
-            tables += 1
+        if re.fullmatch(r'[A-Z][A-Z_]{2,}', l.strip()) and any(x.strip().startswith('Field') for x in lines[i+1:i+14]):   # v6.0: some tables print a description between the heading and the field table
+            seen.add(l.strip())
+    tables = len(seen)
     claim = re.search(r'(\d+) tables and (\d+) views', erd)
-    views = len(set(re.findall(r'\b([A-Z][A-Z_]{3,})\([a-z_, ]*\) ', erd)))
+    vseg = erd[erd.find('Derived views (never stored)'):]; vseg = vseg[:vseg.find('Appendix A')] if 'Appendix A' in vseg else vseg   # v6.0: Appendix C names indexes with the same shape
+    views = len(set(re.findall(r'\b([A-Z][A-Z_]{3,})\([a-z_, ]*\) ', vseg)))
     print(f'  ERD claims {claim.group(1) if claim else "?"} tables / {claim.group(2) if claim else "?"} views; Appendix B defines {tables} tables; views table lists {views}')
     if claim and int(claim.group(1)) != tables: problems += 1; print('  table count mismatch')
     print('\nRESULT:', 'clean' if not problems else f'{problems} item(s) to fix')

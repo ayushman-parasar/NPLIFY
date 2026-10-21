@@ -1,5 +1,5 @@
 {
- "version": "5.9",
+ "version": "6.0",
  "ledger": {
   "L1": {
    "name": "Deal 1 — Evo, 10,000 USDT → EUR at Ali (fee_in_rate), market 0.9000, Ali 0.8910, sender 1.4 % + receiver 0.6 % on market",
@@ -180,144 +180,289 @@
    "payable": 88200,
    "residual": 0,
    "inferredPartnerCost": 900
+  },
+  "L10": {
+   "name": "Part collection: deal 2, 5,000 USDT → EUR at Ali collected as 4,000 + 1,000 (T4 to T6); priced once on the whole amount, nothing posts on the parts",
+   "in": "USDT",
+   "out": "EUR",
+   "amountIn": 5000,
+   "Rb": 0.9,
+   "Rs": 0.8874,
+   "grossOut": 4437,
+   "feeReceiver": 27,
+   "clientNet": 4410,
+   "feeSender": 63,
+   "grossConverted": 4455,
+   "partnerCost": 0,
+   "actualOut": 4455,
+   "grossMargin": 45,
+   "earnings": 45,
+   "payable": 4410,
+   "residual": 0,
+   "inferredPartnerCost": 45
+  },
+  "L11": {
+   "name": "Eight-decimal asset: 0.12345678 BTC → EUR at Ali, market 60,000.00000000 EUR per BTC, Ali 59,400.00000000 (1 % inside), sender 1.4 % + receiver 0.6 %; rate_precision 8, amounts 2 dp",
+   "in": "BTC",
+   "out": "EUR",
+   "amountIn": 0.12345678,
+   "Rs": 59160,
+   "grossOut": 7303.7,
+   "feeSender": 103.7,
+   "feeReceiver": 44.44,
+   "clientNet": 7259.26,
+   "actualOut": 7333.33,
+   "partnerCost": 0,
+   "earnings": 74.07,
+   "payable": 7259.26,
+   "residual": 0,
+   "principal": 7407.41
+  },
+  "L12": {
+   "name": "Tier boundary, exactly reached: GDC, month-to-date USD 450,000.00, target_out USD 50,000.00 at rate 1; the deal ends the month-to-date at exactly 500,000.00, so the whole deal is tier 1 (2.5 %) and the next deal, of any size, is tier 2",
+   "in": "USDT",
+   "out": "USD",
+   "amountIn": 51250,
+   "Rb": 1,
+   "Rs": 0.9756097560975611,
+   "grossOut": 50000,
+   "feeReceiver": 0,
+   "clientNet": 50000,
+   "feeSender": 1250,
+   "grossConverted": 51250,
+   "partnerCost": 0,
+   "actualOut": 51250,
+   "grossMargin": 1250,
+   "earnings": 1250,
+   "payable": 50000,
+   "residual": 0,
+   "inferredPartnerCost": 0
+  },
+  "L13": {
+   "name": "Tier boundary, crossed: GDC, month-to-date USD 490,000.00, target_out USD 20,000.00; 10,000.00 at 2.5 % and 10,000.00 at 2.25 % (two DEAL_FEE_TIER portions, blended 2.375 %)",
+   "in": "USDT",
+   "out": "USD",
+   "amountIn": 20475,
+   "Rs": 0.9768009768009768,
+   "grossOut": 20000,
+   "feeSender": 475,
+   "feeReceiver": 0,
+   "clientNet": 20000,
+   "actualOut": 20475,
+   "partnerCost": 0,
+   "earnings": 475,
+   "payable": 20000,
+   "residual": 0,
+   "blended": 0.02375
   }
  },
  "npl": [
   {
+   "id": "B1",
    "name": "Evo sender: 29,325 USDT at market 0.888977323, sender pays 1.40 %",
    "inputs": "fixed_in; sender rate = market × (1 − 1.40 %) = 0.876531640478",
-   "computed": 25704.29,
-   "shown": 25704,
+   "computed": "25,704",
+   "shown": "25,704",
    "ok": true,
    "note": "NPL's sheet prints the sender rate 0.876531640478 and EUR 25,704 (rounded to the unit)"
   },
   {
+   "id": "B2",
    "name": "Evo receiver: the same deal, receiver pays 0.60 %",
    "inputs": "fee parts on the principal: 29,325 × 0.888977323 × (1 − 1.40 % − 0.60 %)",
-   "computed": 25547.87,
-   "shown": 25550,
-   "ok": false,
-   "note": "NPL's sheet applies 0.60 % to the EUR 25,704 (25,550); on the principal, the confirmed rule, it is 25,547.88 — the sheet's line is the one to correct (see §3)"
+   "computed": "25,548",
+   "shown": "25,548",
+   "ok": true,
+   "note": "corrected sheet of 21 October: (29,325 − 2 %) × 0.888977323 = 25,548; the 8 October sheet read 25,550 (receiver part taken on the gross out)"
   },
   {
+   "id": "B3",
    "name": "Evo selected senders: EUR 50,000 target, market 1 ÷ 0.8652 USDT per EUR, sender pays 1.00 %",
    "inputs": "target_out; amount_in = target × (1 + 1.00 %) × market in_per_out = 50,000 × 1.01 × 1.155802126676",
-   "computed": 58368,
-   "shown": 58368,
+   "computed": "58,368",
+   "shown": "58,368",
    "ok": true,
    "note": "NPL prints the final rate 1.16736014794267 = market × 1.01"
   },
   {
+   "id": "B4",
    "name": "BF-Raeen via Jeton: 200,000 USDT at 0.8610999, fee 1 %",
    "inputs": "fixed_in; 200,000 × 0.8610999 × (1 − 1 %)",
-   "computed": 170498,
-   "shown": 170498,
+   "computed": "170,498",
+   "shown": "170,498",
    "ok": true,
    "note": ""
   },
   {
+   "id": "B5",
    "name": "BF-Raeen via Ali: 300,000 USDT at 0.864189, fee 1 %",
    "inputs": "fixed_in; 300,000 × 0.864189 × (1 − 1 %)",
-   "computed": 256664,
-   "shown": 256664,
+   "computed": "256,664",
+   "shown": "256,664",
    "ok": true,
-   "note": "the printed rate is recomputed so the sender-facing fee reads 1 % (D22)"
+   "note": "the printed rate is recomputed so the sender-facing fee reads 1 %"
   },
   {
+   "id": "B6",
    "name": "Raeen sub-account: 50,000 USDT at 0.8650036, fee 4 %",
    "inputs": "fixed_in; 50,000 × 0.8650036 × (1 − 4 %)",
-   "computed": 41520.17,
-   "shown": 41520.17,
+   "computed": "41,520.17",
+   "shown": "41,520.17",
    "ok": true,
    "note": ""
   },
   {
+   "id": "B7",
    "name": "GDC: USD 84,482 target, fee 2.5 %, converted at a rate of 1 USDT per USD",
    "inputs": "target_out; 84,482 × (1 + 2.5 %) ÷ 1.0000",
-   "computed": 86594,
-   "shown": 86594,
+   "computed": "86,594",
+   "shown": "86,594",
    "ok": true,
    "note": "the sheet's figure implies a rate of exactly 1"
   },
   {
+   "id": "B8",
    "name": "GDC above USD 500,000 a month: tier 2.25 %",
    "inputs": "target_out; 84,482 × (1 + 2.25 %)",
-   "computed": 86383,
-   "shown": 86383,
+   "computed": "86,383",
+   "shown": "86,383",
    "ok": true,
-   "note": "FEE_TIER chosen from PROJECT_MONTH_VOLUME (D21)"
+   "note": "FEE_TIER chosen from PROJECT_MONTH_VOLUME"
   },
   {
+   "id": "B9",
    "name": "27 Group (reseller): THB 17,000,000 at 0.0259463782412186 EUR per THB, fee 2 %",
    "inputs": "fixed_in; sender rate = 0.0259463782412186 × 0.98 = 0.02542745; 17,000,000 × 0.02542745",
-   "computed": 432266.66,
-   "shown": 432266.66,
+   "computed": "432,266.66",
+   "shown": "432,266.66",
    "ok": true,
    "note": "NPL rounds the EUR to the unit: 432,267"
   },
   {
+   "id": "B10",
    "name": "27 Group: the same THB at Ali, agent rate 1 ÷ 33.83 USDT per THB",
    "inputs": "what the partner delivers: 17,000,000 ÷ 33.83",
-   "computed": 502513,
-   "shown": 502513,
+   "computed": "502,513",
+   "shown": "502,513",
    "ok": true,
    "note": "agent fee 0.64 % inside the rate against market 1 ÷ 33.613"
   },
   {
+   "id": "B11",
    "name": "27 Group balance clearance: EUR 329,408 target, market 38.13570206 THB per EUR, fee 2 %",
    "inputs": "target_out; 329,408 × 1.02 × 38.13570206",
-   "computed": 12813449.45,
-   "shown": 12813449.45,
+   "computed": "12,813,449.45",
+   "shown": "12,813,449.45",
    "ok": true,
    "note": "then cash-rounded by NPL to THB 12,813,000 (nearest 1,000; the pair's cash_rounding)"
   },
   {
+   "id": "B12",
    "name": "Bala (reseller): EUR 2,220 target, market 1 ÷ 0.8716, fee 2 %",
    "inputs": "target_out; 2,220 × 1.02 × 1.147315282240",
-   "computed": 2597.98,
-   "shown": 2597.98,
+   "computed": "2,597.98",
+   "shown": "2,597.98",
    "ok": true,
-   "note": "then rounded up to USDT 2,600 (D25: USDT paid by reseller customers rounded up)"
+   "note": "then rounded up to USDT 2,600 (USDT paid by reseller customers rounded up)"
   },
   {
+   "id": "B13",
    "name": "66 Group (reseller): EUR 239,149 target, market 1 ÷ 0.8796, fee 1.5 %",
    "inputs": "target_out; 239,149 × 1.015 × 1.136880400182",
-   "computed": 275962.07,
-   "shown": 275962.07,
+   "computed": "275,962.07",
+   "shown": "275,962.07",
    "ok": true,
    "note": "rounded to USDT 275,962"
   },
   {
+   "id": "B14",
    "name": "TripleSeven/GZ (reseller): EUR 4,097 target, market 1 ÷ 0.8598, fee 1.5 %",
    "inputs": "target_out; 4,097 × 1.015 × 1.163061177018",
-   "computed": 4837,
-   "shown": 4837,
+   "computed": "4,837",
+   "shown": "4,837",
    "ok": true,
    "note": ""
   },
   {
+   "id": "B15",
    "name": "Alpha Plus (reseller): EUR 2,939 target, market 1 ÷ 0.8712, fee 1.5 %",
    "inputs": "target_out; 2,939 × 1.015 × 1.147842056933",
-   "computed": 3424.11,
-   "shown": 3424.11,
+   "computed": "3,424.11",
+   "shown": "3,424.11",
    "ok": true,
    "note": "rounded to USDT 3,424"
   },
   {
+   "id": "B16",
    "name": "Fair (reseller): EUR 1,079 target, market 1 ÷ 0.8642, fee 0.75 %",
    "inputs": "target_out; 1,079 × 1.0075 × 1.157139551030",
-   "computed": 1257.92,
-   "shown": 1257.92,
+   "computed": "1,257.92",
+   "shown": "1,257.92",
    "ok": true,
    "note": "rounded to USDT 1,258"
   },
   {
-   "name": "D28 rate direction: Ali quotes 1.1738 (USDT per EUR) on a USDT → EUR pair",
+   "id": "B17",
+   "name": "rate direction: Ali quotes 1.1738 (USDT per EUR) on a USDT → EUR pair",
    "inputs": "normalised rate = 1 ÷ 1.1738 at the pair's precision (6)",
-   "computed": 0.851934,
-   "shown": 0.851934,
+   "computed": "0.851934",
+   "shown": "0.851934",
    "ok": true,
    "note": "a direction slip freezes the pair instead of pricing a deal"
+  },
+  {
+   "id": "B18",
+   "name": "Evo selected senders, receiver side: EUR 50,000 target, receiver pays 0.60 %",
+   "inputs": "receiver's part on the target: 50,000 × (1 − 0.60 %)",
+   "computed": "49,700",
+   "shown": "49,700",
+   "ok": true,
+   "note": "the receiver line of B3; corrected sheet of 21 October"
+  },
+  {
+   "id": "B19",
+   "name": "Part collection: 5,000 USDT → EUR at Ali, received as 4,000 + 1,000, priced once on the whole amount",
+   "inputs": "fixed_in; gross out 5,000 × 0.9000 × (1 − 1.4 %); client net 5,000 × 0.9000 × (1 − 2 %)",
+   "computed": "4,437.00 / 4,410.00",
+   "shown": "4,437 / 4,410",
+   "ok": true,
+   "note": "NPL's figure of 21 October, sender side / receiver side; nothing posts on the parts (L10)"
+  },
+  {
+   "id": "B20",
+   "name": "Eight-decimal asset: 0.12345678 BTC → EUR at Ali, market 60,000, Ali 59,400",
+   "inputs": "fixed_in; gross out 0.12345678 × 60,000 × (1 − 1.4 %); client net 0.12345678 × 60,000 × (1 − 2 %)",
+   "computed": "7,303.70 / 7,259.26",
+   "shown": "7,304 / 7,259",
+   "ok": true,
+   "note": "NPL's figure of 21 October, rounded to the unit (L11)"
+  },
+  {
+   "id": "B21",
+   "name": "Tier reached exactly: GDC, month-to-date USD 450,000, USD 50,000 target out",
+   "inputs": "target_out; 50,000 × (1 + 2.5 %), tier 1 on the whole deal",
+   "computed": "51,250",
+   "shown": "51,250",
+   "ok": true,
+   "note": "NPL's figure of 21 October; the next deal of any size is tier 2 (L12)"
+  },
+  {
+   "id": "B22",
+   "name": "Tier crossed inside one deal: GDC, month-to-date USD 490,000, USD 20,000 target out",
+   "inputs": "target_out; 10,000 × (1 + 2.5 %) + 10,000 × (1 + 2.25 %)",
+   "computed": "20,475",
+   "shown": "20,475",
+   "ok": true,
+   "note": "NPL's figure of 21 October, the two-portion split confirmed (L13)"
+  },
+  {
+   "id": "B23",
+   "name": "Same-currency: 5,000 EUR → EUR at rate 1, Evo 2.8 % split 1.4 / 1.4",
+   "inputs": "fixed_in at rate 1; client net 5,000 × (1 − 2.8 %)",
+   "computed": "4,860",
+   "shown": "4,860",
+   "ok": true,
+   "note": "NPL's figure of 21 October (L3)"
   }
  ]
 }

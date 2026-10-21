@@ -1,5 +1,5 @@
 // Controlled actions: [action, initiates, approves, escalates to Management when, on rejection, ROLE_RIGHT.action].
-// Shared by the Lifecycle & Approvals document and the Roles & Visibility Matrix (both at v5.9, ERD v5.9, D1–D46).
+// Shared by the Lifecycle & Approvals document and the Roles & Visibility Matrix (both at v6.0, ERD v6.0, D1–D46 and the design review of October 2026).
 // The last column is the action code of the ROLE_RIGHT row that carries the right (D44); "—" where the action is an
 // audited operational step rather than an approval.
 export const ACTIONS = [
@@ -38,4 +38,5 @@ export const ACTIONS = [
   ["Change a system setting (reporting currency, staleness limit, time zone) or a platform pair", "Finance", "Management", "Always (D43, D44)", "Current setting stays in force", "—"],
   ["Create, change or remove a user or role (ROLE, ROLE_RIGHT, USER)", "Management", "Management (second user)", "Always (D44)", "No change", "—"],
   ["Ledger adjustment (reversal and re-posting; a company currency exchange through FX_RESULT)", "Finance", "Management", "Always; the reversal names the transaction it reverses", "Books unchanged; the discrepancy stays on the exception list", "—"],
+  ["Emergency suspend of a partner, freeze of a destination, or override of a partner cutoff (immediate)", "Finance applies it at once, with a mandatory reason; the suspension, freeze or override takes effect immediately on every deal and settlement it touches", "Management ratifies within one business day (after the fact)", "Always: the action is recorded as applied and awaiting ratification; the deals affected show it as the blocker (Roles & Visibility rule 8)", "Not ratified: the action is lifted and the standing configuration applies again; the record and the reason stay (EMERGENCY_ACTION in the ERD)", "emergency_suspend"],
 ];

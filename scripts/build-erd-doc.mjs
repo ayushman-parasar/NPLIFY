@@ -13,7 +13,7 @@ const root = path.resolve(here, "..");
 const outDir = path.join(root, "docs");
 fs.mkdirSync(outDir, { recursive: true });
 const V = D.version;
-const DATE = "11 October 2026";
+const DATE = "22 October 2026";
 const DATE56 = "9 October 2026";
 const DATE52 = "8 October 2026";
 
@@ -41,10 +41,25 @@ const diagramPage = (dg) => {
 };
 
 // ------------------------------------------------------------------ text helpers
+// Tables whose description is printed in the dictionary: the three tables new in v6.0 (the whole description) and
+// the tables whose v6.0 change is a rule rather than a field (the "v6.0:" sentence of the description only).
+const DICT_DESC = { EMERGENCY_ACTION: "all", PARTNER_STATEMENT_RECONCILIATION: "all", OPENING_ENTRY: "all", OWN_WALLET: "v6.0", REROUTE: "text" };
+const DICT_TEXT = {
+  REROUTE: `“Reroute is the only way partner or partner entity change after quote” now holds for a converted leg too; a post_conversion reroute leaves the leg's pricing stamp and client net untouched and moves only where the balance rests.`,
+};
+const dictDesc = (name) => {
+  const mode = DICT_DESC[name];
+  if (!mode) return "";
+  if (mode === "text") return `<p class="small">${esc(DICT_TEXT[name])}</p>`;
+  let t = String(D.E[name].desc ?? "");
+  if (mode === "v6.0") { const i = t.indexOf("v6.0:"); if (i < 0) return ""; t = t.slice(i + 5).trim(); t = t[0].toUpperCase() + t.slice(1); }
+  t = t.replace(/\bv6\.0\b[,:]?\s*/g, "").replace(/\s*,?\s*\bD5\d\b/g, "");
+  return `<p class="small">${esc(hist(t))}</p>`;
+};
 const fieldTable = (name) => {
   const e = D.E[name];
   return `<h4 id="dd-${name}">${esc(name)}</h4>
-<table class="dd"><thead><tr><th>Field</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead><tbody>
+${dictDesc(name)}<table class="dd"><thead><tr><th>Field</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead><tbody>
 ${e.f.map((f) => `<tr><td class="mono">${esc(f[0])}</td><td>${esc(f[1])}</td><td class="mono">${esc(f[2] ?? "")}</td><td>${esc(note(f[3] ?? ""))}</td></tr>`).join("\n")}
 </tbody></table>`;
 };
@@ -65,11 +80,13 @@ const notes = {
     `${code("OWN_WALLET")} has a role: reroute contingency (AQN-LT-Sub at Aquanow), own desk, or a collection bridge on a network a partner lacks, forwarded to the partner as a hop within the wallet's custody limit (D40); ${code("PARTNER_CONFIG.applicable_for_reroute")} defines the alternate-partner set. ${code("PARTNER.supported_methods")} declares what a partner offers — cash and local deposits have no standing endpoint to read it from (D39). ${code("WALLET_REGISTRY")} lists every known address with its owner and role. Under an <b>own-desk</b> partner configuration (${code("is_own_desk")}, the NPL-GR game-reseller project) NPL itself is the converting party: its pairs are priced market plus NPL's markup and its collection endpoints are NPL's own wallets (${code("COLLECTION_RECEIVING_ENDPOINT.own_wallet_id")}); the custody view reports every such balance (D23).`,
     `<b>Fees.</b> A ${code("FEE_OVERRIDE")} may carry its own sender / receiver split instead of inheriting the structure's proportion (D20). ${code("FEE_TIER")} rows under a structure price by the project's calendar-month volume; a leg that takes the month past a threshold is split across two tiers (D21). ${code("customer_facing_fee_basis")} / ${code("customer_facing_fee_pct")} on the structure say what the customer's quote prints when it differs from the recorded parts; the printed "source rate" is derived at quote, never typed (D22). ${code("CURRENCY_PAIR.amount_rounding")} is a menu — truncate, nearest or round up, to the unit or to ${code("rounding_unit")} — and a pair may have the same currency on both sides (D25, D33).`,
     `<b>Who else earns on a deal.</b> ${code("MARKUP_SHARE_PARTY")} / ${code("MARKUP_SHARE_RULE")} record a share NPL pays — or, with basis ${code("share_of_net_markup")} and ${code("party_kind")} client_party, the customer who provides a sub-account and shares NPL's markup (Raeen): the base is the leg's fee parts less its partner cost, rebates excluded, several parties may hold rules with different shares, and ${code("settlement_mode")} party_retains means the party holds the converted money and pays NPL the remainder monthly (D26). ${code("PARTNER_REBATE_RULE")} records the rebate a partner pays NPL, with a basis (percentage of amount or of the partner's fee) and an optional scope by sender or fee structure; the rebate is NPL's alone and is reported as its own stream (D27).`,
+    `<b>Project state and test twin.</b> A project is priced against only when it is active (Configuration Schema 1a: draft, validated, active); ${code("PROJECT.is_test")} flags the dummy twin project used for scripted test deals, which the pre-copy filter of the cutover removes with every row that references it. ${code("THRESHOLD")} rows also carry the time limits per approval stage (${code("approval_time_limit")}), the cutoff warnings (${code("cutoff_warning_min")}), the lock idle time (${code("lock_idle_minutes")}) and the three breach-rule values (${code("rate_min_observations")}, ${code("rate_fallback_spread_abs")}, ${code("rate_abs_tolerance")}).`,
     `<b>Cutoff, screening, single use.</b> ${code("PARTNER.bank_cutoff_time")} (the partner's own clock, beside its rate expiry and holiday calendar), its per-day changes in ${code("PARTNER_CUTOFF_OVERRIDE")} (an agreed extension or an early close) and ${code("PARTNER_PAIR.needs_bank_lock")} drive same-day or next-day conversion and, on bank rails, same-day or next-day settlement (D29). Cash legs carry their city (${code("DEAL.cash_location")}) and cash rate versions theirs (D30). ${code("WALLET_SCREENING")} records the screening of a sending or receiving wallet address, by Operations, and the endpoint's ${code("risk_band")} says which decisions may land on it (D31). An endpoint or a receiving-entity account may be ${code("single_use")}, reserved for one deal (ad hoc local deposit accounts, D32). ${code("HOLIDAY")} rows under the partner are the dates behind every "next business day" (D34); ${code("MESSAGE_TEMPLATE")} is the versioned wording of outgoing messages and declares the fields it may print — a quote template prints sender-facing figures only (D36).`,
   ],
   rates: [
     `The rate comparison for the day is created lazily by the first deal that needs it, one per partner × pair × date, and reused by every deal that day. A partner may give a new rate during the day, so one date can hold several versions. Rolling averages are built from confirmed versions only.`,
     `A version is breached when spread &gt; avg_2w × (1 + variance_threshold_rel); quoting and conversion on that partner × pair freeze until Finance approves with a reason, rejects, or asks for a better rate. Versions are never overwritten; every deal leg, conversion and balance conversion references its exact version.`,
+    `Breach rules for thin or unusual history (Calculation Specification 2a): with fewer than ${code("rate_min_observations")} confirmed versions, or a zero or negative baseline, the fallback threshold ${code("rate_fallback_spread_abs")} applies; a spread beyond ${code("rate_abs_tolerance")} from the average in either direction is flagged for Finance. The three values are ${code("THRESHOLD")} rows of the project.`,
     `Cross-source slippage is a query over ${code("MARKET_RATE")} across sources for the same pair and window.`,
     `A version stores the rate <b>as the partner quoted it</b> (${code("quoted_rate")}, ${code("quoted_direction")}); ${code("rate")} is normalised to the pair's direction and derived — 1 ÷ quoted when the directions differ — so Ali's 1.1738 becomes 0.851934 without a hand inversion, and a direction slip is caught by the breach check (D28). Cash pairs are priced per ${code("location")}: INR cash in Delhi and in Mumbai are two versions on the same day (D30).`,
   ],
@@ -79,8 +96,9 @@ const notes = {
     `Two entry modes as before: collect-first legs are born in state Collected with priced_at = conversion time; quote-first legs carry sent / valid / grace timestamps and a late decision. An estimate-first mode gives an indicative figure and prices at conversion.`,
     `<b>Conversion has exactly one owner</b>: a deal leg or a ${code("BALANCE_CONVERSION")}. The receiver-side fee is taken at conversion. Amounts are rounded at conversion by the pair's option (D25); a dropped fraction (${code("rounding_residual")}, signed) stays client money in the balance and pays out when it reaches a unit, an amount added by rounding up is NPL's cost. NPL's margin is captured at conversion and is never again at risk from a return or a forward.`,
     `<b>Balance conversion</b> is NPL converting a client's held balance (5K SGD → USDT to fund a 15K USDT payout): Finance-initiated, Management-approved, no sender, receiver or collection, same rate machinery, markup by ${code("FEE_DECISION")}. It names the receiver group it serves; ${code("ENTITLEMENT_REATTRIBUTION")} moves that group's entitlement to the new currency, and any excess over the group's entitlement is booked as an approved offset.`,
-    `<b>Reroute</b> is the only way partner or partner entity change after quote. Forwarding is forward_full or forward_and_recover_dues: NPL nets what the alternate partner owes it (${code("EARNINGS_RECEIVABLE")}) against the funds forwarded, within the outstanding receivable, with the partner's agreement recorded. Post-collection outcome is via the own wallet or a refund to the sender.`,
+    `<b>Reroute</b> is the only way partner or partner entity change after quote. Forwarding is forward_full or forward_and_recover_dues: NPL nets what the alternate partner owes it (${code("EARNINGS_RECEIVABLE")}) against the funds forwarded, within the outstanding receivable, with the partner's agreement recorded. Post-collection outcome is via the own wallet or a refund to the sender. A reroute after conversion (${code("phase")} post_conversion, NPL decision of 20 October 2026) starts from a leg in Converted: the converting partner converts the balance back to the collection currency (${code("return_conversion_id")}, a balance conversion owned by the reroute, no markup), pays it to NPL's own wallet, and NPL forwards it to the alternate partner, which converts at its own rate of the day (${code("second_conversion_id")}); the leg's client net is unchanged, the ${code("rate_difference")} is NPL's gain or cost (VAR_CONVERSION, Ledger Posting Design Pattern O), and Management's ratification (${code("ratified_by")}) is needed in addition to Finance's because NPL's wallet holds client money in the meantime. Own-wallet custody cases therefore become four.`,
     `One settlement model: ${code("SETTLEMENT")} drains one partner's holding into one or many ${code("SETTLEMENT_LINE")}s, rounded as the pair says. Under settlement_policy to_zero the balance after release is less than one unit; under hold_allowed the balance may rest at the partner within the project's exposure cap.`,
+    `A settlement line records when it was released (${code("released_at")}), by when the rail should confirm it (${code("expected_confirmation_by")}) and when it ended (${code("confirmed_at")}), so the named state "sent, not yet confirmed" can be shown and aged (Lifecycle &amp; Approvals §7; Ledger Posting Design rule 13a). The promise is discharged on release; a return or a short delivery re-raises it.`,
     `A line paying a counterparty receiver whose group differs from the paying leg's attributed group is an offset, created by the same action, with Management approval and tighter aging. A line paying a sender_return or partner_transit receiver is never an offset: those receivers have no group, and the line debits the group of the leg it names in ${code("deal_id")} (D13, D17).`,
     `<b>Rejected payout.</b> When the receiving or intermediary bank rejects a transfer, ${code("SETTLEMENT_RETURN")} records the returned amount, bank fee and reason; the line's outcome becomes returned, a reversing ledger transaction puts the money back into the client's balance and the paying leg's group entitlement, and ${code("BANK_FEE_EVENT")} books the bounce fee. The money then stays in balance for later payouts, or funds a return leg — attributed to the same group — that converts back and pays the sender's return receiver.`,
     `<b>Fee decisions.</b> ${code("FEE_DECISION")} is a one-off, approved decision on a single subject: markup applied or waived on a return leg or balance conversion, a network-fee override on a refund, a bank-fee treatment override on one settlement. Standing rules stay in ${code("FEE_STRUCTURE")} and ${code("FEE_OVERRIDE")}.`,
@@ -97,14 +115,101 @@ const notes = {
     `Transaction sources: Collection, Conversion, BalanceConversion, Settlement, SettlementReturn, Confirmation, BankFeeEvent, Reroute, MarkupShare, Rebate, LossEvent, LossRecovery, Invoice, EarningsOffset, Adjustment (D46). Account purposes include PAYABLE, SHARE_PAYABLE, SHARE_RECEIVABLE, REBATE_RECEIVABLE, LOSS_RECEIVABLE, MAKEGOOD / LOSS_PAYABLE, EARN_GROSS, EARN_REBATE, the four VAR_ accounts, FX_RESULT, the reseller purposes (RESELL_REVENUE, RESELL_COST, VENDOR_PAYABLE, RESALE_RECEIVABLE, REMIT_CLAIM), EXP_ROUNDING and EXP_LOSS; ADVANCE and INTRANSIT do not exist. Cost components include share, rebate, rounding, fx_timing, cutoff_timing, loss and resale.`,
     `<b>Three streams NPL never mixes (v5.3).</b> Earnings on deals post to EARN_GROSS at conversion; a partner's rebate posts to EARN_REBATE and is never in the base a client party shares (D26, D27); NPL's remainder from a party that holds the converted funds sits in SHARE_RECEIVABLE until the party pays it. The cost of rounding up is EXP_ROUNDING (D25). A loss is booked to EXP_LOSS in full first and the client made whole; the partner's and the sender's agreed shares are LOSS_RECEIVABLE owed to NPL, the client's share is a partial reversal of the make-good, and what remains in EXP_LOSS is NPL's own share (D32, D46). Own-desk deals use the ordinary partner-coded accounts with the own-desk configuration as holder and EXP_PARTNER zero by construction (D23).`,
     `One system-settings area (D43, D44): ${code("SYSTEM_SETTING")} holds NPL-wide, Management-approved keys — the reporting currency, its staleness limit, the operating time zone; ${code("ROLE")} holds the user roles and ${code("ROLE_RIGHT")} what each may initiate and approve per controlled action, with the role added on escalation; platform-scope ${code("CURRENCY_PAIR")}s carry the conversion rates through the ordinary rate-source chain. ${code("REPORTING_VALUE")} converts any per-currency figure into the reporting currency at the latest market rate of its platform pair, as a display-only estimate that carries the rate it used (D43). ${code("APPROVAL")}, ${code("AUDIT_LOG")} and ${code("RECORD_LOCK")} are modelled once and apply to all master data. Approver ≠ initiator on every approval; Operations never sees derived economics. Approval actions include price_quote, extend_quote_validity, refund_to_third_party, cross_group_payout, balance_conversion, recover_dues, cover_bank_fee, raise_fee_cap, enable_own_desk, approve_loss_split, override_screening_reject and earnings_offset (ROLE_RIGHT rows, D44, D46). cross_group_payout never fires on a line paying a sender_return or partner_transit receiver. Wallet screening itself is an Operations action, not an approval (D31).`,
+    `<b>Three tables of this edition.</b> ${code("OPENING_ENTRY")} is one row per opening balance entered on the opening date (Cutover Approach, Section 4; Ledger Posting Design, Pattern R), posted once, one transaction per row (source Opening): company-side balances against CO.NONE.&lt;CCY&gt;.OPENING_BALANCE, client-side balances between the client's jar and the project's promise, and OPENING_BALANCE is never posted to again. ${code("PARTNER_STATEMENT_RECONCILIATION")} is one row per partner configuration, currency and statement date (Pattern Q): a row for every business day of the parallel run and for every month end afterwards, a difference cleared only by a true-up transaction, never by an edit, and a row in state difference_open on the exception list. ${code("EMERGENCY_ACTION")} is the record behind the controlled action emergency_suspend (Lifecycle &amp; Approvals, section 5): applied by Finance, in effect at once, lifted unless Management ratifies it within one business day; ratified_by is never applied_by. ${code("LEDGER_TRANSACTION.corrects_period")} names the month a correction belongs to when it is posted in a later month (rule 11a).`,
+    `<b>Controls on the person and the record version.</b> The approver is never the initiator <i>on the person</i>: ${code("USER.person_ref")} names the natural person behind every account, and ${code("APPROVAL.approved_by")} is refused when its person_ref equals requested_by's, so a user holding two accounts cannot approve their own request (Roles &amp; Visibility rule 5a). An approval is valid only for the record version the approver saw, so two approvers at once leave exactly one winner and a changed record is re-approved (Lifecycle &amp; Approvals 6a). At most one open lock per record: a ${code("RECORD_LOCK")} is released on save or cancel, expires after the project's lock idle time, or is cleared by Management, and every release is written to ${code("AUDIT_LOG")}. Rules at database level are listed in Appendix C: postings balance per currency and per owner; ledger and audit tables accept inserts only; every PAYABLE line carries its receiver group; the seven type-plus-id references are checked by one generic trigger; the approver's person_ref differs from the initiator's; versioned configuration is write-once.`,
   ],
 };
 
 const frsVocab = D.FRS_VOCAB;
 const frsDev = D.FRS_DEV.map(([a, b, c]) => a.startsWith("Strict Client") ? [a, "RECEIVER_GROUP → RECEIVER → RECEIVING_ENTITY → account; SENDER with a group allow-list; FRS project = one default group", "Generalisation per NPL instruction"] : a.startsWith("One settlement per deal") ? [a, "Accumulate → settle the balance rounded as the pair says (residual carried), or hold within the exposure cap where the project allows", "Generalisation (D25)"] : a.startsWith("AQN-LT-Sub") ? [a, "OWN_WALLET at Aquanow; pass-through is a two-leg deal group or a reroute via the own wallet; also NPL-GR's own-desk collection endpoint", "Resolved (v4.0, D23)"] : [a, b, c]);
 
+// ------------------------------------------------------------------ v6.0 additions: reading note, scope, classification, Appendices C and D
+const READING_NOTE = `<h2 class="pb">How to read this pack</h2>
+<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>`;
+
+const SCOPE_NOTE = `<p><b>Scope (NPL decision, 19 October 2026):</b> the whole model is in scope for Phase 1. Nothing among the ${tables.length} tables and ${views.length} views of this edition, including the tables added in it (${code("EMERGENCY_ACTION")}, ${code("PARTNER_STATEMENT_RECONCILIATION")}, ${code("OPENING_ENTRY")}), is deferred; the milestone estimates of the proposal stand.</p>`;
+
+// Every table belongs to exactly one class; the build refuses a table left out or listed twice.
+const CLASSES = [
+  ["Configuration &amp; master data (dimensions)", ["CLIENT", "PARTNER", "HOLIDAY", "PARTNER_CUTOFF_OVERRIDE", "RATE_SOURCE", "MARKUP_SHARE_PARTY", "SYSTEM_SETTING", "MESSAGE_TEMPLATE", "PROJECT", "THRESHOLD", "CURRENCY_PAIR", "PAIR_RATE_SOURCE", "OWN_WALLET", "SENDER", "SENDER_RECEIVER_ALLOW", "COLLECTION_SENDING_ENTITY", "FEE_OVERRIDE", "RECEIVER_GROUP", "RECEIVER", "RECEIVING_ENTITY", "RECEIVING_ENTITY_ACCOUNT", "WALLET_SCREENING", "PARTNER_CONFIG", "PARTNER_PAIR", "FEE_STRUCTURE", "FEE_TIER", "PARTNER_ENTITY", "COLLECTION_RECEIVING_ENDPOINT", "SETTLEMENT_SENDING_ENTITY", "SETTLEMENT_RAIL", "DESTINATION_APPROVAL", "MARKUP_SHARE_RULE", "PARTNER_REBATE_RULE"]],
+  ["Rate reference", ["MARKET_RATE", "RATE_COMPARISON", "PARTNER_RATE_VERSION"]],
+  ["Transactional events (facts)", ["INVOICE", "DEAL_GROUP", "DEAL", "QUOTE_PACKAGE", "QUOTE_VALIDITY_EXTENSION", "SENDER_CREDIT", "DEAL_FEE_TIER", "COLLECTION", "CONVERSION", "REROUTE", "EARNINGS_RECEIVABLE", "BALANCE_CONVERSION", "ENTITLEMENT_REATTRIBUTION", "EARNINGS_OFFSET", "SETTLEMENT", "SETTLEMENT_LINE", "SETTLEMENT_RETURN", "CONFIRMATION", "SHORTFALL", "BANK_FEE_EVENT", "FEE_DECISION", "MARKUP_SHARE_ACCRUAL", "PARTNER_REBATE_ACCRUAL", "LOSS_EVENT", "LOSS_RECOVERY"]],
+  ["Ledger &amp; control (facts of the books; governance)", ["LEDGER_TRANSACTION", "LEDGER_POSTING", "LEDGER_ACCOUNT", "OPENING_ENTRY", "PARTNER_STATEMENT_RECONCILIATION", "USER", "ROLE", "ROLE_RIGHT", "APPROVAL", "AUDIT_LOG", "RECORD_LOCK", "EMERGENCY_ACTION"]],
+];
+{
+  const seen = new Map();
+  for (const [cls, list] of CLASSES) for (const t of list) { if (!D.E[t] || D.E[t].d === "view") throw new Error(`classified ${t} is not a table`); if (seen.has(t)) throw new Error(`${t} classified twice`); seen.set(t, cls); }
+  for (const t of tables) if (!seen.has(t)) throw new Error(`table ${t} has no class`);
+}
+const CLASSIFICATION = `<h2>Classification of the tables (fact and dimension)</h2>
+<p>Pete asked which tables are the facts and which the dimensions. In this model there are five classes, and every table belongs to exactly one. Configuration and master data are the dimensions: rows that describe how the business is set up, versioned by effective date and never edited. Rate reference is a time series of reference values. Transactional events are the facts: one row per thing that happened to a deal. Ledger and control tables are the facts of the books and the records that govern them. Derived views are never stored.</p>
+${table(["Class", "Tables", "Count"], [
+  ...CLASSES.map(([cls, list]) => [cls, `<span class="mono">${list.join(", ")}</span>`, String(list.length)]),
+  ["Derived views (never stored)", `<span class="mono">${views.join(", ")}</span>`, `${views.length} views`],
+], ["26%", "", "9%"])}
+<p>${tables.length} tables and ${views.length} views. ${code("WALLET_SCREENING")} is configuration-domain data although Operations records it, because its decision binds later deals on the same address; ${code("PARTNER_RATE_VERSION")} is rate reference although Finance confirms it, because deals stamp it as a reference, not as an event of their own.</p>`;
+
+const APPENDIX_C = `<h2 class="pb">Appendix C · Constraints and invariants, and where each is enforced</h2>
+<p>Every rule stated in prose in this document, in the Configuration Schema (section 6) and in the Ledger Posting Design (section 2) is listed here with the mechanism that enforces it in the deployable schema. Four kinds: a unique key or foreign key, a CHECK on one row, a database trigger (for rules that span rows or tables), or an application validation in the API. The last column says which rules must be at database level, because a screen, a job or a mistake must not be able to get around them; the others are enforced by the API and verified by tests. Implemented in Phase 1 (M2) with the schema; the acceptance test for each is a write that breaks the rule and is refused.</p>
+${table(["Rule", "Mechanism", "Database level", "Notes"], [
+  ["Ledger and audit tables accept inserts only", "Privileges (no UPDATE or DELETE for the application role) and a BEFORE UPDATE OR DELETE trigger", "must", "Architecture note §3; LEDGER_ACCOUNT may only change status to closed"],
+  ["Postings balance per currency and per ownership tag within a transaction", "Deferred constraint trigger at commit", "must", "Ledger Posting Design rule 2"],
+  ["Every CL.PROJECT.&lt;CCY&gt;.PAYABLE line carries receiver_group_id", "Trigger on LEDGER_POSTING", "must", "GROUP_ENTITLEMENT is a sum over these"],
+  ["A transaction names a source record of the stated source_type, and the record exists", "Generic type-plus-id trigger (below)", "must", "rule 1"],
+  ["One transaction per event; a retried event posts nothing", "Unique key on the idempotency key of every money-moving action", "must", "rule 1a; Architecture note §5"],
+  ["A CONVERSION has exactly one owner", "CHECK: exactly one of deal_id, balance_conversion_id is set", "must", ""],
+  ["Approver is never the initiator, on the person", "Trigger on APPROVAL comparing USER.person_ref of approved_by and requested_by", "must", "Roles &amp; Visibility rule 5 and 5a"],
+  ["Approval valid only for the record version seen", "Trigger comparing APPROVAL.record_version with the record's current version", "must", "Lifecycle &amp; Approvals 6a"],
+  ["Versioned configuration is write-once", "Trigger refusing UPDATE on FEE_STRUCTURE, FEE_TIER, THRESHOLD, SYSTEM_SETTING, MESSAGE_TEMPLATE, PARTNER_RATE_VERSION, FEE_OVERRIDE except the status column", "must", "a new value is a new row with a later effective_from"],
+  ["Pricing fields are write-once after priced_at", "Trigger on DEAL and DEAL_GROUP", "must", "Lifecycle &amp; Approvals §2"],
+  ["Exactly one default receiver group per project", "Partial unique index on RECEIVER_GROUP(project_id) where is_default", "yes", "Configuration Schema rule 2"],
+  ["Accounts unique per entity, currency and rail; endpoints unique per entity, currency, network or rail", "Unique keys", "yes", "rule 4"],
+  ["A single-use account or endpoint serves one deal", "Unique key on reserved_for_deal_id where usage = single_use", "yes", ""],
+  ["One open lock per record", "Partial unique index on RECORD_LOCK(record_type, record_id) where released_at is null", "yes", "Lifecycle &amp; Approvals 6a"],
+  ["One reconciliation per partner configuration, currency and statement date", "Unique key on PARTNER_STATEMENT_RECONCILIATION", "yes", ""],
+  ["sender_pays_pct + receiver_pays_pct = pct; min_markup ≤ max_markup; a fixed customer-facing fee names its pct", "CHECK on FEE_STRUCTURE and FEE_OVERRIDE", "yes", "rule 6"],
+  ["partner_fee_pct present exactly for fee_on_market", "CHECK on PARTNER_PAIR", "yes", "rule 5"],
+  ["A bank endpoint is active only with a rail; a wallet's rail equals its network", "CHECK on COLLECTION_RECEIVING_ENDPOINT and RECEIVING_ENTITY_ACCOUNT", "yes", "rule 7"],
+  ["A cutoff override is one-day or weekday, never both; an extension names the partner's agreement", "CHECK on PARTNER_CUTOFF_OVERRIDE", "yes", "rule 10"],
+  ["quote_freshness_min &lt; quote_validity_min", "CHECK on PROJECT", "yes", "rule 11"],
+  ["A project prices deals only when active", "Trigger on DEAL insert checking PROJECT.state", "yes", "Configuration Schema 1a"],
+  ["Loss shares sum to the loss amount; a recovery never exceeds its share", "Trigger on LOSS_EVENT and LOSS_RECOVERY", "yes", ""],
+  ["Σ DEAL_FEE_TIER portions = amount_in", "Trigger", "yes", ""],
+  ["needs_bank_lock requires the partner's cutoff and time zone; a partner pair's currency pair belongs to the project; a wallet endpoint's network is one the partner offers", "Application validation on save, re-checked by the project validation report", "no", "cross-table rules of Configuration Schema §6; the validation report lists them"],
+  ["Wallet addresses are checksum-valid per network", "Application validation", "no", ""],
+  ["Σ markup shares of one base ≤ 100 %; tiers have one row at volume 0 and unique thresholds", "Application validation; unique key on FEE_TIER(fee_structure_id, min_monthly_volume)", "partly", ""],
+  ["State transitions follow the state machines", "Application (every state change is a named action)", "no", "Architecture note §5; tested per transition"],
+  ["Every reference to another table is a foreign key", "FOREIGN KEY on every column the dictionary marks FK", "yes", "Appendix B"],
+], ["30%", "34%", "10%", ""])}
+<h3>Type-plus-id references: option b, one generic trigger</h3>
+<p>NPL chose option b on 19 October: the type-plus-id references stay as they are and one generic database trigger checks, on insert and update, that the id exists in the table the type column names, and refuses the row otherwise. The trigger is applied to all seven such references: ${code("LEDGER_TRANSACTION")} (source_type, source_id), ${code("LEDGER_ACCOUNT")} (holder_type, holder_id), ${code("APPROVAL")} (subject_type, subject_id), ${code("AUDIT_LOG")} (record_type, record_id), ${code("RECORD_LOCK")} (record_type, record_id), ${code("FEE_DECISION")} (subject_type, subject_id) and ${code("EMERGENCY_ACTION")} (subject_type, subject_id); ${code("DEAL.funding_ref_id")} is checked against the table funding_source names in the same way. The trade-off accepted: the database cannot cascade or report these as foreign keys, so a referenced row can never be deleted (none of these tables deletes), and the trigger must be kept in step when a type value is added. The acceptance test inserts a row whose id does not exist for each of the seven references and expects a refusal. The four discriminator-plus-column references (${code("WALLET_SCREENING.subject_kind")}, ${code("LOSS_EVENT.side")}, ${code("RECEIVER.kind")}, ${code("CONVERSION")}'s one owner) are ordinary foreign keys with a CHECK that exactly the right column is set.</p>`;
+
+const APPENDIX_D = `<h2>Appendix D · Locking and indexes</h2>
+<p>At ten deals a weekday the model is a few thousand rows a month, so locking is about correctness and indexes are about the few queries that scan: balances, reconciliation and search. Implemented in Phase 1 (M2); the concurrency tests of the go-live acceptance exercise the locks.</p>
+${table(["Lock", "Taken when", "Effect"], [
+  ["Row lock on the record of a controlled action", "For the duration of the action's database transaction (SELECT … FOR UPDATE on the DEAL, SETTLEMENT, CONVERSION or configuration row)", "Two users acting on the same record are serialised; the second sees the first's result and, if the state changed, is refused by the version check (6a)"],
+  ["Lock on the APPROVAL row while it is approved or rejected", "During the approver's action", "Two approvers on one request: the first commit wins, the second is refused"],
+  ["Lock on the project's month-volume row", "While a quote is priced", "Two quotes priced at once read the counter in order, so a tier split is computed on the true month-to-date figure (Calculation Specification 5a)"],
+  ["Job lock row per job", "From the start to the end of a job run", "Two runs of a job never overlap (6a); a run that finds the lock held exits and is recorded as skipped"],
+  ["Edit lock (RECORD_LOCK)", "While a person has a record open for editing", "Advisory, with expiry and clearance (6a); it prevents two people editing one record, not two transactions"],
+], ["28%", "30%", ""])}
+${table(["Index", "Serves"], [
+  ["LEDGER_POSTING (ledger_account_id, ledger_transaction_id)", "every balance view, the ledger explorer"],
+  ["LEDGER_TRANSACTION (source_type, source_id); (posted_at)", "tracing a posting to its event; reports by posting date"],
+  ["LEDGER_POSTING (receiver_group_id) where not null", "GROUP_ENTITLEMENT"],
+  ["DEAL (deal_group_id); DEAL (state, project_id); DEAL (priced_at)", "the per-role lists, the month-volume counter, reports by deal date"],
+  ["COLLECTION (deal_id); SETTLEMENT_LINE (settlement_id); SETTLEMENT_LINE (outcome, expected_confirmation_by)", "deal screens; the sent-not-confirmed report and the exception list"],
+  ["APPROVAL (state, subject_type, subject_id); APPROVAL (requested_by, state)", "the approvals queue; own requests"],
+  ["AUDIT_LOG (record_type, record_id, at)", "the audit trail of a record"],
+  ["PARTNER_RATE_VERSION (partner_pair_id, status, expires_at); MARKET_RATE (currency_pair_id, captured_at)", "pricing, the day's comparison, the two-week average"],
+  ["PARTNER_STATEMENT_RECONCILIATION (partner_config_id, currency, statement_date) unique", "reconciliation history"],
+  ["WALLET_SCREENING (network, address, screened_at)", "the decision that binds later deals on the same address"],
+  ["USER (person_ref)", "the person-level approver check"],
+].map(([a, b]) => [`<span class="mono">${a}</span>`, b]), ["55%", ""])}
+<p>No other index is planned for P0; one is added when a query is measured to need it, never in advance.</p>`;
+
 // ------------------------------------------------------------------ HTML
-const RUN = `NPLify · P0 Technical Baseline · ERD &amp; Data Model · Draft v${V}`;
+const RUN =`NPLify · P0 Technical Baseline · ERD &amp; Data Model · Draft v${V}`;
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify · P0 Technical Baseline — ERD & Data Model · Draft v${V}</title>
 <style>
 @page { size: A4; margin: 16mm 18mm 16mm 18mm; @top-left { content: "${RUN.replace(/&amp;/g, "&")}"; font: 8pt Helvetica, Arial, sans-serif; color: #666 } @bottom-right { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
@@ -146,10 +251,13 @@ tr{break-inside:avoid}
 <p class="date">${DATE} · Confidential</p>
 </div>
 
-<h2 class="pb">Conventions</h2>
+${READING_NOTE}
+<h2>Conventions</h2>
 <p><b>Convention:</b> all monetary amounts are stored as exact decimals; every table carries ${code("created_at")} / ${code("created_by")}; audit, approvals and locking are modelled once (domain 4) and apply to all master data. Derived figures (client balance, group entitlement, offsets, custody) are <b>views over postings and deals — never stored</b>.</p>
 <p>Seven diagrams across four domains, one schema: ${tables.length} tables and ${views.length} views. In each diagram, entities defined in another diagram appear with no attributes and name that diagram. Relationship lines run from the referenced row to the row that stores the foreign key; ${code("||--o{")} is composition (the parent owns the child), ${code("||..o{")} a reference or a polymorphic link resolved by a type column plus an id. The deal lifecycle has three diagrams: 3a is the deal and its collection, 3b the conversion and its exceptions, 3c the settlement. Appendix A reconciles the model with the FRS; Appendix B is the data dictionary.</p>
 <div class="rule"></div>
+${SCOPE_NOTE}
+${CLASSIFICATION}
 
 <h2>1 · Configuration domain</h2>
 <p>A <b>Client</b> is the commercial relationship NPL contracts with; a <b>Project</b> is one arrangement with it (D38) and owns its configuration. Partners are global counterparties; how a partner is used <i>in this project</i> is the <b>partner configuration</b> block — fees, vehicles, endpoints, destination approvals and rebate terms hang off it. Counterparty receivers are organised in <b>receiver groups</b>, the unit entitlement is tracked on, and each receiving entity holds one or more <b>accounts</b> with a currency and rail.</p>
@@ -188,10 +296,14 @@ ${table(["FRS statement", "Model", "Classification"], frsDev.map(([a, b, c]) => 
 <h3>B.3 Deal, collection, conversion, reroute, balance conversion</h3>${byDomain("deal").map(fieldTable).join("")}
 <h3>B.4 Settlement, return, confirmation, fees, shares, rebates, losses and recoveries</h3>${byDomain("settle").map(fieldTable).join("")}
 <h3>B.5 Ledger &amp; controls</h3>${byDomain("ledger").map(fieldTable).join("")}
+${APPENDIX_C}
+${APPENDIX_D}
 </body></html>`;
 
 const htmlPath = path.join(outDir, `NPLify-P0-ERD-v${V}.html`);
-fs.writeFileSync(htmlPath, clientFacing(html));
+// The client-facing pass knows the v1–v5 edition tokens; this edition's own token and draft marker are removed here.
+const thisEdition = (s) => s.replace(/\s*[·—–-]\s*Draft v6\.0\b/g, "").replace(/\bDraft v6\.0\b/g, "").replace(/\(v6\.0,\s*/g, "(").replace(/\bv6\.0[,:]?\s*/g, "").replace(/\(scope:\s*/g, "(");
+fs.writeFileSync(htmlPath, thisEdition(clientFacing(html)));
 const pdfPath = path.join(outDir, `NPLify-P0-ERD-v${V}.pdf`);
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${pdfPath}`, "file://" + htmlPath], { stdio: "ignore" });

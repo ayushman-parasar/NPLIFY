@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NPLify Deal Flow (simple)</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm; }
+  html, body { background: #fff; margin: 0; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #111827; padding: 18px 24px; max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; font-weight: 700; }
+  p { font-size: 13px; color: #4B5563; margin: 0 0 14px; }
+  svg { display: block; width: 100%; height: auto; }
+  @media print { body { padding: 0; max-width: none; } svg { max-height: 165mm; } }
+</style>
+</head>
+<body>
+<h1>How an NPLify deal flows</h1>
+<p>Operations starts each step and Finance approves it, money passes from sender to partner to receiver, and exceptions and the daily close hang off the side of the deal.</p>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1128 516" width="100%" role="img" aria-label="How NPLify deal flows connect" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 z" fill="#6B7280"/></marker></defs>
+<rect x="250" y="186" width="856" height="204" rx="12" fill="#FAFAFB" stroke="#D1D5DB" stroke-width="1.2"/>
+<text x="20" y="114" text-anchor="start" font-size="12" fill="#374151" font-weight="700">Where the money</text>
+<text x="20" y="132" text-anchor="start" font-size="12" fill="#374151" font-weight="700">moves</text>
+<rect x="265" y="92" width="180" height="56" rx="7" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.5"/>
+<text x="355.0" y="112.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Before any deal</text>
+<text x="355.0" y="128.0" text-anchor="middle" font-size="11.5" fill="#374151">set-up and the day's rates</text>
+<text x="355.0" y="142.0" text-anchor="middle" font-size="11.5" fill="#374151">are agreed</text>
+<rect x="480" y="92" width="180" height="56" rx="7" fill="#FFF7E6" stroke="#D97706" stroke-width="1.5"/>
+<text x="570.0" y="119.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Sender</text>
+<text x="570.0" y="135.0" text-anchor="middle" font-size="11.5" fill="#374151">pays in: cash, bank or USDT</text>
+<rect x="695" y="92" width="180" height="56" rx="7" fill="#FFF7E6" stroke="#D97706" stroke-width="1.5"/>
+<text x="785.0" y="119.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Partner</text>
+<text x="785.0" y="135.0" text-anchor="middle" font-size="11.5" fill="#374151">receives, converts, pays out</text>
+<rect x="910" y="92" width="180" height="56" rx="7" fill="#FFF7E6" stroke="#D97706" stroke-width="1.5"/>
+<text x="1000.0" y="119.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Receiver</text>
+<text x="1000.0" y="135.0" text-anchor="middle" font-size="11.5" fill="#374151">gets the agreed amount</text>
+<line x1="660" y1="120" x2="695" y2="120" stroke="#D97706" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+<line x1="875" y1="120" x2="910" y2="120" stroke="#D97706" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+<rect x="895" y="14" width="180" height="46" rx="7" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
+<text x="985.0" y="36.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">NPL earnings</text>
+<text x="985.0" y="52.0" text-anchor="middle" font-size="11.5" fill="#065F46">margin kept at conversion</text>
+<path d="M 855 92 L 855 37 L 895 37" fill="none" stroke="#059669" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+<text x="20" y="224" text-anchor="start" font-size="12" fill="#374151" font-weight="700">The deal</text>
+<text x="20" y="242" text-anchor="start" font-size="12" fill="#374151" font-weight="700">(four steps)</text>
+<rect x="265" y="200" width="180" height="74" rx="7" fill="#EEF2FF" stroke="#3B5BDB" stroke-width="1.5"/>
+<text x="355.0" y="229.0" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Quote</text>
+<text x="355.0" y="245.0" text-anchor="middle" font-size="11.5" fill="#374151">price fixed once;</text>
+<text x="355.0" y="259.0" text-anchor="middle" font-size="11.5" fill="#374151">the sender accepts</text>
+<rect x="480" y="200" width="180" height="74" rx="7" fill="#EEF2FF" stroke="#3B5BDB" stroke-width="1.5"/>
+<text x="570.0" y="229.0" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Collect</text>
+<text x="570.0" y="245.0" text-anchor="middle" font-size="11.5" fill="#374151">money lands at the partner;</text>
+<text x="570.0" y="259.0" text-anchor="middle" font-size="11.5" fill="#374151">Operations verifies it</text>
+<rect x="695" y="200" width="180" height="74" rx="7" fill="#EEF2FF" stroke="#3B5BDB" stroke-width="1.5"/>
+<text x="785.0" y="229.0" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Convert</text>
+<text x="785.0" y="245.0" text-anchor="middle" font-size="11.5" fill="#374151">the partner converts;</text>
+<text x="785.0" y="259.0" text-anchor="middle" font-size="11.5" fill="#374151">NPL keeps its margin</text>
+<rect x="910" y="200" width="180" height="74" rx="7" fill="#EEF2FF" stroke="#3B5BDB" stroke-width="1.5"/>
+<text x="1000.0" y="229.0" text-anchor="middle" font-size="16" font-weight="700" fill="#111827">Settle</text>
+<text x="1000.0" y="245.0" text-anchor="middle" font-size="11.5" fill="#374151">the partner pays out;</text>
+<text x="1000.0" y="259.0" text-anchor="middle" font-size="11.5" fill="#374151">the promise is discharged</text>
+<line x1="445" y1="237" x2="480" y2="237" stroke="#3B5BDB" stroke-width="2.2" marker-end="url(#ar)"/>
+<line x1="660" y1="237" x2="695" y2="237" stroke="#3B5BDB" stroke-width="2.2" marker-end="url(#ar)"/>
+<line x1="875" y1="237" x2="910" y2="237" stroke="#3B5BDB" stroke-width="2.2" marker-end="url(#ar)"/>
+<line x1="355" y1="148" x2="355" y2="200" stroke="#9CA3AF" stroke-width="1.6" marker-end="url(#ar)"/>
+<line x1="570" y1="148" x2="570" y2="200" stroke="#9CA3AF" stroke-width="1.6"/>
+<line x1="785" y1="148" x2="785" y2="200" stroke="#9CA3AF" stroke-width="1.6"/>
+<line x1="1000" y1="148" x2="1000" y2="200" stroke="#9CA3AF" stroke-width="1.6"/>
+<text x="20" y="340" text-anchor="start" font-size="12" fill="#374151" font-weight="700">Who acts,</text>
+<text x="20" y="358" text-anchor="start" font-size="12" fill="#374151" font-weight="700">on every step</text>
+<rect x="265" y="318" width="250" height="56" rx="7" fill="#F5F3FF" stroke="#7048E8" stroke-width="1.5"/>
+<text x="390.0" y="345.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Operations initiates</text>
+<text x="390.0" y="361.0" text-anchor="middle" font-size="11.5" fill="#4C1D95">quotes, verifies, instructs, prepares</text>
+<rect x="560" y="318" width="250" height="56" rx="7" fill="#F5F3FF" stroke="#7048E8" stroke-width="1.5"/>
+<text x="685.0" y="345.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Finance approves</text>
+<text x="685.0" y="361.0" text-anchor="middle" font-size="11.5" fill="#4C1D95">a different person, every time</text>
+<rect x="855" y="318" width="235" height="56" rx="7" fill="#F5F3FF" stroke="#7048E8" stroke-width="1.5"/>
+<text x="972.5" y="345.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Management steps in</text>
+<text x="972.5" y="361.0" text-anchor="middle" font-size="11.5" fill="#4C1D95">escalations and above limits</text>
+<line x1="515" y1="346" x2="560" y2="346" stroke="#7048E8" stroke-width="1.6" marker-end="url(#ar)"/>
+<line x1="810" y1="346" x2="855" y2="346" stroke="#7048E8" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="20" y="458" text-anchor="start" font-size="12" fill="#374151" font-weight="700">Branches off</text>
+<text x="20" y="476" text-anchor="start" font-size="12" fill="#374151" font-weight="700">the deal</text>
+<rect x="265" y="436" width="560" height="66" rx="7" fill="#FBEFE6" stroke="#8D5524" stroke-width="1.5"/>
+<text x="545.0" y="468.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Exceptions, custody and company money</text>
+<text x="545.0" y="484.0" text-anchor="middle" font-size="11.5" fill="#5B3A1A">a stuck deal gets a decision, never a rollback: reroute, void, loss, offset, correction</text>
+<rect x="855" y="436" width="235" height="66" rx="7" fill="#ECEEF1" stroke="#495057" stroke-width="1.5"/>
+<text x="972.5" y="461.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Reconcile, close and report</text>
+<text x="972.5" y="477.0" text-anchor="middle" font-size="11.5" fill="#1F2937">Finance checks the ledger every</text>
+<text x="972.5" y="491.0" text-anchor="middle" font-size="11.5" fill="#1F2937">evening and at month end</text>
+<line x1="445" y1="390" x2="445" y2="436" stroke="#8D5524" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+<line x1="665" y1="390" x2="665" y2="436" stroke="#8D5524" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ar)"/>
+<line x1="972" y1="390" x2="972" y2="436" stroke="#495057" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="455" y="426" text-anchor="start" font-size="10.5" fill="#8D5524" font-weight="400">when something stops a deal</text>
+<text x="980" y="426" text-anchor="start" font-size="10.5" fill="#495057" font-weight="400">at the end of the day</text>
+</svg>
+</body>
+</html>

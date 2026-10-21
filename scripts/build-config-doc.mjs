@@ -15,7 +15,7 @@ const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"
 const outDir = path.join(root, "docs");
 fs.mkdirSync(outDir, { recursive: true });
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const V = D.version, DATE = "11 October 2026";
+const V = D.version, DATE = "22 October 2026";
 
 // ------------------------------------------------------------------ schema: entities of the configuration domain, in reading order
 const GLOBAL = ["CLIENT", "PARTNER", "HOLIDAY", "PARTNER_CUTOFF_OVERRIDE", "RATE_SOURCE", "MARKUP_SHARE_PARTY", "SYSTEM_SETTING", "MESSAGE_TEMPLATE"];
@@ -37,8 +37,25 @@ const RULES = {
   MARKUP_SHARE_PARTY: { scope: "Global", req: ["name", "status"], rules: ["A party who shares NPL's markup: an external party who brought in a client, or a customer who provides sub-accounts (D26). How it is paid on a project is MARKUP_SHARE_RULE."] },
   SYSTEM_SETTING: { scope: "Global, versioned", req: ["key", "value", "effective_from", "approved_by"], rules: ["Keys today: reporting_currency, reporting_rate_max_age_min, operating_timezone (D43). A new value is a new row with a later effective_from, approved by Management.", "The reporting rate source is not a key: it is the PAIR_RATE_SOURCE chain of the platform-scope CURRENCY_PAIR (currency → reporting currency) (D44).", "Nothing here changes a price, a posting or a settlement."] },
   MESSAGE_TEMPLATE: { scope: "Global default, or per project", req: ["code", "version", "channel", "language", "body_ref", "printed_fields", "effective_from", "approved_by", "status"], rules: ["project_id null is the global default; a project row with the same code overrides it (D36).", "printed_fields lists the model fields the template may print. A template of code quote may print only sender-facing figures (sender rate, customer-facing fee and rate, amount out, validity) — never a partner rate, a margin or a cost; the save is refused otherwise.", "A new version is a new row approved by Management; the version a package was rendered with is recorded on QUOTE_PACKAGE."] },
-  PROJECT: { scope: "Per client", req: ["client_id", "name", "quote_freshness_min", "quote_validity_min", "grace_min", "grace_drift_pct", "late_collection_policy", "bank_fee_treatment_default", "receiver_fee_timing", "network_fee_policy", "settlement_policy", "shortfall_tolerance", "status"], defaults: { receiver_fee_timing: "at_conversion", settlement_policy: "to_zero", shortfall_tolerance: 0 }, rules: ["One arrangement with a client; several projects may belong to one CLIENT (D38). Everything the arrangement needs sits under it.", "quote_freshness_min < quote_validity_min; grace_min and grace_drift_pct govern the grace decision after validity (D45 adds extensions before validity ends).", "network_fee_policy is the project default; a one-off override is a FEE_DECISION. When a network fee applies it is stated in USDT; when it does not, nothing posts (D46).", "exposure_ceiling caps the balance resting at a partner (settlement_policy hold_allowed); the client-level cap is on CLIENT."] },
-  THRESHOLD: { scope: "Per project", req: ["kind", "value", "escalation"], rules: ["One row per kind and currency; currency may be blank for kinds that are not amounts (daily_slots, rate_variation_rel).", "escalation names who decides when the threshold is crossed: finance or management; the escalation adds the approval, it never replaces the first.", "settlement_limit also bounds the balance held at a partner under settlement_policy hold_allowed."] },
+  PROJECT: { scope: "Per client", req: ["client_id", "name", "quote_freshness_min", "quote_validity_min", "grace_min", "grace_drift_pct", "late_collection_policy", "bank_fee_treatment_default", "receiver_fee_timing", "network_fee_policy", "settlement_policy", "shortfall_tolerance", "status"], defaults: { receiver_fee_timing: "at_conversion", settlement_policy: "to_zero", shortfall_tolerance: 0 }, rules: ["One arrangement with a client; several projects may belong to one CLIENT (D38). Everything the arrangement needs sits under it.", "quote_freshness_min < quote_validity_min; grace_min and grace_drift_pct govern the grace decision after validity (D45 adds extensions before validity ends).", "network_fee_policy is the project default; a one-off override is a FEE_DECISION. When a network fee applies it is stated in USDT; when it does not, nothing posts (D46).", "exposure_ceiling caps the balance resting at a partner (settlement_policy hold_allowed); the client-level cap is on CLIENT."],
+    // state and is_test (design review): printed after status, in this order, with the configuration wording
+    hide: ["state", "is_test"],   // both are in the model since v6.0; printed below with the configuration wording
+    extraRows: [
+      ["state", "string", "yes", "draft / validated / active · default draft. Only an active project can price a deal; validated means every rule of Section 6 passes for the project and each of its partner configuration blocks; Management activates (see “Project states” in section 1)"],
+      ["is_test", "bool", "yes", "default false. A dummy twin project set up from the same archetype as a real project, used only for scripted test deals on staging (Cutover Approach, Section 3); every row that belongs to it is removed by the pre-copy filter before production is loaded, and its figures are excluded from every count and balance shown to NPL"],
+    ] },
+  THRESHOLD: { scope: "Per project", req: ["kind", "value", "escalation"], rules: ["One row per kind and currency; currency may be blank for kinds that are not amounts (daily_slots, rate_variation_rel).", "escalation names who decides when the threshold is crossed: finance or management; the escalation adds the approval, it never replaces the first.", "settlement_limit also bounds the balance held at a partner under settlement_policy hold_allowed."],
+    override: { kind: (t) => t.replace(/\.?\s*$/, "") + " / rate_min_observations / rate_fallback_spread_abs / rate_abs_tolerance / approval_time_limit / cutoff_warning_min / lock_idle_minutes (the six added kinds are described below)" },
+    after: `<p>Six further THRESHOLD kinds (added in the design review), used by the breach rules of the Calculation Specification (section 2a); NPL Finance sets the values, Management approves them like any threshold.</p>
+<table class="dd"><thead><tr><th style="width:20%">kind</th><th style="width:8%">currency</th><th style="width:16%">value</th><th style="width:13%">escalation</th><th>meaning</th></tr></thead><tbody>
+${[["rate_min_observations", "—", "count (e.g. 10)", "finance", "fewer confirmed rate versions than this in the two-week window → the two-week average is not used; the fallback threshold applies"],
+   ["rate_fallback_spread_abs", "—", "fraction (e.g. 0.015)", "finance", "the absolute spread above which a rate version breaches when the two-week average is unavailable or unusable (zero or negative)"],
+   ["rate_abs_tolerance", "—", "fraction (e.g. 0.005)", "finance", "a spread further than this from the two-week average, in either direction, is flagged for Finance to verify before use; nothing freezes"],
+   ["approval_time_limit", "—", "minutes", "finance / management", "one row per stage, the stage named in condition_expr (collection_verification, rate_confirmation, conversion_approval, settlement_approval, execution_confirmation, eod_reconciliation): after this many minutes a pending item of that stage is overdue and appears on the escalation role's list (Lifecycle & Approvals, 8a)"],
+   ["cutoff_warning_min", "—", "minutes (e.g. 60; a second row 30)", "finance / management", "a warning is raised this many minutes before a partner's cutoff for any item still pending against it"],
+   ["lock_idle_minutes", "—", "minutes (default 15)", "management", "a RECORD_LOCK not touched for this long expires on its own; Management may clear one earlier (Lifecycle & Approvals, 6a)"]]
+  .map((r) => `<tr>${r.map((c, i) => `<td${i === 0 ? ' class="mono"' : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")}
+</tbody></table>` },
   CURRENCY_PAIR: { scope: "Per project, or platform", req: ["scope", "from_currency", "to_currency", "quote_direction", "rate_precision", "amount_rounding", "status"], defaults: { scope: "project", quote_direction: "out_per_in", rate_precision: 5, amount_rounding: "exact" }, rules: ["scope project needs project_id; scope platform (currency → reporting currency) has none, is managed under system settings and is never quoted (D43, D44).", "amount_rounding is the payout-side menu (exact / truncate_unit / nearest_unit / round_up_unit / nearest_n / round_up_n); exact is the default for bank transfers; nearest_n and round_up_n need rounding_unit (D25, D46).", "cash_rounding with cash_rounding_unit applies to the collected cash amount (AED 100, USD cash in Dubai 10, 1,000 for Asian currencies); both blank for a pair that is never collected in cash.", "from_currency may equal to_currency: the leg converts at rate 1 and the fee is captured at conversion (D33).", "A pair needs at least one PAIR_RATE_SOURCE with a unique priority before it can be used."] },
   PAIR_RATE_SOURCE: { scope: "Per pair", req: ["currency_pair_id", "rate_source_id", "priority"], rules: ["Priority 1 is tried first; the chain continues on staleness or outage.", "Platform pairs use the same chain: it is what REPORTING_VALUE converts with."] },
   OWN_WALLET: { scope: "Per project", req: ["provider", "role", "network", "address", "signer_arrangement", "custody_max_hours"], rules: ["Optional. role says which of the three allowed custody cases the wallet serves: reroute_contingency, own_desk (D23) or collection_bridge (D40); custody is allowed in no other case.", "networks lists the networks a bridge receives on (ERC-20 where a partner cannot).", "custody_max_hours is the limit the custody view ages against; an outbound transfer needs dual Management approval and is executed by NPL's signers outside the platform."] },
@@ -85,7 +102,7 @@ const EX = {
     { code: "XE", staleness_threshold_s: 300 },
   ],
   partners: [
-    { code: "ALI", name: "Ali", disclosure_style: "fee_in_rate", rate_expiry_time: "17:00 local", holiday_calendar: "ID banking holidays", supported_methods: ["crypto", "bank", "cash", "local_deposit"], bank_cutoff_time: "14:30", cutoff_timezone: "Asia/Jakarta", status: "active",
+    { code: "ALI", name: "Ali", disclosure_style: "fee_in_rate", rate_expiry_time: "17:00 local", holiday_calendar: "ID banking holidays", supported_methods: ["crypto", "bank", "cash", "local_deposit"], bank_cutoff_time: "14:30", cutoff_timezone: "Asia/Hong_Kong", status: "active",
       holidays: [{ date: "2026-12-25", name: "Christmas Day", scope: "bank_channel", source: "public calendar" }, { date: "2027-03-20", name: "Idul Fitri (illustrative)", scope: "bank_channel", source: "partner notice" }],
       cutoff_overrides: [{ weekday: "Friday", cutoff_time: "13:30", kind: "early_close", reason: "pre-weekend", recorded_by: "finance" }] },
     { code: "JETON", name: "Jeton", disclosure_style: "fee_on_market", rate_expiry_time: "16:00 local", holiday_calendar: "UK banking holidays", supported_methods: ["crypto", "bank"], bank_cutoff_time: null, cutoff_timezone: "Europe/London", status: "active", holidays: [], cutoff_overrides: [] },
@@ -262,17 +279,18 @@ const fieldTable = (n) => {
   return `<h4 id="${n}">${esc(n)} <span class="scope">· ${esc(r.scope)}</span></h4>
 <p class="desc">${esc(hist(e.desc))}</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
-${e.f.filter((f) => f[0] !== "id").map((f) => {
+${e.f.filter((f) => f[0] !== "id" && !(r.hide || []).includes(f[0])).map((f) => {
   const req = r.req.includes(f[0]) ? "yes" : f[2] === "FK" && !/null|optional|when |nullable/.test(f[3] || "") && !["project_id", "sender_id", "receiving_entity_account_id", "partner_pair_id", "fee_structure_id", "own_wallet_id", "reserved_for_deal_id", "wallet_screening_id", "group_id", "partner_config_id", "relationship_owner"].includes(f[0]) ? "yes" : "no";
   const def = r.defaults && r.defaults[f[0]] !== undefined ? ` · default <b>${esc(String(r.defaults[f[0]]))}</b>` : "";
-  return `<tr><td class="mono">${esc(f[0])}</td><td>${esc(f[1])}</td><td>${req}</td><td>${esc(note(f[3] ?? (f[2] === "FK" ? "reference" : "")))}${def}</td></tr>`;
-}).join("")}
+  const txt = note(f[3] ?? (f[2] === "FK" ? "reference" : ""));
+  return `<tr><td class="mono">${esc(f[0])}</td><td>${esc(f[1])}</td><td>${req}</td><td>${esc(r.override && r.override[f[0]] ? r.override[f[0]](txt) : txt)}${def}</td></tr>`;
+}).join("")}${(r.extraRows || []).map((f) => `<tr><td class="mono">${esc(f[0])}</td><td>${esc(f[1])}</td><td>${f[2]}</td><td>${esc(f[3])}</td></tr>`).join("")}
 </tbody></table>
-<ul class="rules">${r.rules.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+<ul class="rules">${r.rules.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>${r.after || ""}`;
 };
 
 const tree = `<figure class="chart"><svg viewBox="0 0 760 470" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The configuration model: global master data, the client and its project, the project's parties and groups, and one partner configuration block per partner">
-<style>.b{fill:#fff;stroke:#2f5d9e;stroke-width:1.2}.g{fill:#f3f6fb;stroke:#2f5d9e;stroke-width:1.2}.gl{fill:#fff;stroke:#777;stroke-width:1.2;stroke-dasharray:3 2}.t{font:600 9.3px Helvetica,Arial,sans-serif;fill:#111}.s{font:8.2px Helvetica,Arial,sans-serif;fill:#444}.h{font:700 10px Helvetica,Arial,sans-serif;fill:#2f5d9e}.l{stroke:#2f5d9e;stroke-width:1.1;fill:none}</style>
+<style>.b{fill:#fff;stroke:#2f5d9e;stroke-width:1.2}.g{fill:#f3f6fb;stroke:#2f5d9e;stroke-width:1.2}.gl{fill:#fff;stroke:#777;stroke-width:1.2;stroke-dasharray:3 2}.t{font:600 9.3px Helvetica,Arial,sans-serif;fill:#111}.s{font:8.2px Helvetica,Arial,sans-serif;fill:#444}.s2{font:7.2px Helvetica,Arial,sans-serif;fill:#444}.h{font:700 10px Helvetica,Arial,sans-serif;fill:#2f5d9e}.l{stroke:#2f5d9e;stroke-width:1.1;fill:none}</style>
 <text x="20" y="20" class="h">Global master data (shared by all projects)</text>
 <rect x="20" y="28" width="118" height="32" rx="6" class="gl"/><text x="79" y="48" text-anchor="middle" class="t">CLIENT</text>
 <rect x="150" y="28" width="150" height="32" rx="6" class="gl"/><text x="225" y="44" text-anchor="middle" class="t">PARTNER</text><text x="225" y="55" text-anchor="middle" class="s">HOLIDAY · CUTOFF_OVERRIDE</text>
@@ -281,16 +299,16 @@ const tree = `<figure class="chart"><svg viewBox="0 0 760 470" width="100%" xmln
 <rect x="596" y="28" width="144" height="32" rx="6" class="gl"/><text x="668" y="44" text-anchor="middle" class="t">SYSTEM_SETTING</text><text x="668" y="55" text-anchor="middle" class="s">platform pairs · templates</text>
 <text x="20" y="96" class="h">One client → one or more projects (one shown)</text>
 <rect x="20" y="104" width="720" height="350" rx="8" class="g"/>
-<rect x="36" y="118" width="150" height="32" rx="6" class="b"/><text x="111" y="138" text-anchor="middle" class="t">PROJECT</text>
-<rect x="36" y="166" width="150" height="28" rx="6" class="b"/><text x="111" y="184" text-anchor="middle" class="t">THRESHOLD</text>
-<rect x="36" y="204" width="150" height="28" rx="6" class="b"/><text x="111" y="222" text-anchor="middle" class="t">CURRENCY_PAIR</text>
-<text x="111" y="246" text-anchor="middle" class="s">→ PAIR_RATE_SOURCE (chain)</text>
-<rect x="36" y="256" width="150" height="28" rx="6" class="b"/><text x="111" y="274" text-anchor="middle" class="t">OWN_WALLET (role)</text>
-<rect x="36" y="294" width="150" height="28" rx="6" class="b"/><text x="111" y="312" text-anchor="middle" class="t">SENDER</text>
-<text x="111" y="336" text-anchor="middle" class="s">allow-list → groups · provenance</text>
-<text x="111" y="348" text-anchor="middle" class="s">fee overrides · sender_return receiver</text>
-<rect x="36" y="362" width="150" height="28" rx="6" class="b"/><text x="111" y="380" text-anchor="middle" class="t">WALLET_SCREENING</text>
-<text x="111" y="404" text-anchor="middle" class="s">per address and day</text>
+<rect x="30" y="112" width="172" height="46" rx="6" class="b"/><text x="116" y="126" text-anchor="middle" class="t">PROJECT</text><text x="116" y="138" text-anchor="middle" class="s2">state draft / validated / active</text><text x="116" y="150" text-anchor="middle" class="s2">is_test (dummy twin) · policies, clocks, caps</text>
+<rect x="30" y="166" width="172" height="46" rx="6" class="b"/><text x="116" y="180" text-anchor="middle" class="t">THRESHOLD</text><text x="116" y="192" text-anchor="middle" class="s2">max_amount · settlement_limit · approval_time_limit</text><text x="116" y="204" text-anchor="middle" class="s2">cutoff_warning_min · lock_idle · rate_* breach values</text>
+<rect x="30" y="220" width="172" height="28" rx="6" class="b"/><text x="116" y="238" text-anchor="middle" class="t">CURRENCY_PAIR</text>
+<text x="116" y="262" text-anchor="middle" class="s">→ PAIR_RATE_SOURCE (chain)</text>
+<rect x="30" y="270" width="172" height="28" rx="6" class="b"/><text x="116" y="288" text-anchor="middle" class="t">OWN_WALLET (role)</text>
+<rect x="30" y="306" width="172" height="28" rx="6" class="b"/><text x="116" y="324" text-anchor="middle" class="t">SENDER</text>
+<text x="116" y="348" text-anchor="middle" class="s">allow-list → groups · provenance</text>
+<text x="116" y="360" text-anchor="middle" class="s">fee overrides · sender_return receiver</text>
+<rect x="30" y="372" width="172" height="28" rx="6" class="b"/><text x="116" y="390" text-anchor="middle" class="t">WALLET_SCREENING</text>
+<text x="116" y="414" text-anchor="middle" class="s">per address and day</text>
 <rect x="214" y="118" width="170" height="28" rx="6" class="b"/><text x="299" y="136" text-anchor="middle" class="t">RECEIVER_GROUP</text>
 <text x="299" y="160" text-anchor="middle" class="s">one default · entitlement unit</text>
 <rect x="214" y="172" width="170" height="28" rx="6" class="b"/><text x="299" y="190" text-anchor="middle" class="t">RECEIVER (kind)</text>
@@ -317,8 +335,8 @@ const tree = `<figure class="chart"><svg viewBox="0 0 760 470" width="100%" xmln
 <text x="430" y="370" class="s">by effective date, never edited.</text>
 <text x="430" y="398" class="s">Partner clock: PARTNER.bank_cutoff_time, HOLIDAY rows and</text>
 <text x="430" y="410" class="s">PARTNER_CUTOFF_OVERRIDE govern pairs with needs_bank_lock.</text>
-<path class="l" d="M186,134 H214 M186,134 H412 V148 M79,60 V104 M225,60 V104 M367,60 V104 M509,60 V104 M668,60 V104" stroke-dasharray="3 2"/>
-</svg><figcaption>Figure 1 — The configuration model. Dashed boxes are global; everything inside the shaded area belongs to one project of one client.</figcaption></figure>`;
+<path class="l" d="M202,132 H214 M202,132 H412 V148 M79,60 V104 M225,60 V104 M367,60 V104 M509,60 V104 M668,60 V104" stroke-dasharray="3 2"/>
+</svg><figcaption>Figure 1 — The configuration model, with the project state (PROJECT.state, PROJECT.is_test) and the THRESHOLD kinds. Dashed boxes are global; everything inside the shaded area belongs to one project of one client.</figcaption></figure>`;
 
 const CSS = `
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
@@ -351,9 +369,28 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Configuration Schema Specification · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
+<h2>How to read this pack</h2>
+<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
+
 <h2>1 · How configuration is organised</h2>
 <p>Four ideas carry the whole model. <b>A client has projects.</b> The client is the commercial relationship; each project is one arrangement with it, with its own settings, currency pairs, senders, receiver groups and partner configurations. <b>Parties are partner-independent.</b> Senders, receiver groups and receiving entities belong to the project, so the same Sender A → Receiver Y flow can run through Ali today and Jeton tomorrow. <b>How a partner is used is a block.</b> Fees and tiers, vehicles and their collection endpoints, the narrative and the rail that pay out, the destination approvals and the rebate rule all hang off one PARTNER_CONFIG, and a deal leg stamps the block's rows it was priced and routed on. <b>The partner's clock is the partner's.</b> Cutoff, time zone, holidays and overrides belong to the global PARTNER and apply wherever a pair says it relies on the banking channel.</p>
 ${tree}
+
+<h2>1a · Creating a project, project states and effective-date rules</h2>
+<h3>Creating a project from an archetype</h3>
+<p>A new project is not set up field by field. It is created from one of the six project archetypes of the Client Operating Procedures (Part C): the archetype pre-fills the project's policies, its currency pairs with their rate-source chains, the fee structure and tiers of each partner pair, the message templates, the thresholds and the partner configuration block. Finance then changes only what differs for the client (names, parties, accounts, the fee percentages agreed) and proposes the project; Management approves it as one change. An existing project of the same archetype may be used as the source instead of the archetype itself (cloning), with the same rules. The guided setup screens that do this are built in milestone M0 of Phase 1.</p>
+<h3>Project states: draft, validated, active</h3>
+<p>A project carries a state in addition to its status. <b>draft</b>: the project is being set up; rows may be added and changed freely under the normal proposal and approval rules; no deal can be priced on it. <b>validated</b>: every cross-entity rule of Section 6 passes for the project and for each of its partner configuration blocks; the validation report lists each rule with its result and the rows concerned, and is kept with the project. <b>active</b>: Management has activated the validated project; deals may be priced and partner configurations used. A project returns to draft when a change proposal is approved that makes a rule fail, and must be validated again before it is used. A partner configuration block added later follows the same path on its own: it cannot be used on a deal until it passes the rules of Section 6. The validation report screen is built in M0; the rules themselves already exist (Section 6) and are evaluated on save.</p>
+<h3>Effective-date rules</h3>
+<p>Configuration is versioned by effective date (Change control, below). The four rules below say what a new version does to deals that already exist. They are stated in the same words in section 2 of the Lifecycle &amp; Approvals document.</p>
+<table><thead><tr><th style="width:36%">Rule</th><th>What happens</th></tr></thead><tbody>
+<tr><td>1. New versions apply to new pricing only</td><td>An approved configuration change takes effect for deals priced on or after its effective date. A deal priced before that date is not re-priced.</td></tr>
+<tr><td>2. A priced deal keeps its versions</td><td>The fee structure version, the tier, the rate basis, the rounding options, the partner configuration and the policy versions stamped at pricing stay with the deal to the end of its life, including through settlement, return and loss handling.</td></tr>
+<tr><td>3. A re-quote uses the configuration of the new pricing time</td><td>An expired or requoted leg is priced afresh on the versions in force when the new quote is made (a new deal group); the original leg keeps its stamp.</td></tr>
+<tr><td>4. A collect-first deal uses the configuration in force when it is priced</td><td>A collect-first leg is priced at conversion, so it uses the versions effective at that time, not at the time the money arrived, unless a documented client agreement names a different rule for that project.</td></tr>
+</tbody></table>
+<p>Worked scenarios (the fee rises from 2.0 % to 2.2 % effective 1 November; proposed 28 October, approved 29 October). A: quoted 30 October, collected 31 October, converted 2 November, pays 2.0 % (rule 2). B: quoted 2 November, pays 2.2 % (rule 1). C: quoted 30 October, expired, re-quoted 2 November, pays 2.2 % (rule 3). D: collected 31 October with no prior quote, priced at conversion on 2 November, pays 2.2 % (rule 4). These four scenarios are demonstrated in Phase 1 (M4) for fees, tiers, rounding options and partner settings, not only the headline percentage.</p>
+
 <div class="box"><b>Change control.</b> Configuration is versioned: thresholds, fee structures, tiers, templates, system settings and policies are new rows with an effective date, never edits. Finance proposes, Management approves (approver ≠ proposer, from the ROLE_RIGHT rows — D44), and every change is audited. Deals keep the versions they were priced on. Three rows are not approvals but audited records: a partner cutoff override (Finance, with the partner's agreement), a wallet screening (Operations) and a destination approval's status as reported by the partner.</div>
 
 <h2>2 · Global master data and system settings</h2>
@@ -367,6 +404,7 @@ ${PARTIES.map(fieldTable).join("")}
 
 <h2 class="pb">5 · The partner configuration block</h2>
 ${PARTNER_BLOCK.map(fieldTable).join("")}
+<p><b>Rebates and the percentages in this document.</b> The Jeton rebate of 0.4 % quoted in the worked example and in the Scenario Catalogue is not a fixed value: it is a PARTNER_REBATE_RULE row of the project's partner configuration, changed by a new version with a later effective_from like any fee, and NPL confirmed on 20 October that it is set per project, not per deal. Every percentage, rate and amount in Sections 2 to 7 is illustrative, taken from NPL's fee table of 8 October 2026, and is replaced by the project's configured values; none is written into code.</p>
 
 <h2 class="pb">6 · Cross-entity rules the system enforces on save</h2>
 <ol>
@@ -382,6 +420,7 @@ ${PARTNER_BLOCK.map(fieldTable).join("")}
 <li>A quote template prints sender-facing fields only (D36); a screening decision of accept_alternate lands only on an elevated-band endpoint (D31); a cutoff override is a one-day or a weekday rule, never both; an extension names the partner's agreement.</li>
 <li>quote_freshness_min is shorter than quote_validity_min; all percentages are stored as decimals; Σ markup shares of one base ≤ 100 % (D26); a rebate rule is pct_of_amount with a payout currency (D46).</li>
 <li>applicable_for_reroute, is_own_desk, exposure ceilings, thresholds, fee structures and tiers, templates, system settings and platform pairs are Management-approved changes; users and roles need a second Management user (D44).</li>
+<li>A project is validated only when rules 1 to 12 pass for it and for each of its partner configuration blocks; only a validated project can be activated, and only Management activates it. A partner configuration block added to an active project cannot be used on a deal until the rules pass for it.</li>
 </ol>
 
 <h2 class="pb">7 · Worked example: the FRS project, end to end</h2>
@@ -392,13 +431,13 @@ ${PARTNER_BLOCK.map(fieldTable).join("")}
 <h3>What each part does in one deal</h3>
 <table><thead><tr><th style="width:30%">Step of the deal</th><th>Configuration it reads</th></tr></thead><tbody>
 <tr><td>Sender A asks to send USDT for Receiver Y</td><td>SENDER Sender A; the allow-list names the default group, so the deal is attributed to <code>DEFAULT</code>; Receiver Y is a counterparty receiver in it.</td></tr>
-<tr><td>Operations picks Ali for USDT → EUR</td><td>PARTNER_CONFIG CLIENT1-ALI, PARTNER_PAIR USDT-EUR (fee_in_rate: Ali's margin is inside its rate; needs_bank_lock, so Ali's 14:30 Jakarta cutoff governs the rate lock), its current FEE_STRUCTURE: basis market, fixed 1.00 % (0.40 % sender, 0.60 % receiver), customer-facing figures as actual. Jeton, the alternative, is fee_on_market at 0.50 % and binds no cutoff.</td></tr>
+<tr><td>Operations picks Ali for USDT → EUR</td><td>PARTNER_CONFIG CLIENT1-ALI, PARTNER_PAIR USDT-EUR (fee_in_rate: Ali's margin is inside its rate; needs_bank_lock, so Ali's 14:30 Hong Kong (GMT+8) cutoff governs the rate lock), its current FEE_STRUCTURE: basis market, fixed 1.00 % (0.40 % sender, 0.60 % receiver), customer-facing figures as actual. Jeton, the alternative, is fee_on_market at 0.50 % and binds no cutoff.</td></tr>
 <tr><td>Sender B instead of Sender A</td><td>FEE_OVERRIDE: 1.20 % split 0.60 / 0.60 on CLIENT1-ALI/USDT-EUR from 1 October, Management-approved; the structure's other terms still apply (D20).</td></tr>
 <tr><td>Market rate</td><td>CURRENCY_PAIR USDT-EUR, source chain Kraken then CMC, 5 decimals; a snapshot older than 120 s is not used; both feeds down → manual rate with Finance approval.</td></tr>
 <tr><td>Quote clocks and the package</td><td>PROJECT: freshness 5 min, validity 60 min, grace 15 min if drift ≤ 0.10 %; beyond grace the policy is re-quote; an extension before validity ends is a QUOTE_VALIDITY_EXTENSION (D45). The package is rendered from MESSAGE_TEMPLATE quote v1, which prints the five sender-facing fields only.</td></tr>
 <tr><td>Can the quote leave Inquiry?</td><td>DESTINATION_APPROVAL: Receiver Y's account Y-EUR-SWIFT is approved with Ali, so yes. Through Jeton it is still pending_partner, so a quote-first deal for Receiver Y cannot be routed through Jeton until the partner approves (invariant 8) — while Receiver X could.</td></tr>
 <tr><td>Where does Sender A pay?</td><td>PARTNER_ENTITY PT-tour, its TRC-20 USDT COLLECTION_RECEIVING_ENDPOINT (standard band). Sender A's wallet is screened first (WALLET_SCREENING); an accept_alternate decision would land on PT Global's elevated-band wallet instead. Provenance is recorded against his COLLECTION_SENDING_ENTITY.</td></tr>
-<tr><td>Conversion</td><td>Receiver part taken at conversion (receiver_fee_timing); Converting may not start before conversion_due_date — the next Jakarta business day after a post-cutoff lock, skipping Ali's HOLIDAY rows and the Friday early close (D29, D34); variance tolerance 0.20 % (THRESHOLD rate_variation_rel).</td></tr>
+<tr><td>Conversion</td><td>Receiver part taken at conversion (receiver_fee_timing); Converting may not start before conversion_due_date — the next Hong Kong business day after a post-cutoff lock, skipping Ali's HOLIDAY rows and the Friday early close (D29, D34); variance tolerance 0.20 % (THRESHOLD rate_variation_rel).</td></tr>
 <tr><td>Payout</td><td>SETTLEMENT from Ali through SETTLEMENT_RAIL "Ali's EU bank / EMI" under the narrative "PT Global Inc" to Y-EUR-SWIFT; amount_rounding exact (cents go out); settlement_policy to_zero; expected bank fee 25 EUR, treatment carry_forward; Management approval above 50,000 EUR or for a third same-day slot.</td></tr>
 <tr><td>If Ali is unavailable</td><td>REROUTE to Jeton (applicable_for_reroute = true) via OWN_WALLET AQN-LT-SUB (role reroute_contingency), custody limit 48 hours; Jeton's rebate of 0.40 % of the amount, in USDT, accrues on what Jeton converts (PARTNER_REBATE_RULE).</td></tr>
 <tr><td>Refund</td><td>A rejected payout opens a return leg to RET_SND_A, the sender_return receiver, through the same destination-approval path; the network-fee policy absorbed applies unless a FEE_DECISION says otherwise.</td></tr>
