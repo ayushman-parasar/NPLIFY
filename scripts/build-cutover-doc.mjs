@@ -14,6 +14,10 @@ const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
 const outDir = path.join(root, "docs");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// v6.0: the figure drawn for the design review (scripts/figures-v6.0/<name>.svg, exported from the client pack's figure pass)
+const figDir = path.join(here, "figures-v6.0");
+const figSvg = (name) => fs.readFileSync(path.join(figDir, `${name}.svg`), "utf8");
 const V = D.version, DATE = "22 October 2026";
 const FLOWS = D.SCENARIO_CATALOGUE.flows; // [code, name, description, tables]
 
@@ -34,21 +38,7 @@ const CHECKS = [
 ];
 
 // ------------------------------------------------------------------ timeline figure
-const timeline = `<figure class="chart"><svg viewBox="0 0 760 250" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Timeline: prepare, opening date with verified opening entries, parallel run of three to four weeks on staging, go/no-go, switch on a quiet day, first live day, sheets read-only for four weeks">
-<style>.t{font:700 9.6px Helvetica,Arial,sans-serif;fill:#111}.s{font:8.4px Helvetica,Arial,sans-serif;fill:#333}.h{font:700 10px Helvetica,Arial,sans-serif;fill:#2f5d9e}</style>
-<line x1="20" y1="120" x2="740" y2="120" stroke="#333" stroke-width="1.5"/>
-<rect x="20" y="60" width="112" height="48" rx="6" fill="#f3f6fb" stroke="#2f5d9e"/><text x="28" y="78" class="t">0 · Prepare</text><text x="28" y="91" class="s">configuration, users,</text><text x="28" y="102" class="s">dummy test projects</text>
-<rect x="140" y="60" width="120" height="48" rx="6" fill="#f3f6fb" stroke="#2f5d9e"/><text x="148" y="78" class="t">1 · Opening date</text><text x="148" y="91" class="s">verified opening entries;</text><text x="148" y="102" class="s">in-flight deals entered</text>
-<rect x="268" y="60" width="182" height="48" rx="6" fill="#f3f6fb" stroke="#2f5d9e"/><text x="276" y="78" class="t">2 · Parallel run (three to four weeks)</text><text x="276" y="91" class="s">sheets lead, app follows, the same day;</text><text x="276" y="102" class="s">daily reconciliation; discrepancy log</text>
-<rect x="458" y="60" width="92" height="48" rx="6" fill="#fff8e6" stroke="#b8860b"/><text x="466" y="78" class="t">3 · Go / no-go</text><text x="466" y="91" class="s">exit criteria 1 to 13;</text><text x="466" y="102" class="s">Management signs</text>
-<rect x="558" y="60" width="92" height="48" rx="6" fill="#eaf3ea" stroke="#2f7d3c"/><text x="566" y="78" class="t">4 · Switch day</text><text x="566" y="91" class="s">filter test projects,</text><text x="566" y="102" class="s">copy, verify, switch</text>
-<rect x="658" y="60" width="82" height="48" rx="6" fill="#eaf3ea" stroke="#2f7d3c"/><text x="666" y="78" class="t">5 · Next day</text><text x="666" y="91" class="s">first live day;</text><text x="666" y="102" class="s">workbook running</text>
-<rect x="458" y="140" width="282" height="52" rx="6" fill="#fff" stroke="#2f7d3c" stroke-dasharray="4 2"/><text x="466" y="157" class="t">6 · After</text><text x="466" y="170" class="s">sheets read-only for four weeks; staging removed;</text><text x="466" y="182" class="s">the recovery runbook (8a) rehearsed once a year</text>
-<text x="20" y="135" class="s">week 0</text><text x="140" y="135" class="s">day 1 of the run</text><text x="268" y="135" class="s">weeks 1–4</text><text x="463" y="135" class="s">S − 2 days</text><text x="563" y="135" class="s">S (switch day)</text><text x="663" y="135" class="s">S + 1</text>
-<text x="20" y="212" class="h">S is the switch day: the day with the least traffic, chosen by NPL a couple of days before, once the go / no-go is signed.</text>
-<text x="20" y="228" class="s">The balances of the opening date enter as verified opening entries (Section 4), so NPL chooses its opening date rather than waiting for a clean break;</text>
-<text x="20" y="240" class="s">scripted test deals live in flagged dummy projects that the pre-copy filter removes (Section 3). Only steps 3 and 4 touch production.</text>
-</svg><figcaption>Figure 1 — The cutover in six steps. Only steps 3 and 4 touch production; everything before them is on the staging instance and reversible.</figcaption></figure>`;
+const timeline = `<figure class="chart">${figSvg("cutover-fig1")}<figcaption>Figure 1 — The cutover in six steps. Only steps 3 and 4 touch production; everything before them is on the staging instance and reversible.</figcaption></figure>`;
 
 const CSS = `
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }

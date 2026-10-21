@@ -15,6 +15,10 @@ const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
 const outDir = path.join(root, "docs");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// v6.0: the figure drawn for the design review (scripts/figures-v6.0/<name>.svg, exported from the client pack's figure pass)
+const figDir = path.join(here, "figures-v6.0");
+const figSvg = (name) => fs.readFileSync(path.join(figDir, `${name}.svg`), "utf8");
 const c = (s) => `<code>${esc(s)}</code>`;
 const V = D.version, DATE = "22 October 2026";
 const byDomain = (d) => Object.keys(D.E).filter((n) => D.E[n].d === d);
@@ -46,25 +50,7 @@ const JOBS = [
 ];
 
 // ------------------------------------------------------------------ the diagram
-const diagram = `<figure class="chart"><svg viewBox="0 0 760 358" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NPL staff in a browser use the NPLify app, two tasks in two zones in NPL's AWS account; the app uses a Multi-AZ PostgreSQL and S3 inside the account, with backups copied to a second region, and Kraken / CoinMarketCap, Tronscan / Etherscan and Google Sheets (client journals and the fallback workbook) outside it">
-<style>.b{fill:#fff;stroke:#333;stroke-width:1.3}.o{fill:#f4f6f9;stroke:#999;stroke-width:1.1}.t{font:700 10.5px Helvetica,Arial,sans-serif;fill:#111}.s{font:8.8px Helvetica,Arial,sans-serif;fill:#444}.h{font:700 10px Helvetica,Arial,sans-serif;fill:#2f5d9e}.l{stroke:#555;stroke-width:1.2;fill:none;marker-end:url(#a)}.d{stroke-dasharray:3 2}</style>
-<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker></defs>
-<rect x="150" y="18" width="340" height="322" rx="8" fill="none" stroke="#2f5d9e" stroke-width="1.3" stroke-dasharray="5 3"/><text x="162" y="36" class="h">NPL's AWS account · Hong Kong (ap-east-1)</text>
-<rect x="6" y="130" width="136" height="58" rx="6" class="o"/><text x="16" y="152" class="t">NPL staff</text><text x="16" y="167" class="s">browser, NPLify login</text><text x="16" y="179" class="s">password + authenticator code</text>
-<rect x="170" y="60" width="160" height="66" rx="6" class="b"/><text x="182" y="80" class="t">NPLify app · task 1 (zone A)</text><text x="182" y="96" class="s">screens · API · jobs</text><text x="182" y="108" class="s">Next.js, TypeScript</text>
-<rect x="170" y="150" width="160" height="66" rx="6" class="b"/><text x="182" y="170" class="t">NPLify app · task 2 (zone B)</text><text x="182" y="186" class="s">same image; the jobs take</text><text x="182" y="198" class="s">a lock so only one runs</text>
-<rect x="346" y="48" width="138" height="92" rx="6" class="b"/><text x="356" y="68" class="t">PostgreSQL, Multi-AZ</text><text x="356" y="83" class="s">primary (zone A) + standby</text><text x="356" y="95" class="s">(zone B), auto failover</text><text x="356" y="110" class="s">${tables} tables · ${VIEWS.length} views</text><text x="356" y="122" class="s">ledger insert-only</text>
-<rect x="346" y="160" width="138" height="68" rx="6" class="b"/><text x="356" y="180" class="t">File storage</text><text x="356" y="195" class="s">S3 bucket, versioned</text><text x="356" y="207" class="s">slips, screenshots, photos,</text><text x="356" y="219" class="s">quote packages</text>
-<rect x="346" y="248" width="138" height="70" rx="6" class="b"/><text x="356" y="268" class="t">Backups</text><text x="356" y="283" class="s">daily · 30 days · any minute</text><text x="356" y="295" class="s">+ daily copy to a second region</text>
-<rect x="520" y="40" width="230" height="52" rx="6" class="o"/><text x="532" y="60" class="t">Kraken, CoinMarketCap</text><text x="532" y="75" class="s">market rates (MARKET_RATE), in that order;</text><text x="532" y="87" class="s">manual with Finance approval</text>
-<rect x="520" y="110" width="230" height="52" rx="6" class="o"/><text x="532" y="130" class="t">Tronscan, Etherscan</text><text x="532" y="145" class="s">check transaction hashes (TRC-20, ERC-20)</text>
-<rect x="520" y="180" width="230" height="66" rx="6" class="o"/><text x="532" y="200" class="t">Google Sheets</text><text x="532" y="215" class="s">one client journal per client, written and read back;</text><text x="532" y="227" class="s">+ the fallback workbook, refreshed every 15 minutes</text><text x="532" y="239" class="s">(tenth job)</text>
-<rect x="520" y="264" width="230" height="52" rx="6" class="o"/><text x="532" y="284" class="t">Authenticator app</text><text x="532" y="299" class="s">on each user's phone (TOTP); no outside identity provider</text>
-<path class="l" d="M142,152 C156,152 156,93 170,93"/><path class="l d" d="M142,166 C156,166 156,183 170,183"/>
-<path class="l" d="M330,100 C338,100 338,94 346,94"/><path class="l d" d="M330,176 C338,176 338,120 346,120"/><path class="l d" d="M330,196 C338,196 338,194 346,194"/>
-<path class="l d" d="M415,140 V160" marker-end="none"/><path class="l d" d="M415,228 V248" marker-end="none"/>
-<path class="l d" d="M250,60 V46 H504" marker-end="none"/><path class="l d" d="M504,46 V66 H520"/><path class="l d" d="M504,66 V136 H520"/><path class="l d" d="M504,136 V213 H520"/><path class="l d" d="M70,188 V350 H635 V316"/>
-</svg><figcaption>Figure 1 — Two application tasks in two zones, a Multi-AZ database, backups copied to a second region, and the fallback workbook as the tenth job. Recovery inside one hour (Cutover Approach 8a): a zone failure fails over to the standby and the second task; a whole-region outage is covered by the cross-region backup copy and the runbook; the fallback workbook bridges the hours in between. Running cost about USD 165–245 a month (Section 6).</figcaption></figure>`;
+const diagram = `<figure class="chart">${figSvg("arch-fig1")}<figcaption>Figure 1 — Two application tasks in two zones, a Multi-AZ database, backups copied to a second region, and the fallback workbook as the tenth job. Recovery inside one hour (Cutover Approach 8a): a zone failure fails over to the standby and the second task; a whole-region outage is covered by the cross-region backup copy and the runbook; the fallback workbook bridges the hours in between. Running cost about USD 165–245 a month (Section 6).</figcaption></figure>`;
 
 const CSS = `
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }

@@ -15,11 +15,15 @@ const outDir = path.join(root, "docs");
 fs.mkdirSync(outDir, { recursive: true });
 const V = D.version, DATE = "22 October 2026";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// v6.0: the figure drawn for the design review (scripts/figures-v6.0/<name>.svg, exported from the client pack's figure pass)
+const figDir = path.join(here, "figures-v6.0");
+const figSvg = (name) => fs.readFileSync(path.join(figDir, `${name}.svg`), "utf8");
 const code = (s) => `<code>${esc(s)}</code>`;
 
 // ------------------------------------------------------------------ state-chart drawing
 // nodes: {id, label, x, y, w?, h?, kind?: 'start'|'end'|'exception'|'note'}; edges: {from, to, label?, via?:[[x,y]...], kind?}
-function chart({ w, h, nodes, edges, title }) {
+function chart({ w, h, nodes, edges, title, file }) {
   const N = Object.fromEntries(nodes.map((n) => [n.id, { w: 118, h: 34, kind: "state", ...n }]));
   const fill = { state: "#fff", end: "#e8eef7", exception: "#fdf1ea", start: "#fff", note: "none" };
   const stroke = { state: "#2f5d9e", end: "#2f5d9e", exception: "#b7651a", start: "#2f5d9e", note: "#999" };
@@ -66,6 +70,7 @@ function chart({ w, h, nodes, edges, title }) {
     const ls = n.label.split("\n");
     ls.forEach((l, i) => parts.push(`<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 3.5 - (ls.length - 1) * 5 + i * 10.5}" text-anchor="middle" class="st">${esc(l)}</text>`));
   }
+  if (file) return `<figure class="chart">${figSvg(file)}<figcaption>${esc(title)}</figcaption></figure>`;
   return `<figure class="chart"><svg viewBox="0 0 ${w} ${h}" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(title)}">
 <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#2f5d9e"/></marker>
 <marker id="arrE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,1 L9,5 L0,9 z" fill="#b7651a"/></marker>
@@ -78,7 +83,7 @@ ${labels.join("\n")}</svg><figcaption>${esc(title)}</figcaption></figure>`;
 // ------------------------------------------------------------------ Figure 1: deal leg lifecycle
 const r1 = 44, r2 = 160, r3 = 290, r4 = 410, r5 = 500;
 const X = [20, 168, 316, 464, 612];
-const dealChart = chart({ w: 760, h: 600, title: "Figure 1 — Deal leg lifecycle. Blue: normal path. Orange: exceptions. Rounded: end states. Red bars: the points of no return (Section 7a). Collect-first and return legs enter at Collected; estimate-first enters at Collecting; a reroute after conversion (Section 2b) returns the leg to Converted at the alternate partner.", nodes: [
+const dealChart = chart({ file: "lifecycle-fig1", w: 760, h: 600, title: "Figure 1 — Deal leg lifecycle. Blue: normal path. Orange: exceptions. Rounded: end states. Red bars: the points of no return (Section 7a). Collect-first and return legs enter at Collected; estimate-first enters at Collecting; a reroute after conversion (Section 2b) returns the leg to Converted at the alternate partner.", nodes: [
   { id: "inq", label: "Inquiry", x: X[0], y: r1, kind: "start" }, { id: "quo", label: "Quoted", x: X[1], y: r1 }, { id: "sent", label: "Sent", x: X[2], y: r1 }, { id: "acc", label: "Accepted", x: X[3], y: r1 }, { id: "colg", label: "Collecting", x: X[4], y: r1 },
   { id: "cold", label: "Collected", x: X[4], y: r2 }, { id: "cvg", label: "Converting", x: X[3], y: r2 }, { id: "cvd", label: "Converted", x: X[2], y: r2 }, { id: "stl", label: "Settled", x: X[1], y: r2, kind: "end" },
   { id: "grace", label: "Expired /\nin grace", x: X[2], y: r3, kind: "exception" }, { id: "req", label: "Requoted\n(new deal group)", x: X[1], y: r3, kind: "end" }, { id: "void", label: "Voided\n(no money moved)", x: X[0], y: r3, kind: "end" },
@@ -109,7 +114,7 @@ const dealChart = chart({ w: 760, h: 600, title: "Figure 1 — Deal leg lifecycl
 ] });
 
 // ------------------------------------------------------------------ Figure 2: settlement, lines, confirmation
-const settleChart = chart({ w: 760, h: 350, title: "Figure 2 — Settlement: a run and its lines. The promise is discharged when the partner releases the money; a line is then “sent, not yet confirmed” until the receiver confirms, the bank deducts a fee or the bank rejects; a return or a short delivery re-raises the promise. A run completes when every line is confirmed, short or returned. Red bar: the point of no return.", nodes: [
+const settleChart = chart({ file: "lifecycle-fig2", w: 760, h: 350, title: "Figure 2 — Settlement: a run and its lines. The promise is discharged when the partner releases the money; a line is then “sent, not yet confirmed” until the receiver confirms, the bank deducts a fee or the bank rejects; a return or a short delivery re-raises the promise. A run completes when every line is confirmed, short or returned. Red bar: the point of no return.", nodes: [
   { id: "prep", label: "Prepared\n(Ops)", x: 20, y: 30, kind: "start" }, { id: "appr", label: "Approved\n(Finance)", x: 168, y: 30 }, { id: "rel", label: "Released by partner\n(execution_due_date)", x: 316, y: 30 }, { id: "done", label: "Completed", x: 612, y: 30, kind: "end" },
   { id: "wait", label: "Approved after cutoff:\nnext business day", x: 20, y: 140, kind: "exception" },
   { id: "rej", label: "Rejected →\nback to Ops", x: 168, y: 140, kind: "exception" },
@@ -133,7 +138,7 @@ const rateChart = chart({ w: 760, h: 195, title: "Figure 3 — Partner rate vers
 ] });
 
 // ------------------------------------------------------------------ Figure 4: reroute and custody
-const rerouteChart = chart({ w: 760, h: 200, title: "Figure 4 — Reroute, with the entry after conversion (phase post_conversion, Section 2b). Client money rests in NPL's own wallet in four cases only — an approved reroute before conversion, a reroute after conversion, a bridge collection awaiting its hop, an own-desk leg (invariant 3) — and every resting balance carries deal, reason and age. Red bar: the point of no return for an own-wallet transfer.", nodes: [
+const rerouteChart = chart({ file: "lifecycle-fig4", w: 760, h: 200, title: "Figure 4 — Reroute, with the entry after conversion (phase post_conversion, Section 2b). Client money rests in NPL's own wallet in four cases only — an approved reroute before conversion, a reroute after conversion, a bridge collection awaiting its hop, an own-desk leg (invariant 3) — and every resting balance carries deal, reason and age. Red bar: the point of no return for an own-wallet transfer.", nodes: [
   { id: "req", label: "Requested\n(Ops, trigger)", x: 20, y: 30, kind: "start" }, { id: "appr", label: "Approved\n(Finance)", x: 168, y: 30 }, { id: "cust", label: "In custody\n(own wallet)", x: 316, y: 30 }, { id: "fwd", label: "Forwarded to\nalternate partner", x: 464, y: 30 }, { id: "done", label: "Completed", x: 612, y: 30, kind: "end" },
   { id: "rej", label: "Rejected →\nroute unchanged", x: 168, y: 120, kind: "end" }, { id: "rec", label: "Dues recovered\n(Management)", x: 464, y: 120, kind: "exception" },
   { id: "cvd", label: "From Converted\n(phase post_conversion)", x: 20, y: 120, kind: "exception" },

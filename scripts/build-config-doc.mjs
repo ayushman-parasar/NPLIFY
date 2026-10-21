@@ -15,6 +15,10 @@ const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"
 const outDir = path.join(root, "docs");
 fs.mkdirSync(outDir, { recursive: true });
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// v6.0: the figure drawn for the design review (scripts/figures-v6.0/<name>.svg, exported from the client pack's figure pass)
+const figDir = path.join(here, "figures-v6.0");
+const figSvg = (name) => fs.readFileSync(path.join(figDir, `${name}.svg`), "utf8");
 const V = D.version, DATE = "22 October 2026";
 
 // ------------------------------------------------------------------ schema: entities of the configuration domain, in reading order
@@ -289,54 +293,7 @@ ${e.f.filter((f) => f[0] !== "id" && !(r.hide || []).includes(f[0])).map((f) => 
 <ul class="rules">${r.rules.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>${r.after || ""}`;
 };
 
-const tree = `<figure class="chart"><svg viewBox="0 0 760 470" width="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The configuration model: global master data, the client and its project, the project's parties and groups, and one partner configuration block per partner">
-<style>.b{fill:#fff;stroke:#2f5d9e;stroke-width:1.2}.g{fill:#f3f6fb;stroke:#2f5d9e;stroke-width:1.2}.gl{fill:#fff;stroke:#777;stroke-width:1.2;stroke-dasharray:3 2}.t{font:600 9.3px Helvetica,Arial,sans-serif;fill:#111}.s{font:8.2px Helvetica,Arial,sans-serif;fill:#444}.s2{font:7.2px Helvetica,Arial,sans-serif;fill:#444}.h{font:700 10px Helvetica,Arial,sans-serif;fill:#2f5d9e}.l{stroke:#2f5d9e;stroke-width:1.1;fill:none}</style>
-<text x="20" y="20" class="h">Global master data (shared by all projects)</text>
-<rect x="20" y="28" width="118" height="32" rx="6" class="gl"/><text x="79" y="48" text-anchor="middle" class="t">CLIENT</text>
-<rect x="150" y="28" width="150" height="32" rx="6" class="gl"/><text x="225" y="44" text-anchor="middle" class="t">PARTNER</text><text x="225" y="55" text-anchor="middle" class="s">HOLIDAY · CUTOFF_OVERRIDE</text>
-<rect x="312" y="28" width="110" height="32" rx="6" class="gl"/><text x="367" y="48" text-anchor="middle" class="t">RATE_SOURCE</text>
-<rect x="434" y="28" width="150" height="32" rx="6" class="gl"/><text x="509" y="48" text-anchor="middle" class="t">MARKUP_SHARE_PARTY</text>
-<rect x="596" y="28" width="144" height="32" rx="6" class="gl"/><text x="668" y="44" text-anchor="middle" class="t">SYSTEM_SETTING</text><text x="668" y="55" text-anchor="middle" class="s">platform pairs · templates</text>
-<text x="20" y="96" class="h">One client → one or more projects (one shown)</text>
-<rect x="20" y="104" width="720" height="350" rx="8" class="g"/>
-<rect x="30" y="112" width="172" height="46" rx="6" class="b"/><text x="116" y="126" text-anchor="middle" class="t">PROJECT</text><text x="116" y="138" text-anchor="middle" class="s2">state draft / validated / active</text><text x="116" y="150" text-anchor="middle" class="s2">is_test (dummy twin) · policies, clocks, caps</text>
-<rect x="30" y="166" width="172" height="46" rx="6" class="b"/><text x="116" y="180" text-anchor="middle" class="t">THRESHOLD</text><text x="116" y="192" text-anchor="middle" class="s2">max_amount · settlement_limit · approval_time_limit</text><text x="116" y="204" text-anchor="middle" class="s2">cutoff_warning_min · lock_idle · rate_* breach values</text>
-<rect x="30" y="220" width="172" height="28" rx="6" class="b"/><text x="116" y="238" text-anchor="middle" class="t">CURRENCY_PAIR</text>
-<text x="116" y="262" text-anchor="middle" class="s">→ PAIR_RATE_SOURCE (chain)</text>
-<rect x="30" y="270" width="172" height="28" rx="6" class="b"/><text x="116" y="288" text-anchor="middle" class="t">OWN_WALLET (role)</text>
-<rect x="30" y="306" width="172" height="28" rx="6" class="b"/><text x="116" y="324" text-anchor="middle" class="t">SENDER</text>
-<text x="116" y="348" text-anchor="middle" class="s">allow-list → groups · provenance</text>
-<text x="116" y="360" text-anchor="middle" class="s">fee overrides · sender_return receiver</text>
-<rect x="30" y="372" width="172" height="28" rx="6" class="b"/><text x="116" y="390" text-anchor="middle" class="t">WALLET_SCREENING</text>
-<text x="116" y="414" text-anchor="middle" class="s">per address and day</text>
-<rect x="214" y="118" width="170" height="28" rx="6" class="b"/><text x="299" y="136" text-anchor="middle" class="t">RECEIVER_GROUP</text>
-<text x="299" y="160" text-anchor="middle" class="s">one default · entitlement unit</text>
-<rect x="214" y="172" width="170" height="28" rx="6" class="b"/><text x="299" y="190" text-anchor="middle" class="t">RECEIVER (kind)</text>
-<text x="299" y="214" text-anchor="middle" class="s">counterparty · sender_return · partner_transit</text>
-<rect x="214" y="226" width="170" height="28" rx="6" class="b"/><text x="299" y="244" text-anchor="middle" class="t">RECEIVING_ENTITY</text>
-<rect x="214" y="270" width="170" height="28" rx="6" class="b"/><text x="299" y="288" text-anchor="middle" class="t">RECEIVING_ENTITY_ACCOUNT</text>
-<text x="299" y="312" text-anchor="middle" class="s">currency × rail · bank or wallet</text>
-<text x="299" y="324" text-anchor="middle" class="s">standing or single_use</text>
-<path class="l" d="M299,146 V172 M299,200 V226 M299,254 V270"/>
-<text x="420" y="130" class="h">Partner configuration block (one per partner used)</text>
-<rect x="412" y="138" width="312" height="300" rx="6" class="b"/>
-<rect x="424" y="148" width="150" height="26" rx="5" class="b"/><text x="499" y="165" text-anchor="middle" class="t">PARTNER_CONFIG</text>
-<text x="584" y="165" class="s">applicable_for_reroute · is_own_desk</text>
-<text x="430" y="194" class="s">PARTNER_PAIR → FEE_STRUCTURE (versioned) → FEE_TIER</text>
-<text x="430" y="210" class="s">PARTNER_ENTITY → COLLECTION_RECEIVING_ENDPOINT</text>
-<text x="430" y="222" class="s">   (bank or wallet · risk band · standing or single-use · own wallet)</text>
-<text x="430" y="240" class="s">SETTLEMENT_SENDING_ENTITY (narrative)</text>
-<text x="430" y="256" class="s">SETTLEMENT_RAIL (bank / EMI that executes · expected fee)</text>
-<text x="430" y="272" class="s">DESTINATION_APPROVAL → account (approval per partner)</text>
-<text x="430" y="288" class="s">MARKUP_SHARE_RULE · PARTNER_REBATE_RULE</text>
-<text x="430" y="318" class="s">Deals reference the block: partner × pair, fee version and tier,</text>
-<text x="430" y="330" class="s">partner entity and destination approval are stamped on the leg.</text>
-<text x="430" y="358" class="s">Finance proposes, Management approves; every row is versioned</text>
-<text x="430" y="370" class="s">by effective date, never edited.</text>
-<text x="430" y="398" class="s">Partner clock: PARTNER.bank_cutoff_time, HOLIDAY rows and</text>
-<text x="430" y="410" class="s">PARTNER_CUTOFF_OVERRIDE govern pairs with needs_bank_lock.</text>
-<path class="l" d="M202,132 H214 M202,132 H412 V148 M79,60 V104 M225,60 V104 M367,60 V104 M509,60 V104 M668,60 V104" stroke-dasharray="3 2"/>
-</svg><figcaption>Figure 1 — The configuration model, with the project state (PROJECT.state, PROJECT.is_test) and the THRESHOLD kinds. Dashed boxes are global; everything inside the shaded area belongs to one project of one client.</figcaption></figure>`;
+const tree = `<figure class="chart">${figSvg("config-fig1")}<figcaption>Figure 1 — The configuration model, with the project state (PROJECT.state, PROJECT.is_test) and the THRESHOLD kinds. Dashed boxes are global; everything inside the shaded area belongs to one project of one client.</figcaption></figure>`;
 
 const CSS = `
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
