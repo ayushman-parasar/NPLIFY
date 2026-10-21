@@ -2,6 +2,7 @@ import { z } from "zod";
 import { currentViewer } from "@/lib/auth";
 import { getDb, schema } from "@/lib/db";
 import { data, KB_VERSION } from "@/lib/kb";
+import { clientIp } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,6 @@ export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return new Response("Bad request", { status: 400 });
   const db = getDb();
-  if (db) await db.insert(schema.entityFlags).values({ userId: viewer.id, entity: parsed.data.entity, comment: parsed.data.comment, kbVersion: KB_VERSION });
+  if (db) await db.insert(schema.entityFlags).values({ userId: viewer.id, entity: parsed.data.entity, comment: parsed.data.comment, kbVersion: KB_VERSION, ip: clientIp(req.headers) });
   return new Response(null, { status: 204 });
 }

@@ -20,6 +20,7 @@ export const chatSessions = pgTable("chat_session", {
   id: text("id").primaryKey(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   kbVersion: text("kb_version").notNull(),
+  ip: text("ip"), // client address of the request that opened the session (from the proxy headers)
   startedAt: timestamp("started_at", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -43,6 +44,7 @@ export const chatMessages = pgTable("chat_message", {
   outputTokens: integer("output_tokens"),
   latencyMs: integer("latency_ms"),
   feedback: text("feedback"), // up | down | null
+  ip: text("ip"), // client address of the question (null on assistant rows)
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -51,8 +53,9 @@ export const events = pgTable("event", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-  type: text("type").notNull(), // entity_pinned | entity_unpinned | walkthrough | trace | tab | search
+  type: text("type").notNull(), // entity_pinned | entity_unpinned | walkthrough | trace | tab | search | sign_in
   payload: jsonb("payload").$type<Record<string, unknown>>(),
+  ip: text("ip"), // client address
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -65,5 +68,6 @@ export const entityFlags = pgTable("entity_flag", {
   comment: text("comment").notNull(),
   resolved: boolean("resolved").notNull().default(false),
   kbVersion: text("kb_version"),
+  ip: text("ip"), // client address
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });

@@ -3,6 +3,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { currentViewer } from "@/lib/auth";
 import { getDb, schema } from "@/lib/db";
+import { clientIp } from "@/lib/request-ip";
 import { KB_VERSION, SYSTEM_PROMPT } from "@/lib/kb";
 
 export const runtime = "nodejs";
@@ -46,8 +47,9 @@ export async function POST(req: Request) {
       .where(and(eq(schema.chatMessages.userId, viewer.id), eq(schema.chatMessages.role, "user"), gte(schema.chatMessages.createdAt, since)));
     if (n >= DAILY_LIMIT) return new Response("Daily question limit reached", { status: 429 });
 
-    await db.insert(schema.chatSessions).values({ id: sessionId, userId: viewer.id, kbVersion: KB_VERSION }).onConflictDoNothing();
-    await db.insert(schema.chatMessages).values({ sessionId, userId: viewer.id, role: "user", content: question, kbVersion: KB_VERSION });
+    const ip = clientIp(req.headers);
+    await db.insert(schema.chatSessions).values({ id: sessionId, userId: viewer.id, kbVersion: KB_VERSION, ip }).onConflictDoNothing();
+    await db.insert(schema.chatMessages).values({ sessionId, userId: viewer.id, role: "user", content: question, kbVersion: KB_VERSION, ip });
     messageId = crypto.randomUUID();
   }
 

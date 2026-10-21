@@ -25,6 +25,7 @@ export default async function AdminPage() {
           model: schema.chatMessages.model,
           feedback: schema.chatMessages.feedback,
           latencyMs: schema.chatMessages.latencyMs,
+          ip: schema.chatMessages.ip,
           cacheRead: schema.chatMessages.cacheReadTokens,
           output: schema.chatMessages.outputTokens,
           createdAt: schema.chatMessages.createdAt,
@@ -43,6 +44,7 @@ export default async function AdminPage() {
           entity: schema.entityFlags.entity,
           comment: schema.entityFlags.comment,
           resolved: schema.entityFlags.resolved,
+          ip: schema.entityFlags.ip,
           createdAt: schema.entityFlags.createdAt,
           email: schema.users.email,
         })
@@ -54,7 +56,7 @@ export default async function AdminPage() {
 
   const events = db
     ? await db
-        .select({ type: schema.events.type, payload: schema.events.payload, createdAt: schema.events.createdAt, email: schema.users.email })
+        .select({ type: schema.events.type, payload: schema.events.payload, ip: schema.events.ip, createdAt: schema.events.createdAt, email: schema.users.email })
         .from(schema.events)
         .leftJoin(schema.users, eq(schema.users.id, schema.events.userId))
         .orderBy(desc(schema.events.createdAt))
@@ -106,6 +108,7 @@ export default async function AdminPage() {
             <tr>
               <th>When</th>
               <th>Who</th>
+              <th>From</th>
               <th>Entity</th>
               <th>Comment</th>
               <th>Status</th>
@@ -114,7 +117,7 @@ export default async function AdminPage() {
           <tbody>
             {flags.length === 0 && (
               <tr>
-                <td colSpan={5} className="mono">
+                <td colSpan={6} className="mono">
                   no flags yet
                 </td>
               </tr>
@@ -123,6 +126,7 @@ export default async function AdminPage() {
               <tr key={f.id} style={delay(i)}>
                 <td className="mono">{when(f.createdAt)}</td>
                 <td>{f.email}</td>
+                <td className="mono">{f.ip ?? "-"}</td>
                 <td>
                   <span className="ent">{f.entity}</span>
                 </td>
@@ -139,6 +143,7 @@ export default async function AdminPage() {
             <tr>
               <th>When</th>
               <th>Who</th>
+              <th>From</th>
               <th>Session</th>
               <th>Role</th>
               <th>Content</th>
@@ -149,7 +154,7 @@ export default async function AdminPage() {
           <tbody>
             {messages.length === 0 && (
               <tr>
-                <td colSpan={7} className="mono">
+                <td colSpan={8} className="mono">
                   no messages yet
                 </td>
               </tr>
@@ -158,6 +163,7 @@ export default async function AdminPage() {
               <tr key={m.id} style={delay(i)}>
                 <td className="mono">{when(m.createdAt)}</td>
                 <td>{m.email}</td>
+                <td className="mono">{m.ip ?? ""}</td>
                 <td className="mono">{m.sessionId.slice(0, 8)}</td>
                 <td>
                   <span className={`role ${m.role}`}>{m.role}</span>
@@ -178,12 +184,13 @@ export default async function AdminPage() {
           </tbody>
         </table>
 
-        <h2>Map events ({events.length})</h2>
+        <h2>Map events and sign-ins ({events.length})</h2>
         <table>
           <thead>
             <tr>
               <th>When</th>
               <th>Who</th>
+              <th>From</th>
               <th>Type</th>
               <th>Payload</th>
             </tr>
@@ -191,7 +198,7 @@ export default async function AdminPage() {
           <tbody>
             {events.length === 0 && (
               <tr>
-                <td colSpan={4} className="mono">
+                <td colSpan={5} className="mono">
                   no events yet
                 </td>
               </tr>
@@ -200,6 +207,7 @@ export default async function AdminPage() {
               <tr key={i} style={delay(i)}>
                 <td className="mono">{when(e.createdAt)}</td>
                 <td>{e.email}</td>
+                <td className="mono">{e.ip ?? "-"}</td>
                 <td className="mono">{e.type}</td>
                 <td className="mono" style={{ whiteSpace: "normal" }}>
                   {JSON.stringify(e.payload)}

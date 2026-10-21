@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { clientIp } from "@/lib/request-ip";
 
 declare module "next-auth" {
   interface Session {
@@ -26,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: { email: { label: "Email", type: "email" }, password: { label: "Password", type: "password" } },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const email = String(credentials?.email ?? "").trim().toLowerCase();
         const password = String(credentials?.password ?? "");
         if (!email || !password) return null;
@@ -34,6 +35,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!db) return null;
         const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1);
         if (!user || !user.active || !verifyPassword(password, user.passwordHash)) return null;
+        // every successful sign-in is an event in the activity log, with the client address
+        try {
+          await db.insert(schema.events).values({ userId: user.id, type: "sign_in", payload: { email: user.email }, ip: clientIp(request.headers) });
+        } catch {}
         return { id: user.id, email: user.email, name: user.name ?? user.email, role: user.role } as { id: string; email: string; name: string; role: string };
       },
     }),
