@@ -240,11 +240,11 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <tr><td>FX_RESULT</td><td>NPL's own exchanges of one currency for another: what it sold and what it bought, per currency</td></tr>
 </tbody></table></div></div></div>
 
-${PATTERNS.map(([letter, name, intro, keys, extra]) => name === null ? `<div class="intro">${intro}</div>` : `<h2 class="pb">Pattern ${letter} — ${esc(name)}</h2><div class="intro">${intro}</div>${keys.map(pair).join("")}${extra ?? ""}`).join("")}
+${PATTERNS.map(([letter, name, intro, keys, extra]) => name === null ? `<div class="intro">${intro}</div>` : `<h2 class="${letter === "P" ? "" : "pb"}">Pattern ${letter} — ${esc(name)}</h2><div class="intro">${intro}</div>${keys.map(pair).join("")}${extra ?? ""}`).join("")}
 
-<h2 class="pb">Pattern G — inter-group offsets, and what is not here</h2>
+<h2>Pattern G — inter-group offsets, and what is not here</h2>
 <div class="intro">One pattern of the main document has no table because it has no special lines: when a receiver of one group is paid out of money collected for another group, the payout posts exactly like Pattern C, and a report (not an account) shows one group owed and the other holding its flow. The main document also carries the full chart of accounts, the identities that must hold after every posting, the reports built from the ledger, and who may post what. This companion is for reading the examples; that one is the reference.</div>
-<h2 class="pb">Appendix · Identifier register</h2>
+<h2>Appendix · Identifier register</h2>
 <p>Every worked transaction, acceptance vector, walkthrough, flow and common procedure in the pack has one identifier, listed here so that a requirement, a fixture in the test suite and a line in a review can name the same thing. The identifiers are frozen from this edition: none is renumbered, none is reused, a new item takes the next free number, and a withdrawn item keeps its number with the note “withdrawn”. The ${L.txs.length} transactions of this companion (T1 to T61 with their a, b and c variants) are the fixtures of the automated ledger tests from Phase 1 (M2); T56 to T61 join them as they are written.</p>
 <table><thead><tr><th>Identifiers</th><th>What they name</th><th>Where</th></tr></thead><tbody>
 <tr><td>T1, T2, T3a, T3</td><td>Pattern A — direct collection, conversion and accumulation</td><td>Ledger Posting Design §6; this companion</td></tr>

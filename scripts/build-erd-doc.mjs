@@ -30,9 +30,15 @@ for (const n of tables) if (!drawn.has(n)) throw new Error(`table ${n} is drawn 
 console.log("rendering diagrams …");
 const svgs = renderSvgs(DIAGRAMS.map((dg) => ({ id: dg.id, text: erDiagram(dg.nodes, { direction: "TB", noSelf: dg.noSelf }), config: {} })), path.join(outDir, ".mermaid-work"));
 const DG = Object.fromEntries(DIAGRAMS.map((dg) => [dg.id, dg]));
+// v6.0: the seven diagrams are the redrawn figures of the design review (scripts/erd-figures-v6.0/<id>.svg, exported
+// from the client pack's figure pass; boxes coloured by class, key fields only). The Mermaid diagrams are still rendered
+// and used when a figure file is missing.
+const figDir = path.join(here, "erd-figures-v6.0");
+const figureSvg = (id) => { const f = path.join(figDir, `${id}.svg`); return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null; };
 const diagramPage = (dg) => {
-  const svg = svgs[dg.id];
-  const m = /data-w="(\d+)" data-h="(\d+)"/.exec(svg);
+  const drawn = figureSvg(dg.id);
+  const svg = drawn ?? svgs[dg.id];
+  const m = drawn ? /viewBox="0 0 (\d+) (\d+)"/.exec(drawn) : /data-w="(\d+)" data-h="(\d+)"/.exec(svg);
   const land = m ? +m[1] / +m[2] >= 1.15 : true;
   return `<section class="diagram-page ${land ? "land" : "port"}">
 <p class="dgnote"><b>Diagram ${esc(dg.id)}.</b> ${stubNote(dg.nodes, homeOf)}</p>
@@ -142,7 +148,7 @@ const CLASSES = [
   for (const t of tables) if (!seen.has(t)) throw new Error(`table ${t} has no class`);
 }
 const CLASSIFICATION = `<h2>Classification of the tables (fact and dimension)</h2>
-<p>Pete asked which tables are the facts and which the dimensions. In this model there are five classes, and every table belongs to exactly one. Configuration and master data are the dimensions: rows that describe how the business is set up, versioned by effective date and never edited. Rate reference is a time series of reference values. Transactional events are the facts: one row per thing that happened to a deal. Ledger and control tables are the facts of the books and the records that govern them. Derived views are never stored.</p>
+<p>Pete asked which tables are the facts and which the dimensions. In this model there are five classes; every table belongs to exactly one, and the diagrams (1a to 4) colour each box by its class. Configuration and master data are the dimensions: rows that describe how the business is set up, versioned by effective date and never edited. Rate reference is a time series of reference values. Transactional events are the facts: one row per thing that happened to a deal. Ledger and control tables are the facts of the books and the records that govern them. Derived views are never stored.</p>
 ${table(["Class", "Tables", "Count"], [
   ...CLASSES.map(([cls, list]) => [cls, `<span class="mono">${list.join(", ")}</span>`, String(list.length)]),
   ["Derived views (never stored)", `<span class="mono">${views.join(", ")}</span>`, `${views.length} views`],
@@ -254,7 +260,7 @@ tr{break-inside:avoid}
 ${READING_NOTE}
 <h2>Conventions</h2>
 <p><b>Convention:</b> all monetary amounts are stored as exact decimals; every table carries ${code("created_at")} / ${code("created_by")}; audit, approvals and locking are modelled once (domain 4) and apply to all master data. Derived figures (client balance, group entitlement, offsets, custody) are <b>views over postings and deals — never stored</b>.</p>
-<p>Seven diagrams across four domains, one schema: ${tables.length} tables and ${views.length} views. In each diagram, entities defined in another diagram appear with no attributes and name that diagram. Relationship lines run from the referenced row to the row that stores the foreign key; ${code("||--o{")} is composition (the parent owns the child), ${code("||..o{")} a reference or a polymorphic link resolved by a type column plus an id. The deal lifecycle has three diagrams: 3a is the deal and its collection, 3b the conversion and its exceptions, 3c the settlement. Appendix A reconciles the model with the FRS; Appendix B is the data dictionary.</p>
+<p>Seven diagrams across four domains, one schema: ${tables.length} tables and ${views.length} views. In each diagram, boxes show the key fields only (full attributes in Appendix B) and are coloured by class — configuration and master data, rate reference, transactional event, ledger and control, derived view; a dashed box is a table drawn in another diagram and names it. Relationship lines run from the referenced row to the row that stores the foreign key; a dashed line is a reference or a polymorphic link resolved by a type column plus an id. The deal lifecycle has three diagrams: 3a is the deal and its collection, 3b the conversion and its exceptions, 3c the settlement. Appendix A reconciles the model with the FRS; Appendix B is the data dictionary.</p>
 <div class="rule"></div>
 ${SCOPE_NOTE}
 ${CLASSIFICATION}

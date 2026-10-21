@@ -134,7 +134,7 @@ ${CHECKS.map((r) => `<tr><td class="k">${esc(r[0])}</td><td>${esc(r[1])}</td><td
 </tbody></table>
 <p class="small">The discrepancy log is a sheet of its own: date, check, project, app figure, sheet figure, cause (app entry · sheet error · method · policy), resolution, who closed it. It is the evidence the go/no-go is signed on, and it is kept after go-live.</p>
 
-<h2 class="pb">6 · Exit criteria and the go / no-go</h2>
+<h2>6 · Exit criteria and the go / no-go</h2>
 <ol>
 <li><b>Ten consecutive business days</b> with every check of Section 5 inside tolerance at the evening reconciliation, and no discrepancy open for more than one day during the run.</li>
 <li><b>Every project NPL runs today</b> has had at least one deal through the app during the run, or a scripted test deal on staging where the weeks brought none (the dormant Evo products need none).</li>

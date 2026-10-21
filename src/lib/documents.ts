@@ -1,8 +1,8 @@
 // The document pack shown on /documents and served by /documents/[file]. Only files listed here are served,
 // from the docs/ folder of the repo (traced into the deployment by next.config.ts). Keep the newest edition of
 // each document here; older editions stay in docs/ for the record but are not served.
-// v6.0 (22 October 2026): the HTML is the builder's output; the PDF is the hand-built client copy (NPLify client pack /
-// feedback-npl-working/client-copy-v6.0-draft-r2), copied in as *-v6.0-client.pdf so a rebuild never overwrites it.
+// v6.0 (22 October 2026): HTML and PDF are both the builder's output, so they always say the same thing. The Test Strategy
+// and the four map pages have no builder; their PDFs come from the client pack (NPLify client pack / feedback-npl-working).
 
 export type DocFormat = "html" | "pdf" | "xlsx" | "docx" | "json";
 export type Audience = "client" | "staff";
@@ -60,7 +60,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "The entity-relationship diagram and data dictionary behind the interactive map: every table, field, key and link, the derived views and the notes per domain.",
     audience: "client",
-    files: { html: "NPLify-P0-ERD-v6.0.html", pdf: "NPLify-P0-ERD-v6.0-client.pdf" },
+    files: { html: "NPLify-P0-ERD-v6.0.html", pdf: "NPLify-P0-ERD-v6.0.pdf" },
     group: "model",
   },
   {
@@ -69,7 +69,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "The chart of accounts and how every deal, collection, conversion, settlement, fee, share, rebate, variance, loss and reseller invoice becomes append-only postings, with the balances and reports derived from them.",
     audience: "client",
-    files: { html: "NPLify-Ledger-Posting-Design-v6.0.html", pdf: "NPLify-Ledger-Posting-Design-v6.0-client.pdf" },
+    files: { html: "NPLify-Ledger-Posting-Design-v6.0.html", pdf: "NPLify-Ledger-Posting-Design-v6.0.pdf" },
     group: "design",
   },
   {
@@ -78,7 +78,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "The same worked transactions as the Ledger Posting Design, laid out with a plain-language explanation beside each table, for readers with no bookkeeping background.",
     audience: "client",
-    files: { html: "NPLify-Ledger-Patterns-Companion-v6.0.html", pdf: "NPLify-Ledger-Patterns-Companion-v6.0-client.pdf" },
+    files: { html: "NPLify-Ledger-Patterns-Companion-v6.0.html", pdf: "NPLify-Ledger-Patterns-Companion-v6.0.pdf" },
     group: "design",
   },
   {
@@ -87,7 +87,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "The states a deal, a settlement, a conversion, a reroute, a loss event and an earnings offset move through, the 36 controlled actions along the way, and who may initiate, approve or escalate each.",
     audience: "client",
-    files: { html: "NPLify-Lifecycle-and-Approvals-v6.0.html", pdf: "NPLify-Lifecycle-and-Approvals-v6.0-client.pdf" },
+    files: { html: "NPLify-Lifecycle-and-Approvals-v6.0.html", pdf: "NPLify-Lifecycle-and-Approvals-v6.0.pdf" },
     group: "design",
   },
   {
@@ -96,7 +96,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "Which role sees which figures and may take which action: Operations, Finance and Management as nested rings, the approval rights per controlled action, and every field of the model classified.",
     audience: "client",
-    files: { html: "NPLify-Roles-and-Visibility-Matrix-v6.0.html", pdf: "NPLify-Roles-and-Visibility-Matrix-v6.0-client.pdf" },
+    files: { html: "NPLify-Roles-and-Visibility-Matrix-v6.0.html", pdf: "NPLify-Roles-and-Visibility-Matrix-v6.0.pdf" },
     group: "design",
   },
   {
@@ -105,7 +105,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "Every calculation the engine performs, in order, with its rounding rule: fee parts on the principal, target-out quotes, tiers, rounding, shares and rebates, the four variance kinds, invoice instalments, earnings offsets and the reseller arithmetic, with acceptance vectors checked against NPL's own figures (23 of 23 match) and the regression gate.",
     audience: "client",
-    files: { html: "NPLify-Calculation-Specification-v6.0.html", pdf: "NPLify-Calculation-Specification-v6.0-client.pdf" },
+    files: { html: "NPLify-Calculation-Specification-v6.0.html", pdf: "NPLify-Calculation-Specification-v6.0.pdf" },
     group: "design",
   },
   {
@@ -114,7 +114,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "Every configuration table — client, system settings, project, parties, the partner block — with its fields, allowed values, defaults and the rules checked on save, and one client's configuration as a validated example.",
     audience: "client",
-    files: { html: "NPLify-Configuration-Schema-v6.0.html", pdf: "NPLify-Configuration-Schema-v6.0-client.pdf" },
+    files: { html: "NPLify-Configuration-Schema-v6.0.html", pdf: "NPLify-Configuration-Schema-v6.0.pdf" },
     group: "design",
   },
   {
@@ -123,7 +123,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "One app, one database and one bucket in NPL's AWS account, expanded against the model: the background jobs, the insert-only ledger enforced in the database, the visibility filter, environments, backups and cost.",
     audience: "client",
-    files: { html: "NPLify-Architecture-and-Stack-v6.0.html", pdf: "NPLify-Architecture-and-Stack-v6.0-client.pdf" },
+    files: { html: "NPLify-Architecture-and-Stack-v6.0.html", pdf: "NPLify-Architecture-and-Stack-v6.0.pdf" },
     group: "design",
   },
   {
@@ -132,7 +132,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "Every NPL client and project with its scenarios in NPL's own words, the shared operational flows F1–F10, the guided walkthroughs W1–W8, and one deal walked through the model class by class.",
     audience: "client",
-    files: { html: "NPLify-Scenario-Catalogue-v6.0.html", pdf: "NPLify-Scenario-Catalogue-v6.0-client.pdf" },
+    files: { html: "NPLify-Scenario-Catalogue-v6.0.html", pdf: "NPLify-Scenario-Catalogue-v6.0.pdf" },
     group: "design",
   },
   {
@@ -150,7 +150,7 @@ export const DOCS: Doc[] = [
     version: "v6.0",
     blurb: "From the spreadsheets to NPLify: a parallel run of three to four weeks on a staging instance, earlier deals entered as real postings, the daily reconciliation, the exit criteria and the switch on a quiet day.",
     audience: "client",
-    files: { html: "NPLify-Cutover-Approach-v6.0.html", pdf: "NPLify-Cutover-Approach-v6.0-client.pdf" },
+    files: { html: "NPLify-Cutover-Approach-v6.0.html", pdf: "NPLify-Cutover-Approach-v6.0.pdf" },
     group: "design",
   },
   {

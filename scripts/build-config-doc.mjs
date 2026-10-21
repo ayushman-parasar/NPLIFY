@@ -406,7 +406,7 @@ ${PARTIES.map(fieldTable).join("")}
 ${PARTNER_BLOCK.map(fieldTable).join("")}
 <p><b>Rebates and the percentages in this document.</b> The Jeton rebate of 0.4 % quoted in the worked example and in the Scenario Catalogue is not a fixed value: it is a PARTNER_REBATE_RULE row of the project's partner configuration, changed by a new version with a later effective_from like any fee, and NPL confirmed on 20 October that it is set per project, not per deal. Every percentage, rate and amount in Sections 2 to 7 is illustrative, taken from NPL's fee table of 8 October 2026, and is replaced by the project's configured values; none is written into code.</p>
 
-<h2 class="pb">6 · Cross-entity rules the system enforces on save</h2>
+<h2>6 · Cross-entity rules the system enforces on save</h2>
 <ol>
 <li>Every project belongs to one client; a project's exposure_ceiling never exceeds its client's; both are compared through REPORTING_VALUE, so a platform pair must exist for every currency that rests at a partner (D43).</li>
 <li>Every project has exactly one default receiver group, created by the system. A counterparty receiver is in exactly one group; sender_return and partner_transit receivers are group-less and never on a forward deal or an allow-list (D13).</li>
