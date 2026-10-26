@@ -252,6 +252,106 @@
       "custody_max_hours": 48
     }
   ],
+  "bank_account_details": [
+    {
+      "code": "BAD-X1-EUR",
+      "holder_name": "Entity X1 Ltd",
+      "bank_name": "Bank X",
+      "country": "DE",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "DE89 3704 0044 0532 0130 00",
+        "bic": "COBADEFFXXX"
+      },
+      "evidence_ref": "restricted/bank-letters/x1-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-X2-EUR",
+      "holder_name": "Entity X2 GmbH",
+      "bank_name": "Bank X",
+      "country": "DE",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "DE02 1203 0000 0000 2020 51",
+        "bic": "BYLADEM1001"
+      },
+      "evidence_ref": "restricted/bank-letters/x2-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-Y-EUR",
+      "holder_name": "Entity Y SA",
+      "bank_name": "Bank Y",
+      "country": "FR",
+      "currency": "EUR",
+      "rail": "SWIFT",
+      "rail_fields": {
+        "iban": "FR14 2004 1010 0505 0001 3M02 606",
+        "bic": "BNPAFRPPXXX",
+        "bank_address": "16 bd des Italiens, Paris",
+        "intermediary_bic": ""
+      },
+      "evidence_ref": "restricted/bank-letters/y-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-PTG-IDR",
+      "holder_name": "PT Global Inc",
+      "bank_name": "Bank Mandiri",
+      "country": "ID",
+      "currency": "IDR",
+      "rail": "local",
+      "rail_fields": {
+        "bank_code": "008",
+        "account_number": "1234567890"
+      },
+      "evidence_ref": "restricted/bank-letters/ptg-idr.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-ALI-EUR-RAIL",
+      "holder_name": "Ali EU EMI",
+      "bank_name": "EMI Bank",
+      "country": "LT",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "LT12 1000 0111 0100 1000",
+        "bic": "EMIBLT22"
+      },
+      "evidence_ref": "restricted/bank-letters/ali-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-JETON-EUR-RAIL",
+      "holder_name": "Jeton EMI",
+      "bank_name": "Jeton Bank",
+      "country": "GB",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "GB29 NWBK 6016 1331 9268 19",
+        "bic": "NWBKGB2L"
+      },
+      "evidence_ref": "restricted/bank-letters/jeton-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    }
+  ],
   "receiver_groups": [
     {
       "code": "DEFAULT",
@@ -278,7 +378,7 @@
               "currency": "EUR",
               "rail": "SEPA",
               "account_kind": "bank",
-              "bank_details_ref": "bank-ref-001",
+              "bank_account_details": "BAD-X1-EUR",
               "usage": "standing",
               "status": "active"
             }
@@ -294,7 +394,7 @@
               "currency": "EUR",
               "rail": "SEPA",
               "account_kind": "bank",
-              "bank_details_ref": "bank-ref-002",
+              "bank_account_details": "BAD-X2-EUR",
               "usage": "standing",
               "status": "active"
             }
@@ -319,7 +419,7 @@
               "currency": "EUR",
               "rail": "SWIFT",
               "account_kind": "bank",
-              "bank_details_ref": "bank-ref-003",
+              "bank_account_details": "BAD-Y-EUR",
               "usage": "standing",
               "status": "active"
             }
@@ -391,8 +491,8 @@
       ],
       "provenance": [
         {
-          "label": "own account",
-          "account_ref": "wallet-snd-a-1"
+          "label": "own wallet (TRC-20)",
+          "bank_account_details": null
         }
       ],
       "fee_overrides": []
@@ -407,8 +507,8 @@
       ],
       "provenance": [
         {
-          "label": "own account",
-          "account_ref": "wallet-snd-b-1"
+          "label": "own wallet (TRC-20)",
+          "bank_account_details": null
         }
       ],
       "fee_overrides": [
@@ -495,7 +595,7 @@
               "kind": "bank",
               "currency": "IDR",
               "rail": "local",
-              "bank_details_ref": "bank-ref-ptg-idr",
+              "bank_account_details": "BAD-PTG-IDR",
               "risk_band": "standard",
               "usage": "standing",
               "status": "active"
@@ -512,7 +612,7 @@
       "settlement_rails": [
         {
           "name": "Ali's EU bank / EMI",
-          "bank_details_ref": "rail-ref-ali-eur",
+          "bank_account_details": "BAD-ALI-EUR-RAIL",
           "expected_bank_fee": 25,
           "currency": "EUR"
         }
@@ -608,7 +708,7 @@
       "settlement_rails": [
         {
           "name": "Jeton EMI (SEPA)",
-          "bank_details_ref": "rail-ref-jeton-eur",
+          "bank_account_details": "BAD-JETON-EUR-RAIL",
           "expected_bank_fee": 0,
           "currency": "EUR"
         }

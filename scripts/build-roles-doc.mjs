@@ -13,7 +13,11 @@ import { clientFacing } from "./client-facing.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
-const outDir = path.join(root, "docs");
+const REVIEW = !!process.env.NPLIFY_REVIEW;                      // round-2 review marks: yellow = new, red strike = goes
+const outDir = process.env.NPLIFY_OUT || path.join(root, "docs");
+const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
+const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
+const REV_TABLES = new Set(["BANK_ACCOUNT_DETAILS", "BANK_DETAILS_TEMPLATE"]), REV_FIELD = "bank_account_details_id";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const c = (s) => `<code>${esc(s)}</code>`;
 const V = D.version, DATE = "22 October 2026";
@@ -37,7 +41,7 @@ const ENTITY_GROUP = {
   CURRENCY_PAIR: "CONFIG", PARTNER_CONFIG: "CONFIG", COLLECTION_SENDING_ENTITY: "CONFIG", SENDER_RECEIVER_ALLOW: "CONFIG", RECEIVING_ENTITY: "CONFIG", PAIR_RATE_SOURCE: "CONFIG", SETTLEMENT_SENDING_ENTITY: "CONFIG",
   FEE_OVERRIDE: "CONFIG", RECEIVING_ENTITY_ACCOUNT: "CONFIG", DESTINATION_APPROVAL: "CONFIG", PARTNER_ENTITY: "CONFIG", COLLECTION_RECEIVING_ENDPOINT: "CONFIG", FEE_TIER: "CONFIG", PARTNER_CUTOFF_OVERRIDE: "CONFIG",
   HOLIDAY: "CONFIG", MESSAGE_TEMPLATE: "CONFIG", CLIENT: "CONFIG", SYSTEM_SETTING: "CONFIG", WALLET_SCREENING: "OPS",
-  MARKUP_SHARE_RULE: "ECON", PARTNER_REBATE_RULE: "ECON",
+  MARKUP_SHARE_RULE: "ECON", PARTNER_REBATE_RULE: "ECON", BANK_ACCOUNT_DETAILS: "CONFIG", BANK_DETAILS_TEMPLATE: "CONFIG",
   // rates
   MARKET_RATE: "REF",
   // deal
@@ -95,6 +99,7 @@ const MATRIX = [
   ["Configuration", [
     ["Project, pairs and rounding, rate-source chains, thresholds, own wallets, templates", "CONFIG", "PROJECT, CURRENCY_PAIR (amount_rounding, cash_rounding), PAIR_RATE_SOURCE, THRESHOLD, OWN_WALLET (role), MESSAGE_TEMPLATE"],
     ["Parties: senders, groups, receivers, entities, accounts, allow-lists", "CONFIG", "SENDER, SENDER_RECEIVER_ALLOW, COLLECTION_SENDING_ENTITY, RECEIVER_GROUP, RECEIVER, RECEIVING_ENTITY, RECEIVING_ENTITY_ACCOUNT (single_use)"],
+    ["Bank account details, in full (holder, bank, IBAN or account number, BIC, sort code …) and the templates per rail", "CONFIG", "BANK_ACCOUNT_DETAILS, BANK_DETAILS_TEMPLATE — Operations enters, Finance or Management approves; all three roles read in full, no masking; every full read is logged (rule 10)", true],
     ["Partner block: methods, cutoff and holidays, pairs, vehicles, endpoints, rails, narratives, destination approvals", "CONFIG", "PARTNER (supported_methods, bank_cutoff_time), PARTNER_CUTOFF_OVERRIDE, HOLIDAY, PARTNER_CONFIG (is_own_desk), PARTNER_PAIR (needs_bank_lock), PARTNER_ENTITY, COLLECTION_RECEIVING_ENDPOINT (risk_band, single_use), SETTLEMENT_SENDING_ENTITY, SETTLEMENT_RAIL, DESTINATION_APPROVAL"],
     ["Fee structures, tiers and overrides (the percentages applied to the sender and receiver; what the quote prints)", "CONFIG", "FEE_STRUCTURE (pct, sender_pays_pct, receiver_pays_pct, min_markup_pct, max_markup_pct, rate_basis, mode, customer_facing_*), FEE_TIER, FEE_OVERRIDE"],
     ["Minimum margin, partner fee, variance thresholds, expected bank fees", "ECON", "FEE_STRUCTURE.min_margin_pct, PARTNER_PAIR.partner_fee_pct, FEE_STRUCTURE.variance_threshold_rel, SETTLEMENT_RAIL.expected_bank_fee"],
@@ -154,6 +159,7 @@ const TESTS = [
   ["Audit", "Any controlled action is taken.", "AUDIT_LOG holds actor, time, reason and record version; APPROVAL holds requester, approver and state; neither can be edited or deleted."],
   ["No client-side leakage", "Any screen shown to Operations is inspected (page source, network responses, cached data).", "No value of groups REF, ECON or LEDGER is present, even hidden: the filtering happens on the server, not in the user interface."],
   ["Template fields", "A quote template is saved with a field outside the sender-facing set, or a message is rendered for a sender.", "The template is refused (MESSAGE_TEMPLATE.printed_fields); a rendered message never carries a partner rate, a margin or a cost (D36)."],
+  [mk("Bank details read in full, and logged"), mk("A user of any role opens the bank-details card of an account, endpoint, rail or destination approval, or exports it."), mk("The card shows every field of the current BANK_ACCOUNT_DETAILS version unmasked; an AUDIT_LOG row (record_type BANK_ACCOUNT_DETAILS, field read, actor, time) exists for the read; a superseded version is shown only from the account's history, and the read of it is logged the same way.")],
 ];
 
 // ------------------------------------------------------------------ appendix: every field, its group, its rights
@@ -161,9 +167,9 @@ const byDomain = (d) => Object.keys(D.E).filter((n) => D.E[n].d === d);
 const DOMAIN_NAME = { config: "Configuration", rates: "Rates", deal: "Deal lifecycle", settle: "Settlement", ledger: "Ledger & controls", view: "Derived views" };
 const appendix = Object.keys(DOMAIN_NAME).map((dom) => `<h3>${esc(DOMAIN_NAME[dom])}</h3>` + byDomain(dom).map((n) => {
   const e = D.E[n];
-  const rows = e.f.map((f) => { const g = groupOf(n, f[0]); return [f[0], GROUPS[g].name, ...RIGHTS[g]]; });
-  return `<h4>${esc(n)}</h4><table class="dd"><thead><tr><th style="width:30%">Field</th><th style="width:24%">Group</th><th>Operations</th><th>Finance</th><th>Management</th></tr></thead><tbody>
-${rows.map((r) => `<tr><td class="mono">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td></tr>`).join("")}</tbody></table>`;
+  const rows = e.f.map((f) => { const g = groupOf(n, f[0]); const r = [f[0], GROUPS[g].name, ...RIGHTS[g]]; return REVIEW && (REV_TABLES.has(n) || f[0] === REV_FIELD) ? r.map((c) => mk(esc(c))) : r.map(esc); });
+  return `<h4>${REVIEW && REV_TABLES.has(n) ? mk(esc(n)) : esc(n)}</h4><table class="dd"><thead><tr><th style="width:30%">Field</th><th style="width:24%">Group</th><th>Operations</th><th>Finance</th><th>Management</th></tr></thead><tbody>
+${rows.map((r) => `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join("")}</tbody></table>`;
 }).join("")).join("");
 
 // summary counts for the status line
@@ -174,6 +180,7 @@ const withCode = ACTIONS.filter((a) => a[5] !== "—");
 
 // ------------------------------------------------------------------ HTML
 const CSS = `
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
 @page land { size: A4 landscape; margin: 12mm 14mm 12mm 14mm; }
 body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
@@ -220,14 +227,15 @@ const nest = `<figure class="chart"><svg viewBox="0 0 760 290" width="100%" xmln
 </svg><figcaption>Figure 1 — Cumulative visibility. Each ring sees everything inside it. Rights to approve grow outward; rights to see never shrink.</figcaption></figure>`;
 
 const matrixRows = MATRIX.map(([mod, rows]) => rows.map((r, i) => {
-  const [label, g, fields] = r; const rt = RIGHTS[g];
-  return `<tr>${i === 0 ? `<td class="mod" rowspan="${rows.length}">${esc(mod)}</td>` : ""}<td>${esc(label)}</td><td>${esc(GROUPS[g].name)}</td><td class="r-ops">${esc(rt[0])}</td><td class="r-fin">${esc(rt[1])}</td><td class="r-mgmt">${esc(rt[2])}</td><td class="small">${esc(fields)}</td></tr>`;
+  const [label, g, fields, rv] = r; const rt = RIGHTS[g]; const W = (t) => (rv && REVIEW ? mk(t) : t);
+  return `<tr>${i === 0 ? `<td class="mod" rowspan="${rows.length}">${esc(mod)}</td>` : ""}<td>${W(esc(label))}</td><td>${W(esc(GROUPS[g].name))}</td><td class="r-ops">${W(esc(rt[0]))}</td><td class="r-fin">${W(esc(rt[1]))}</td><td class="r-mgmt">${W(esc(rt[2]))}</td><td class="small">${W(esc(fields))}</td></tr>`;
 }).join("")).join("");
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Roles &amp; Visibility Matrix v${V}</title><style>${CSS}</style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Roles &amp; Visibility Matrix · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
+${REVIEW ? `<p class="rev-note"><b>Round-2 review draft, 26 October 2026 (D58, bank account details).</b> Yellow = added or replaced; red strike = what goes. Nothing else has changed.</p>` : ""}
 <h2>How to read this pack</h2>
 <p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
 
@@ -266,6 +274,7 @@ ${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""
 <li><b>Nothing is deleted.</b> Rejections keep the request, the decision and the mandatory reason; a re-submission is a new approval that points at the rejected one; ${c("AUDIT_LOG")} records actor, time, reason and record version for every controlled action and every configuration change.</li>
 <li><b>Users and roles need two Management users.</b> Creating, changing or removing a user, a role or a ROLE_RIGHT row is a Management action approved by a second Management user.</li>
 <li><b>Exceptions are shown as blockers, not as figures.</b> A frozen partner × pair, an open variance exception, an open offset, custody aging, a negative pool, an unfunded make-good and an open loss recovery appear to Operations as the state that blocks their work and the role that must act; the spread, variance, offset amount, pool and loss shares are Finance's view.</li>
+<li>${mk("<b>Bank account details are read in full and read-logged.</b> BANK_ACCOUNT_DETAILS belongs to group <i>Configuration and master data</i>: Operations enters a row from the rail's template, Finance or Management approves it (controlled action bank_details_approve), and all three roles read every field unmasked, on one card component, because the people who instruct and verify transfers need the details as the bank sees them. In return every full read — card, export or API — writes an AUDIT_LOG row with the actor and time, and the quarterly access review (5a) samples those rows. The evidence files (bank letters, KYC, legal documents) stay under the restricted prefix of the file store, which only Finance and Management resolve.")}</li>
 <li><b>Messages print only what the template allows.</b> ${c("MESSAGE_TEMPLATE.printed_fields")} is the list of model fields a template may render; a quote template is sender-facing only (D36), so a message can never carry a partner rate, a margin or a cost whichever role sends it.</li>
 </ol>
 <div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate). If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
@@ -286,7 +295,8 @@ ${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""
 ${appendix}
 </body></html>`;
 
-const h = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.html`), p = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.pdf`);
+const base = REVIEW ? "NPLify-Roles-and-Visibility-Matrix-review" : `NPLify-Roles-and-Visibility-Matrix-v${V}`;
+const h = path.join(outDir, `${base}.html`), p = path.join(outDir, `${base}.pdf`);
 // The client-facing pass knows the v1–v5 edition tokens; this edition's own token and draft marker are removed here.
 const thisEdition = (s) => s.replace(/\s*[·—–-]\s*Draft v6\.0\b/g, "").replace(/\bDraft v6\.0\b/g, "").replace(/\(v6\.0,\s*/g, "(").replace(/\bv6\.0[,:]?\s*/g, "");
 fs.writeFileSync(h, thisEdition(clientFacing(html)));

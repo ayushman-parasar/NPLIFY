@@ -1,4 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Configuration Schema Specification</title><style>
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
 body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
 h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
@@ -26,6 +27,7 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 </style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Configuration Schema Specification</p><p class="org">New XP Technologies Limited</p><p class="date">22 October 2026 · Confidential</p></div>
 <div class="rule"></div>
+
 
 <h2>How to read this pack</h2>
 <p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
@@ -92,7 +94,12 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
 <tr><td class="mono">project_id</td><td>int</td><td>no</td><td>null = global default; a project row overrides it</td></tr><tr><td class="mono">code</td><td>string</td><td>yes</td><td>quote / payment_instructions / confirmation_request / settlement_advice / cash_token</td></tr><tr><td class="mono">version</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">channel</td><td>string</td><td>yes</td><td>email / chat / portal / pdf</td></tr><tr><td class="mono">language</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">body_ref</td><td>string</td><td>yes</td><td>external content store</td></tr><tr><td class="mono">printed_fields</td><td>string</td><td>yes</td><td>the model fields the template may print; sender-facing only for quote</td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">approved_by</td><td>int</td><td>yes</td><td>Management</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
 </tbody></table>
-<ul class="rules"><li>project_id null is the global default; a project row with the same code overrides it.</li><li>printed_fields lists the model fields the template may print. A template of code quote may print only sender-facing figures (sender rate, customer-facing fee and rate, amount out, validity) — never a partner rate, a margin or a cost; the save is refused otherwise.</li><li>A new version is a new row approved by Management; the version a package was rendered with is recorded on QUOTE_PACKAGE.</li></ul>
+<ul class="rules"><li>project_id null is the global default; a project row with the same code overrides it.</li><li>printed_fields lists the model fields the template may print. A template of code quote may print only sender-facing figures (sender rate, customer-facing fee and rate, amount out, validity) — never a partner rate, a margin or a cost; the save is refused otherwise.</li><li>A new version is a new row approved by Management; the version a package was rendered with is recorded on QUOTE_PACKAGE.</li></ul><h4 id="BANK_DETAILS_TEMPLATE">BANK_DETAILS_TEMPLATE <span class="scope">· Platform, per rail</span></h4>
+<p class="desc">Configuration: what a bank account on a given rail must carry. One row per rail × field, in display order: SWIFT (account number or IBAN, BIC, bank address, intermediary bank), SEPA (IBAN, BIC), UK Faster Payments (sort code, account number), a local rail (bank code, account number). The template drives the entry form, the validation on save (IBAN check digits, BIC length, sort-code pattern) and the card that shows the details in full; wallets are not templated (network and address stay on the account row). Versioned by effective date like every configuration table; Finance proposes, Management approves.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">rail</td><td>string</td><td>yes</td><td>SWIFT / SEPA / UK_FPS / local:&lt;country&gt; …; one template per rail</td></tr><tr><td class="mono">position</td><td>int</td><td>yes</td><td>display order within the rail</td></tr><tr><td class="mono">field_key</td><td>string</td><td>yes</td><td>iban, bic, account_number, sort_code, bank_code, bank_address, intermediary_bic …</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>as shown on the form and the card</td></tr><tr><td class="mono">required</td><td>bool</td><td>yes</td><td> · default <b>true</b></td></tr><tr><td class="mono">format_rule</td><td>string</td><td>no</td><td>named check or pattern: iban_check_digits, bic_length, uk_sort_code, digits(n) …</td></tr><tr><td class="mono">example</td><td>string</td><td>no</td><td>shown on the form</td></tr><tr><td class="mono">effective_from</td><td>date</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td> · default <b>active</b></td></tr>
+</tbody></table>
+<ul class="rules"><li>One row per rail × field, in display order. The starting templates: SWIFT — account number or IBAN, BIC, bank name and address, intermediary bank (optional); SEPA — IBAN, BIC; UK Faster Payments — sort code, account number; a local rail — bank code, account number.</li><li>format_rule names the check applied on save: iban_check_digits, bic_length (8 or 11), uk_sort_code (6 digits), digits(n), or a pattern. A value that fails the rule cannot be saved.</li><li>Wallets are not templated: a wallet's network and address stay on the account or endpoint row and are checksum-validated per network as before.</li><li>Changed like any configuration: Finance proposes a row, Management approves; a retired field stops being required for new versions and stays readable on old ones.</li></ul>
 
 <h2 class="pb">3 · Project settings</h2>
 <h4 id="PROJECT">PROJECT <span class="scope">· Per client</span></h4>
@@ -126,6 +133,7 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <ul class="rules"><li>Optional. role says which of the three allowed custody cases the wallet serves: reroute_contingency, own_desk or collection_bridge; custody is allowed in no other case.</li><li>networks lists the networks a bridge receives on (ERC-20 where a partner cannot).</li><li>custody_max_hours is the limit the custody view ages against; an outbound transfer needs dual Management approval and is executed by NPL's signers outside the platform.</li></ul>
 
 <h2 class="pb">4 · Parties: senders, receiver groups, receivers, entities, accounts, screenings</h2>
+<p>Bank account details are rows of the database from this edition (decision of 26 October 2026): BANK_ACCOUNT_DETAILS below, one versioned row per bank account, with the fields of its rail taken from BANK_DETAILS_TEMPLATE (Section 2). The same row type serves a receiving entity's account, a partner's collection endpoint, a settlement rail, the details a partner holds under a destination approval, and a sender's source account. The restricted prefix of the file store keeps only the evidence.</p>
 <h4 id="SENDER">SENDER <span class="scope">· Per project</span></h4>
 <p class="desc">A sending party of the project (Sender A, Sender B). Which receiver groups a sender may pay is SENDER_RECEIVER_ALLOW. A sender’s refunds go to a RECEIVER of kind sender_return linked to it.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
@@ -137,9 +145,9 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">receiver_group_id</td><td>int</td><td>yes</td><td>sendable_to</td></tr>
 </tbody></table>
 <ul class="rules"><li>The allow-list (sendable_to). A sender may pay only the groups listed here; the group belongs to the same project.</li></ul><h4 id="COLLECTION_SENDING_ENTITY">COLLECTION_SENDING_ENTITY <span class="scope">· Per sender</span></h4>
-<p class="desc">Provenance: where the sender’s funds originated. Reference only; never a payout destination (a refund goes to the sender_return receiver’s chosen account, not back to the source wallet).</p>
+<p class="desc">Provenance: where the sender’s funds originated. Reference only; never a payout destination (a refund goes to the sender_return receiver’s chosen account, not back to the source wallet). the source account, when known, is a BANK_ACCOUNT_DETAILS row.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
-<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>sender’s own account or a client’s account</td></tr><tr><td class="mono">account_ref</td><td>string</td><td>no</td><td></td></tr>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>sender’s own account or a client’s account</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>nullable; the source account when it is known</td></tr>
 </tbody></table>
 <ul class="rules"><li>Provenance only: where the sender's funds come from. Never a payout destination.</li></ul><h4 id="FEE_OVERRIDE">FEE_OVERRIDE <span class="scope">· Per sender × partner pair</span></h4>
 <p class="desc">A standing sender-specific override of the fee on a partner × pair. One-off decisions on a single transaction are FEE_DECISION. may carry its own sender / receiver split instead of inheriting the structure’s proportion (Evo’s selected senders pay 1.0 % while Evo still pays 0.6 %).</p>
@@ -162,11 +170,16 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <tr><td class="mono">receiver_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>Entity X1, Entity X2</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
 </tbody></table>
 <ul class="rules"><li>A legal entity of the receiver. Bank and wallet details live on its accounts, not here.</li></ul><h4 id="RECEIVING_ENTITY_ACCOUNT">RECEIVING_ENTITY_ACCOUNT <span class="scope">· Per entity</span></h4>
-<p class="desc">One account of a receiving entity, with its own currency and rail (EUR via SWIFT and EUR via SEPA are two accounts). An account is a bank account or a wallet (account_kind): a bank account carries bank_details_ref and a bank rail; a wallet carries network and address explicitly, mirroring the partner-side COLLECTION_RECEIVING_ENDPOINT, so addresses are checksum-validated, checked against the rail, and found when one address is registered with two partners. Destination approvals and settlement lines point at the account; no table stores actual bank details.</p>
+<p class="desc">One account of a receiving entity, with its own currency and rail (EUR via SWIFT and EUR via SEPA are two accounts). An account is a bank account or a wallet (account_kind): a bank account carries bank_account_details_id and a bank rail; a wallet carries network and address explicitly, mirroring the partner-side COLLECTION_RECEIVING_ENDPOINT, so addresses are checksum-validated, checked against the rail, and found when one address is registered with two partners. Destination approvals and settlement lines point at the account; the bank details themselves are in BANK_ACCOUNT_DETAILS, versioned.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
-<tr><td class="mono">receiving_entity_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>yes</td><td>SWIFT / SEPA / TRC-20 / ERC-20 / …</td></tr><tr><td class="mono">account_kind</td><td>string</td><td>yes</td><td>bank / wallet</td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>no</td><td>external store; when account_kind = bank</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>when account_kind = wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>when account_kind = wallet; checksum-validated per network</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">usage</td><td>string</td><td>yes</td><td>standing / single_use — a local account the receiver gives for one payout · default <b>standing</b></td></tr><tr><td class="mono">reserved_for_deal_id</td><td>int</td><td>no</td><td>nullable; the one deal a single_use account serves</td></tr>
+<tr><td class="mono">receiving_entity_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>yes</td><td>SWIFT / SEPA / TRC-20 / ERC-20 / …</td></tr><tr><td class="mono">account_kind</td><td>string</td><td>yes</td><td>bank / wallet</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>when account_kind = bank; the current BANK_ACCOUNT_DETAILS version</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>when account_kind = wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>when account_kind = wallet; checksum-validated per network</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">usage</td><td>string</td><td>yes</td><td>standing / single_use — a local account the receiver gives for one payout · default <b>standing</b></td></tr><tr><td class="mono">reserved_for_deal_id</td><td>int</td><td>no</td><td>nullable; the one deal a single_use account serves</td></tr>
 </tbody></table>
-<ul class="rules"><li>One row per currency × rail (EUR via SWIFT and EUR via SEPA are two accounts).</li><li>account_kind bank carries bank_details_ref (an external store; no table holds bank details); account_kind wallet carries network and address, checksum-validated per network, and rail equal to the network.</li><li>usage single_use is a local account the receiver gives for one payout; it names reserved_for_deal_id and serves that deal only.</li><li>An account is payable through a partner only once a DESTINATION_APPROVAL with that partner is approved.</li></ul><h4 id="WALLET_SCREENING">WALLET_SCREENING <span class="scope">· Per project, per address and day</span></h4>
+<ul class="rules"><li>One row per currency × rail (EUR via SWIFT and EUR via SEPA are two accounts).</li><li>account_kind bank carries bank_account_details_id — the current BANK_ACCOUNT_DETAILS version; formerly bank_details_ref, a reference into an external store — and a bank rail; the account is active only when that details row is active (rule 14); account_kind wallet carries network and address, checksum-validated per network, and rail equal to the network.</li><li>usage single_use is a local account the receiver gives for one payout; it names reserved_for_deal_id and serves that deal only.</li><li>An account is payable through a partner only once a DESTINATION_APPROVAL with that partner is approved.</li></ul><h4 id="BANK_ACCOUNT_DETAILS">BANK_ACCOUNT_DETAILS <span class="scope">· Per bank account, versioned</span></h4>
+<p class="desc">The bank details of one account, in the database: a receiving-entity account, a partner's collection endpoint, a settlement rail, the details a partner holds under a destination approval, or a sender's source account. Versioned: a change is a new row that names the row it supersedes (supersedes_id); the old row is kept and is what any settlement line released before the change points at through its account. Common fields here; the rail-specific values (IBAN, BIC, sort code, bank code …) are stored under rail_fields, keyed by the field_key of the rail's BANK_DETAILS_TEMPLATE rows and validated against them on save. Entered by Operations, approved by Finance or Management (controlled action bank_details_approve); read in full by Operations, Finance and Management, with every full read written to AUDIT_LOG. The evidence (bank letter, KYC, legal document) stays a file under the restricted prefix (evidence_ref).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">supersedes_id</td><td>int</td><td>no</td><td>nullable; the BANK_ACCOUNT_DETAILS row this version replaces</td></tr><tr><td class="mono">holder_name</td><td>string</td><td>yes</td><td>the account holder as the bank knows it</td></tr><tr><td class="mono">bank_name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">country</td><td>string</td><td>yes</td><td>ISO 3166 alpha-2</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>yes</td><td>names the BANK_DETAILS_TEMPLATE rows that apply</td></tr><tr><td class="mono">rail_fields</td><td>json</td><td>yes</td><td>the rail-specific values, keyed by the template's field_key; validated by format_rule on save</td></tr><tr><td class="mono">evidence_ref</td><td>string</td><td>yes</td><td>bank letter or confirmation, restricted prefix of the file store</td></tr><tr><td class="mono">entered_by</td><td>int</td><td>yes</td><td>Operations user</td></tr><tr><td class="mono">entered_at</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td> · default <b>draft</b></td></tr>
+</tbody></table>
+<ul class="rules"><li>Entered by Operations from the rail's template: choose the rail, fill the template's fields, attach the bank letter or confirmation as evidence (a file under the restricted prefix). Saved only when every required field is present and every format rule passes.</li><li>Approved by Finance or Management (controlled action bank_details_approve, approver never the person who entered it); the row becomes active and the account, endpoint, rail or destination approval that points at it may become active.</li><li>Never edited: a change is a new row with supersedes_id naming the old one; the old row becomes superseded and stays. The account keeps pointing at the current version; a settlement line released earlier still resolves to the version current at its release.</li><li>Read in full by Operations, Finance and Management — no masking anywhere, one card component shows the common fields then the rail's fields in template order. Every full read is written to AUDIT_LOG (Roles &amp; Visibility rule 10).</li></ul><h4 id="WALLET_SCREENING">WALLET_SCREENING <span class="scope">· Per project, per address and day</span></h4>
 <p class="desc">A screening of one wallet address on one day — a sender’s declared sending wallet before a collection, or a receiver’s wallet before a settlement — with the result, the decision and who made it. Operations records it as part of transaction coordination; a reject may be overridden only by Finance. The decision picks the endpoint: accept_alternate lands only on an elevated-band endpoint.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
 <tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">subject_kind</td><td>string</td><td>yes</td><td>sender_wallet / receiver_wallet</td></tr><tr><td class="mono">sender_id</td><td>int</td><td>no</td><td>when subject_kind = sender_wallet</td></tr><tr><td class="mono">receiving_entity_account_id</td><td>int</td><td>no</td><td>when subject_kind = receiver_wallet</td></tr><tr><td class="mono">network</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">address</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">provider_ref</td><td>string</td><td>no</td><td>screening tool reference</td></tr><tr><td class="mono">result</td><td>string</td><td>yes</td><td>standard / elevated / unacceptable</td></tr><tr><td class="mono">decision</td><td>string</td><td>yes</td><td>accept / accept_alternate / reject</td></tr><tr><td class="mono">screened_by</td><td>int</td><td>yes</td><td>Operations</td></tr><tr><td class="mono">screened_at</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">evidence_ref</td><td>string</td><td>no</td><td></td></tr>
@@ -202,24 +215,24 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <ul class="rules"><li>The partner's legal vehicle (PT-tour, PT Global Inc), the name that appears on paperwork. Fixed on a deal leg at quote; only a REROUTE changes it.</li><li>Owns the partner's collection endpoints.</li></ul><h4 id="COLLECTION_RECEIVING_ENDPOINT">COLLECTION_RECEIVING_ENDPOINT <span class="scope">· Per partner entity</span></h4>
 <p class="desc">One collection endpoint at the partner, owned by a partner entity: bank-in or crypto-in by kind, with the same field shape as RECEIVING_ENTITY_ACCOUNT (rail required only on active bank endpoints). rail is nullable — null means not yet known, never doesn’t matter. A bank endpoint cannot become active, and no COLLECTION may reference it, until rail is set; a wallet endpoint may leave rail null, and when set it must match network. the endpoint’s kind must match the leg’s collection_method — wallet for crypto-in, bank for bank-in, none for cash.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
-<tr><td class="mono">partner_entity_id</td><td>int</td><td>yes</td><td>the vehicle whose name is on the account or wallet</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>bank / wallet</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>no</td><td>nullable: a bank endpoint needs it to go active; optional for wallets, must match network when set</td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>no</td><td>external store; when kind = bank</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>TRC-20 / ERC-20 / …; when kind = wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>when kind = wallet; checksum-validated per network</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">own_wallet_id</td><td>int</td><td>no</td><td>nullable; set when the endpoint is NPL’s own wallet — under an own-desk configuration or as a collection bridge for a partner that lacks the network or for risk isolation; the endpoint still belongs to the leg’s partner configuration</td></tr><tr><td class="mono">risk_band</td><td>string</td><td>yes</td><td>standard / elevated — which screening decisions may land here · default <b>standard</b></td></tr><tr><td class="mono">usage</td><td>string</td><td>yes</td><td>standing / single_use (ad hoc local deposit accounts) · default <b>standing</b></td></tr><tr><td class="mono">reserved_for_deal_id</td><td>int</td><td>no</td><td>nullable; the one deal a single_use endpoint serves</td></tr><tr><td class="mono">expected_amount</td><td>decimal</td><td>no</td><td>nullable; the amount a single_use endpoint for</td></tr>
+<tr><td class="mono">partner_entity_id</td><td>int</td><td>yes</td><td>the vehicle whose name is on the account or wallet</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>bank / wallet</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>no</td><td>nullable: a bank endpoint needs it to go active; optional for wallets, must match network when set</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>when kind = bank; the current BANK_ACCOUNT_DETAILS version</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>TRC-20 / ERC-20 / …; when kind = wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>when kind = wallet; checksum-validated per network</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">own_wallet_id</td><td>int</td><td>no</td><td>nullable; set when the endpoint is NPL’s own wallet — under an own-desk configuration or as a collection bridge for a partner that lacks the network or for risk isolation; the endpoint still belongs to the leg’s partner configuration</td></tr><tr><td class="mono">risk_band</td><td>string</td><td>yes</td><td>standard / elevated — which screening decisions may land here · default <b>standard</b></td></tr><tr><td class="mono">usage</td><td>string</td><td>yes</td><td>standing / single_use (ad hoc local deposit accounts) · default <b>standing</b></td></tr><tr><td class="mono">reserved_for_deal_id</td><td>int</td><td>no</td><td>nullable; the one deal a single_use endpoint serves</td></tr><tr><td class="mono">expected_amount</td><td>decimal</td><td>no</td><td>nullable; the amount a single_use endpoint for</td></tr>
 </tbody></table>
-<ul class="rules"><li>kind bank carries bank_details_ref and needs rail before it can become active (null means not yet known); kind wallet carries network and address, and rail, when set, equals network.</li><li>A wallet endpoint's network must be one the partner offers; cash and local_deposit collections have no standing endpoint.</li><li>own_wallet_id names an OWN_WALLET when the endpoint is NPL's own wallet: under an own-desk configuration or as a collection bridge; the endpoint still belongs to the leg's partner configuration.</li><li>usage single_use names reserved_for_deal_id and expected_amount (ad hoc local deposit accounts).</li><li>The endpoint's kind must match the leg's collection method; the system refuses a collection on an endpoint of another partner entity.</li></ul><h4 id="SETTLEMENT_SENDING_ENTITY">SETTLEMENT_SENDING_ENTITY <span class="scope">· Per partner config</span></h4>
+<ul class="rules"><li>kind bank carries bank_account_details_id (the current BANK_ACCOUNT_DETAILS version; formerly bank_details_ref) and needs rail before it can become active (null means not yet known), and the details row must be active (rule 14); kind wallet carries network and address, and rail, when set, equals network.</li><li>A wallet endpoint's network must be one the partner offers; cash and local_deposit collections have no standing endpoint.</li><li>own_wallet_id names an OWN_WALLET when the endpoint is NPL's own wallet: under an own-desk configuration or as a collection bridge; the endpoint still belongs to the leg's partner configuration.</li><li>usage single_use names reserved_for_deal_id and expected_amount (ad hoc local deposit accounts).</li><li>The endpoint's kind must match the leg's collection method; the system refuses a collection on an endpoint of another partner entity.</li></ul><h4 id="SETTLEMENT_SENDING_ENTITY">SETTLEMENT_SENDING_ENTITY <span class="scope">· Per partner config</span></h4>
 <p class="desc">The narrative on an outgoing transfer: what the receiver sees. Holds no money.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
 <tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">narrative_name</td><td>string</td><td>yes</td><td>what the receiver sees</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
 </tbody></table>
 <ul class="rules"><li>The name the receiver sees on an outgoing transfer. Holds no money.</li></ul><h4 id="SETTLEMENT_RAIL">SETTLEMENT_RAIL <span class="scope">· Per partner config</span></h4>
-<p class="desc">The bank or EMI that executes an outgoing transfer. Holds no money. Carries the expected bank fee.</p>
+<p class="desc">The bank or EMI that executes an outgoing transfer. Holds no money. Carries the expected bank fee. its account's details are a BANK_ACCOUNT_DETAILS row.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
-<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>bank or EMI executing the transfer</td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">expected_bank_fee</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>bank or EMI executing the transfer</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>yes</td><td>the rail's own account</td></tr><tr><td class="mono">expected_bank_fee</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr>
 </tbody></table>
-<ul class="rules"><li>The bank or EMI that executes the transfer. expected_bank_fee is the figure the bank-fee true-up compares against (BANK_FEE_EVENT).</li></ul><h4 id="DESTINATION_APPROVAL">DESTINATION_APPROVAL <span class="scope">· Per partner config × account</span></h4>
-<p class="desc">Destination approval per partner: a receiving-entity account as registered with this partner, with the partner’s approval status and the payout details the partner holds. The details follow the account’s kind: bank_details_ref when the account is a bank account; network and address as registered with the partner when it is a wallet.</p>
+<ul class="rules"><li>The bank or EMI that executes the transfer. expected_bank_fee is the figure the bank-fee true-up compares against (BANK_FEE_EVENT).</li><li>bank_account_details_id names the rail's own account as a BANK_ACCOUNT_DETAILS row (formerly bank_details_ref); the rail is usable only while that row is active (rule 14).</li></ul><h4 id="DESTINATION_APPROVAL">DESTINATION_APPROVAL <span class="scope">· Per partner config × account</span></h4>
+<p class="desc">Destination approval per partner: a receiving-entity account as registered with this partner, with the partner’s approval status and the payout details the partner holds. The details follow the account’s kind: bank_account_details_id when the account is a bank account; network and address as registered with the partner when it is a wallet.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
-<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">receiving_entity_account_id</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">approval_status</td><td>string</td><td>yes</td><td>pending_partner / approved / suspended · default <b>pending_partner</b></td></tr><tr><td class="mono">bank_details_ref</td><td>string</td><td>no</td><td>as paid by this partner; only when the account’s kind is bank</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>as registered with this partner; only when the account’s kind is wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>as registered with this partner; only when the account’s kind is wallet</td></tr><tr><td class="mono">approved_at</td><td>datetime</td><td>no</td><td></td></tr><tr><td class="mono">wallet_screening_id</td><td>int</td><td>no</td><td>nullable; the receiver-side screening of a wallet account</td></tr>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">receiving_entity_account_id</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">approval_status</td><td>string</td><td>yes</td><td>pending_partner / approved / suspended · default <b>pending_partner</b></td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>the bank details as registered with this partner, when the account is a bank account</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>as registered with this partner; only when the account’s kind is wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>as registered with this partner; only when the account’s kind is wallet</td></tr><tr><td class="mono">approved_at</td><td>datetime</td><td>no</td><td></td></tr><tr><td class="mono">wallet_screening_id</td><td>int</td><td>no</td><td>nullable; the receiver-side screening of a wallet account</td></tr>
 </tbody></table>
-<ul class="rules"><li>Destination approval per partner: an account as registered with this partner.</li><li>The payout details follow the account's kind: bank_details_ref for a bank account; network and address as registered with the partner for a wallet; a wallet account carries its WALLET_SCREENING.</li><li>A quote-first deal leaves Inquiry only if at least one account in the entitled group is approved with the chosen partner.</li></ul><h4 id="MARKUP_SHARE_RULE">MARKUP_SHARE_RULE <span class="scope">· Per party × project (optionally one partner pair or fee structure)</span></h4>
+<ul class="rules"><li>Destination approval per partner: an account as registered with this partner.</li><li>The payout details follow the account's kind: bank_account_details_id — the details as registered with this partner, a BANK_ACCOUNT_DETAILS row (formerly bank_details_ref) — for a bank account; network and address as registered with the partner for a wallet; a wallet account carries its WALLET_SCREENING.</li><li>A quote-first deal leaves Inquiry only if at least one account in the entitled group is approved with the chosen partner.</li></ul><h4 id="MARKUP_SHARE_RULE">MARKUP_SHARE_RULE <span class="scope">· Per party × project (optionally one partner pair or fee structure)</span></h4>
 <p class="desc">How an markup-share party is paid on a project (and optionally only on one partner × pair): a share of NPL’s earnings in a ratio, or a fixed % applied inside the sender-facing markup (§4.2a). also the customer who provides a sub-account and shares NPL’s markup (Raeen): basis share_of_net_markup, several rules with different shares on one project, and settlement by the party itself when it holds the converted money.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
 <tr><td class="mono">markup_share_party_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pair_id</td><td>int</td><td>no</td><td>optional</td></tr><tr><td class="mono">basis</td><td>string</td><td>yes</td><td>share_of_earnings / fixed_pct / share_of_net_markup (base = fee parts − partner cost on the leg, on amount × market; rebates never in the base)</td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">fee_structure_id</td><td>int</td><td>no</td><td>optional scope: only deals priced on this structure (Raeen sub-account 50 %, Raeen direct downlines 75 %)</td></tr><tr><td class="mono">party_kind</td><td>string</td><td>yes</td><td>markup-share party / client_party</td></tr><tr><td class="mono">settlement_mode</td><td>string</td><td>yes</td><td>npl_pays / party_retains — the party holds the converted funds and pays NPL the remainder monthly · default <b>npl_pays</b></td></tr>
@@ -237,7 +250,7 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <li>Every project belongs to one client; a project's exposure_ceiling never exceeds its client's; both are compared through REPORTING_VALUE, so a platform pair must exist for every currency that rests at a partner.</li>
 <li>Every project has exactly one default receiver group, created by the system. A counterparty receiver is in exactly one group; sender_return and partner_transit receivers are group-less and never on a forward deal or an allow-list.</li>
 <li>Every sender has an allow-list naming groups of the same project and a sender_return receiver for refunds; a sender with no allow-list cannot be chosen on a deal.</li>
-<li>Every receiving entity has at least one account; accounts are unique per entity, currency and rail; a bank account carries a bank-details reference, a wallet account a network and a checksum-valid address with rail = network. A single-use account or endpoint names the one deal it serves.</li>
+<li>Every receiving entity has at least one account; accounts are unique per entity, currency and rail; a bank account names its BANK_ACCOUNT_DETAILS row, a wallet account a network and a checksum-valid address with rail = network. A single-use account or endpoint names the one deal it serves.</li>
 <li>A partner pair's currency pair is a project pair; partner_pricing agrees with the partner's disclosure_style; partner_fee_pct is present exactly for fee_on_market; needs_bank_lock requires the partner's bank_cutoff_time and cutoff_timezone.</li>
 <li>A fee structure's sender and receiver parts add up to its pct; min_markup ≤ max_markup; a fixed customer-facing fee names its pct; tiers have exactly one row at volume 0; a new version is a new row with a later effective_from.</li>
 <li>A partner configuration that will pay out needs at least one partner entity, one settlement sending entity (narrative) and one settlement rail. A bank endpoint cannot go active without a rail; a wallet endpoint's network is one the partner offers; an own-desk configuration needs an own wallet of role own_desk.</li>
@@ -247,6 +260,7 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <li>quote_freshness_min is shorter than quote_validity_min; all percentages are stored as decimals; Σ markup shares of one base ≤ 100 %; a rebate rule is pct_of_amount with a payout currency.</li>
 <li>applicable_for_reroute, is_own_desk, exposure ceilings, thresholds, fee structures and tiers, templates, system settings and platform pairs are Management-approved changes; users and roles need a second Management user.</li>
 <li>A project is validated only when rules 1 to 12 pass for it and for each of its partner configuration blocks; only a validated project can be activated, and only Management activates it. A partner configuration block added to an active project cannot be used on a deal until the rules pass for it.</li>
+<li>A bank account, a bank endpoint and a settlement rail name a BANK_ACCOUNT_DETAILS row of the same currency and rail and can be active only while that row is active; a row is saved only when the rail's template is satisfied (required fields present, format rules passed: IBAN check digits, BIC length, sort-code pattern) and its evidence is attached; a change to any detail is a new row that supersedes the old one, never an edit; a details row is approved by Finance or Management, never by the Operations user who entered it.</li>
 </ol>
 
 <h2 class="pb">7 · Worked example: the FRS project, end to end</h2>
@@ -413,6 +427,87 @@ own_wallets:
  address: T…(wallet address)
  signer_arrangement: multisig
  custody_max_hours: 48
+bank_account_details:
+ - code: BAD-X1-EUR
+ holder_name: Entity X1 Ltd
+ bank_name: Bank X
+ country: DE
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: DE89 3704 0044 0532 0130 00
+ bic: COBADEFFXXX
+ evidence_ref: restricted/bank-letters/x1-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-X2-EUR
+ holder_name: Entity X2 GmbH
+ bank_name: Bank X
+ country: DE
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: DE02 1203 0000 0000 2020 51
+ bic: BYLADEM1001
+ evidence_ref: restricted/bank-letters/x2-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-Y-EUR
+ holder_name: Entity Y SA
+ bank_name: Bank Y
+ country: FR
+ currency: EUR
+ rail: SWIFT
+ rail_fields:
+ iban: FR14 2004 1010 0505 0001 3M02 606
+ bic: BNPAFRPPXXX
+ bank_address: &quot;16 bd des Italiens, Paris&quot;
+ intermediary_bic: &quot;&quot;
+ evidence_ref: restricted/bank-letters/y-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-PTG-IDR
+ holder_name: PT Global Inc
+ bank_name: Bank Mandiri
+ country: ID
+ currency: IDR
+ rail: local
+ rail_fields:
+ bank_code: &quot;008&quot;
+ account_number: &quot;1234567890&quot;
+ evidence_ref: restricted/bank-letters/ptg-idr.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-ALI-EUR-RAIL
+ holder_name: Ali EU EMI
+ bank_name: EMI Bank
+ country: LT
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: LT12 1000 0111 0100 1000
+ bic: EMIBLT22
+ evidence_ref: restricted/bank-letters/ali-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-JETON-EUR-RAIL
+ holder_name: Jeton EMI
+ bank_name: Jeton Bank
+ country: GB
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: GB29 NWBK 6016 1331 9268 19
+ bic: NWBKGB2L
+ evidence_ref: restricted/bank-letters/jeton-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
 receiver_groups:
  - code: DEFAULT
  name: Default group
@@ -433,7 +528,7 @@ receivers:
  currency: EUR
  rail: SEPA
  account_kind: bank
- bank_details_ref: bank-ref-001
+ bank_account_details: BAD-X1-EUR
  usage: standing
  status: active
  - code: ENTITY_X2
@@ -444,7 +539,7 @@ receivers:
  currency: EUR
  rail: SEPA
  account_kind: bank
- bank_details_ref: bank-ref-002
+ bank_account_details: BAD-X2-EUR
  usage: standing
  status: active
  - code: RCV_Y
@@ -461,7 +556,7 @@ receivers:
  currency: EUR
  rail: SWIFT
  account_kind: bank
- bank_details_ref: bank-ref-003
+ bank_account_details: BAD-Y-EUR
  usage: standing
  status: active
  - code: RET_SND_A
@@ -507,8 +602,8 @@ senders:
  status: active
  sendable_to: [DEFAULT]
  provenance:
- - label: own account
- account_ref: wallet-snd-a-1
+ - label: own wallet (TRC-20)
+ bank_account_details: null
  fee_overrides: []
  - code: SND_B
  name: Sender B
@@ -516,8 +611,8 @@ senders:
  status: active
  sendable_to: [DEFAULT]
  provenance:
- - label: own account
- account_ref: wallet-snd-b-1
+ - label: own wallet (TRC-20)
+ bank_account_details: null
  fee_overrides:
  - partner_pair: CLIENT1-ALI/USDT-EUR
  pct: 0.012
@@ -581,7 +676,7 @@ partner_configs:
  kind: bank
  currency: IDR
  rail: local
- bank_details_ref: bank-ref-ptg-idr
+ bank_account_details: BAD-PTG-IDR
  risk_band: standard
  usage: standing
  status: active
@@ -590,7 +685,7 @@ partner_configs:
  status: active
  settlement_rails:
  - name: Ali's EU bank / EMI
- bank_details_ref: rail-ref-ali-eur
+ bank_account_details: BAD-ALI-EUR-RAIL
  expected_bank_fee: 25
  currency: EUR
  destination_approvals:
@@ -655,7 +750,7 @@ partner_configs:
  status: active
  settlement_rails:
  - name: Jeton EMI (SEPA)
- bank_details_ref: rail-ref-jeton-eur
+ bank_account_details: BAD-JETON-EUR-RAIL
  expected_bank_fee: 0
  currency: EUR
  destination_approvals:

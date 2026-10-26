@@ -13,7 +13,10 @@ import { clientFacing } from "./client-facing.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
-const outDir = path.join(root, "docs");
+const REVIEW = !!process.env.NPLIFY_REVIEW;                      // round-2 review marks: yellow = new, red strike = goes
+const outDir = process.env.NPLIFY_OUT || path.join(root, "docs");
+const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
+const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 // v6.0: the figure drawn for the design review (scripts/figures-v6.0/<name>.svg, exported from the client pack's figure pass)
@@ -29,7 +32,7 @@ const refs = [];
 for (const n of Object.keys(D.E)) for (const f of D.E[n].f) if (/_ref$/.test(f[0]) && f[0] !== "client_ref") refs.push([n, f[0], f[3] || ""]);
 const refGroups = {
   "Evidence and documents (S3)": refs.filter((r) => /evidence|body_ref|token_ref|agent_contact|provider_ref|slip_ref/.test(r[1])),
-  "Bank details, KYC and legal (restricted store)": refs.filter((r) => /bank_details|kyc_ref|legal_entity|details_ref/.test(r[1])),
+  "KYC, legal documents and bank letters (restricted prefix)": refs.filter((r) => /kyc_ref|legal_entity|details_ref/.test(r[1]) || r[0] === "BANK_ACCOUNT_DETAILS"),
   "References to outside records (text only)": refs.filter((r) => /partner_agreement|account_ref|funding_reference/.test(r[1])),
 };
 const covered = new Set(Object.values(refGroups).flat().map((r) => r[0] + "." + r[1]));
@@ -53,6 +56,7 @@ const JOBS = [
 const diagram = `<figure class="chart">${figSvg("arch-fig1")}<figcaption>Figure 1 — Two application tasks in two zones, a Multi-AZ database, backups copied to a second region, and the fallback workbook as the tenth job. Recovery inside one hour (Cutover Approach 8a): a zone failure fails over to the standby and the second task; a whole-region outage is covered by the cross-region backup copy and the runbook; the fallback workbook bridges the hours in between. Running cost about USD 165–245 a month (Section 6).</figcaption></figure>`;
 
 const CSS = `
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
 body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
 h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
@@ -81,6 +85,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Architecture &amp; Stack Note · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
+${REVIEW ? `<p class="rev-note"><b>Round-2 review draft, 26 October 2026 (D58, bank account details).</b> Yellow = added or replaced; red strike = what goes. Nothing else has changed.</p>` : ""}
 <h2>How to read this pack</h2>
 <p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
 
@@ -92,7 +97,7 @@ ${diagram}
 <table><thead><tr><th style="width:12%">Piece</th><th style="width:38%">NPL's page</th><th>What it has to do for the model (v${V})</th></tr></thead><tbody>
 <tr><td class="k">App</td><td>Next.js with TypeScript: screens, API and background jobs (quote clocks, rate fetch, alerts) in one app.</td><td>Screens per role (Section 5); a JSON API the screens call, which is also where every rule of the model is enforced — pricing (Calculation Specification), the state machines (Lifecycle &amp; Approvals), maker-checker from ROLE_RIGHT rows, the field filter of ROLE.sees_economics; and a job runner inside the same service for the nine jobs of Section 4. One process, one deployment, one log.</td></tr>
 <tr><td class="k">Database</td><td>PostgreSQL. Ledger and audit tables accept inserts only; the database refuses updates and deletes.</td><td>${tables} tables and ${VIEWS.length} derived views of the ERD. ${LEDGER.filter((n) => /^LEDGER_|AUDIT/.test(n)).join(", ")} are insert-only at the database level (Section 3). Every balance anywhere is a SQL view over postings (invariant 10); nothing is stored twice. Money is ${c("numeric")}, never floating point; time is ${c("timestamptz")}, shown in SYSTEM_SETTING.operating_timezone and in each partner's cutoff_timezone where the partner's clock applies.</td></tr>
-<tr><td class="k">Files</td><td>Amazon S3 for slips, screenshots and photos.</td><td>The model never stores a file or a bank detail in a table: it stores a reference. Objects go into one versioned bucket, private, encrypted at rest, reached through short-lived signed links the app issues; bank details, KYC and legal documents sit under a restricted prefix only Finance and Management roles can resolve.</td></tr>
+<tr><td class="k">Files</td><td>Amazon S3 for slips, screenshots and photos.</td><td>The model never stores a file ${dl("or a bank detail")} in a table: it stores a reference. Objects go into one versioned bucket, private, encrypted at rest, reached through short-lived signed links the app issues; ${dl("bank details, KYC and legal documents sit under a restricted prefix only Finance and Management roles can resolve.")}${mk("evidence files (bank letters, KYC, legal documents) sit under a restricted prefix only Finance and Management roles can resolve. Bank account details themselves are in the database (BANK_ACCOUNT_DETAILS, versioned), visible in full to Operations, Finance and Management, every full read logged in AUDIT_LOG.")}</td></tr>
 <tr><td class="k">Sign-in</td><td>NPLify's own login: email and password plus a code from an authenticator app. Users and roles are managed in NPLify.</td><td>USER (email, role_id, status) → ROLE (sees_economics) → ROLE_RIGHT (may_initiate, may_approve, escalates_to_role_id) (D44). Password hashed with a modern algorithm; TOTP secret per user; a session cookie, server-side, that expires on inactivity; every user change approved by a second Management user (Roles &amp; Visibility rule 7). No outside identity provider: the ERD's note "Google Workspace" on USER.email describes the address, not the login.</td></tr>
 <tr><td class="k">Hosting</td><td>AWS in Hong Kong: one small container service, a managed PostgreSQL database and an S3 bucket.</td><td>Region ap-east-1. Two small application tasks in two availability zones (App Runner or ECS on Fargate), and a Multi-AZ managed PostgreSQL instance with a standby in the second zone (Section 7, item 5, as decided on 20 October): RDS, smallest burstable class, storage auto-growing, automated backups on; one S3 bucket with versioning. Secrets (database password, rate-feed and explorer keys, the Sheets service account) in the account's secrets store, never in the image or the repository. Outbound calls only to the four services of Figure 1.</td></tr>
 </tbody></table>
@@ -179,14 +184,15 @@ ${JOBS.map((j) => `<tr><td class="k">${esc(j[0])}</td><td>${esc(j[1])}</td><td>$
 <ol>
 <li><b>Container service.</b> App Runner (simplest) or ECS on Fargate (more control); both fit the cost line. Assumed: App Runner.</li>
 <li><b>Wallet screening provider</b> (D31): which tool, and whether the app calls it or Operations pastes the result. Assumed: pasted result with evidence until a provider is chosen.</li>
-<li><b>The restricted store</b> for bank details, KYC and legal documents: the same bucket under a restricted prefix (assumed), or a separate secrets store.</li>
+<li><b>The restricted store</b> for ${dl("bank details,")} KYC${mk(",")} legal documents ${mk("and bank letters")}: the same bucket under a restricted prefix (assumed), or a separate secrets store. ${mk("Bank account details are no longer files: they are rows of BANK_ACCOUNT_DETAILS, read-logged (decision of 26 October 2026).")}</li>
 <li><b>Client journal content</b>: which state changes and which fields each client sees; assumed the sender-facing set of MESSAGE_TEMPLATE quote plus state and timestamps, per client.</li>
 <li><b>Availability,</b> decided on 20 October 2026 with the one-hour recovery target: a Multi-AZ database (a hot standby in a second availability zone with automatic failover) and two application tasks in two zones, so that one zone's failure neither loses the database nor stops the application. The cost of both is in the table of Section 6. The residual risk accepted is a whole-region outage, covered by the daily cross-region backup copy and the recovery runbook (Cutover Approach 8a), with the fallback workbook bridging the hours until restore.</li>
 </ol>
 <p class="small"><i>Draft v${V} — for review with NPL. This note describes the build; the data model it serves is the ERD &amp; Data Model, and the rules it enforces are those of the Lifecycle &amp; Approvals, Roles &amp; Visibility, Calculation and Configuration documents.</i></p>
 </body></html>`;
 
-const h = path.join(outDir, `NPLify-Architecture-and-Stack-v${V}.html`), p = path.join(outDir, `NPLify-Architecture-and-Stack-v${V}.pdf`);
+const base = REVIEW ? "NPLify-Architecture-and-Stack-review" : `NPLify-Architecture-and-Stack-v${V}`;
+const h = path.join(outDir, `${base}.html`), p = path.join(outDir, `${base}.pdf`);
 fs.writeFileSync(h, clientFacing(html));
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });

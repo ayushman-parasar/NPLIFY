@@ -10,7 +10,15 @@ import { D, erDiagram, renderSvgs, stubNote } from "./mermaid-diagrams.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
-const outDir = path.join(root, "docs");
+const REVIEW = !!process.env.NPLIFY_REVIEW;                      // round-2 review marks: yellow = new, red strike = goes
+const outDir = process.env.NPLIFY_OUT || path.join(root, "docs");
+const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
+const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
+// v6.1 (D58): what the review marks cover in the generated parts — new tables, changed fields, removed fields
+const REV = { tables: new Set(["BANK_ACCOUNT_DETAILS", "BANK_DETAILS_TEMPLATE"]),
+  fields: { RECEIVING_ENTITY_ACCOUNT: ["bank_account_details_id"], COLLECTION_RECEIVING_ENDPOINT: ["bank_account_details_id"], DESTINATION_APPROVAL: ["bank_account_details_id"], SETTLEMENT_RAIL: ["bank_account_details_id"], COLLECTION_SENDING_ENTITY: ["bank_account_details_id"] },
+  removed: { RECEIVING_ENTITY_ACCOUNT: [["bank_details_ref", "string", "", "external store; when account_kind = bank"]], COLLECTION_RECEIVING_ENDPOINT: [["bank_details_ref", "string", "", "external store; when kind = bank"]], DESTINATION_APPROVAL: [["bank_details_ref", "string", "", "external store; bank account"]], SETTLEMENT_RAIL: [["bank_details_ref", "string", "", ""]], COLLECTION_SENDING_ENTITY: [["account_ref", "string", "", ""]] } };
+const revRow = (name, f) => REVIEW && (REV.tables.has(name) || (REV.fields[name] || []).includes(f[0]));
 fs.mkdirSync(outDir, { recursive: true });
 const V = D.version;
 const DATE = "22 October 2026";
@@ -34,7 +42,7 @@ const DG = Object.fromEntries(DIAGRAMS.map((dg) => [dg.id, dg]));
 // from the client pack's figure pass; boxes coloured by class, key fields only). The Mermaid diagrams are still rendered
 // and used when a figure file is missing.
 const figDir = path.join(here, "erd-figures-v6.0");
-const figureSvg = (id) => { const f = path.join(figDir, `${id}.svg`); return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null; };
+const figureSvg = (id) => { const f = path.join(figDir, `${id}.svg`); if (!fs.existsSync(f)) return null; const svg = fs.readFileSync(f, "utf8"); return REVIEW ? svg : svg.replace(/<g class="rev">[\s\S]*?<\/g>/g, ""); };
 const diagramPage = (dg) => {
   const drawn = figureSvg(dg.id);
   const svg = drawn ?? svgs[dg.id];
@@ -49,7 +57,7 @@ const diagramPage = (dg) => {
 // ------------------------------------------------------------------ text helpers
 // Tables whose description is printed in the dictionary: the three tables new in v6.0 (the whole description) and
 // the tables whose v6.0 change is a rule rather than a field (the "v6.0:" sentence of the description only).
-const DICT_DESC = { EMERGENCY_ACTION: "all", PARTNER_STATEMENT_RECONCILIATION: "all", OPENING_ENTRY: "all", OWN_WALLET: "v6.0", REROUTE: "text" };
+const DICT_DESC = { EMERGENCY_ACTION: "all", PARTNER_STATEMENT_RECONCILIATION: "all", OPENING_ENTRY: "all", BANK_ACCOUNT_DETAILS: "all", BANK_DETAILS_TEMPLATE: "all", OWN_WALLET: "v6.0", REROUTE: "text" };
 const DICT_TEXT = {
   REROUTE: `“Reroute is the only way partner or partner entity change after quote” now holds for a converted leg too; a post_conversion reroute leaves the leg's pricing stamp and client net untouched and moves only where the balance rests.`,
 };
@@ -60,13 +68,14 @@ const dictDesc = (name) => {
   let t = String(D.E[name].desc ?? "");
   if (mode === "v6.0") { const i = t.indexOf("v6.0:"); if (i < 0) return ""; t = t.slice(i + 5).trim(); t = t[0].toUpperCase() + t.slice(1); }
   t = t.replace(/\bv6\.0\b[,:]?\s*/g, "").replace(/\s*,?\s*\bD5\d\b/g, "");
-  return `<p class="small">${esc(hist(t))}</p>`;
+  const out = esc(hist(t.replace(/\bv6\.1:?\s*/g, "").replace(/\s*\(?D58\)?,?/g, "")));
+  return `<p class="small">${REVIEW && REV.tables.has(name) ? mk(out) : out}</p>`;
 };
 const fieldTable = (name) => {
   const e = D.E[name];
-  return `<h4 id="dd-${name}">${esc(name)}</h4>
+  return `<h4 id="dd-${name}">${REVIEW && REV.tables.has(name) ? mk(esc(name)) : esc(name)}</h4>
 ${dictDesc(name)}<table class="dd"><thead><tr><th>Field</th><th>Type</th><th>Key</th><th>Notes</th></tr></thead><tbody>
-${e.f.map((f) => `<tr><td class="mono">${esc(f[0])}</td><td>${esc(f[1])}</td><td class="mono">${esc(f[2] ?? "")}</td><td>${esc(note(f[3] ?? ""))}</td></tr>`).join("\n")}
+${e.f.map((f) => `<tr>${[esc(f[0]), esc(f[1]), esc(f[2] ?? ""), esc(note(f[3] ?? ""))].map((c, i) => `<td${i === 0 || i === 2 ? ' class="mono"' : ""}>${revRow(name, f) ? mk(c) : c}</td>`).join("")}</tr>`).join("\n")}${REVIEW ? (REV.removed[name] || []).map((f) => `<tr>${[esc(f[0]), esc(f[1]), esc(f[2]), esc(f[3])].map((c, i) => `<td${i === 0 || i === 2 ? ' class="mono"' : ""}>${c ? dl(c) : ""}</td>`).join("")}</tr>`).join("\n") : ""}
 </tbody></table>`;
 };
 const byDomain = (d) => Object.keys(D.E).filter((n) => D.E[n].d === d);
@@ -79,10 +88,10 @@ const notes = {
   config: [
     `A <b>Client</b> is the commercial relationship NPL contracts with; a <b>Project</b> is one arrangement with it (D38) and owns its configuration. Counterparty receivers sit in <b>receiver groups</b>: every project has one default group and every counterparty receiver belongs to exactly one group. Entitlement is tracked per group, so payouts within a group are ordinary settlement and only payouts across groups are offsets; a project with a single group never has an offset.`,
     `A <b>Receiver</b> has a kind: ${code("counterparty")} for a client receiver; ${code("sender_return")} stands for a sender so refunds use the ordinary payout path and the partner's destination approval; ${code("partner_transit")} stands for a partner's collection endpoint so the hop of a two-leg route is an ordinary payout. ${code("sender_return")} and ${code("partner_transit")} receivers belong to no group (${code("group_id")} is null). They never appear on forward deals or allow lists — both validate kind = counterparty — and a payout to them is attributed to the group of the leg that pays them, so no entitlement moves between groups on a refund or a hop. Groups exist for entitlement and offset accounting; refund exclusion is a receiver-kind rule, not a group (D13).`,
-    `A receiving entity holds one or more <b>accounts</b>, each with a currency and rail (EUR via SWIFT and EUR via SEPA are two accounts). An account is a bank account or a wallet (${code("account_kind")}): a bank account carries ${code("bank_details_ref")} and a bank rail; a wallet carries ${code("network")} and ${code("address")} explicitly, mirroring the partner-side ${code("COLLECTION_RECEIVING_ENDPOINT")}, so addresses can be checksum-validated, checked against the rail, and found when the same address is registered with two partners. Destination approvals and settlement lines point at the account. No table stores actual bank details: ${code("bank_details_ref")} points at the external store.`,
+    `A receiving entity holds one or more <b>accounts</b>, each with a currency and rail (EUR via SWIFT and EUR via SEPA are two accounts). An account is a bank account or a wallet (${code("account_kind")}): a bank account carries ${dl(code("bank_details_ref"))}${mk(code("bank_account_details_id"))} and a bank rail; a wallet carries ${code("network")} and ${code("address")} explicitly, mirroring the partner-side ${code("COLLECTION_RECEIVING_ENDPOINT")}, so addresses can be checksum-validated, checked against the rail, and found when the same address is registered with two partners. Destination approvals and settlement lines point at the account. ${dl(`No table stores actual bank details: ${code("bank_details_ref")} points at the external store.`)}${mk(`The bank details themselves are rows of ${code("BANK_ACCOUNT_DETAILS")}: a bank account carries ${code("bank_account_details_id")}, the current version of its details. A details row is never edited — a change is a new row that names the one it supersedes — so a settlement line released before the change still resolves to the details it was released against. The fields a rail needs (IBAN and BIC for SEPA; account or IBAN, BIC, bank address and intermediary for SWIFT; sort code and account number in the UK; bank code and account number on a local rail) come from ${code("BANK_DETAILS_TEMPLATE")}, which also carries the format rule each field is validated against on save. Only the evidence (bank letter, KYC, legal document) stays a file under the restricted prefix.`)}`,
     `Fees are per partner × pair (${code("FEE_STRUCTURE")} under ${code("PARTNER_PAIR")}), so choosing the partner is part of pricing. ${code("PARTNER.disclosure_style")} records whether the partner's markup is visible; ${code("partner_fee_pct")} is known only for fee_on_market partners.`,
-    `A partner operates through one or more legal vehicles (${code("PARTNER_ENTITY")}: PT-tour, PT Global Inc); the deal stamps the vehicle at quote so paperwork names the right company. Each vehicle owns the endpoints a sender can pay into (${code("COLLECTION_RECEIVING_ENDPOINT")}): kind = bank with a currency and ${code("bank_details_ref")}, or kind = wallet with ${code("network")} and ${code("address")}. The partner side therefore mirrors the client side — ${code("PARTNER_CONFIG")} → ${code("PARTNER_ENTITY")} → ${code("COLLECTION_RECEIVING_ENDPOINT")} as ${code("RECEIVER")} → ${code("RECEIVING_ENTITY")} → ${code("RECEIVING_ENTITY_ACCOUNT")} (D15). An endpoint also carries a nullable ${code("rail")}: a bank endpoint must have it before it becomes active, and a wallet may leave it null but must match ${code("network")} when it is set (D18); the endpoint's kind must match the leg's ${code("collection_method")} (D19). Cash-in has no endpoint record; the leg carries the city and the collection the token (D30). The collected cash amount is rounded by the pair's ${code("cash_rounding")} option — truncate, nearest or round up — to ${code("cash_rounding_unit")} (100 / 500 / 1,000 by currency), the same menu as payout rounding (D25).`,
-    `Destination approval is per partner: ${code("DESTINATION_APPROVAL")} is an account of the project's receiving entity as registered with this partner, carrying the partner's approval status and the payout details the partner holds. Those details follow the account's kind: ${code("bank_details_ref")} for a bank account, ${code("network")} and ${code("address")} for a wallet (D16). ${code("SETTLEMENT_SENDING_ENTITY")} is the narrative on an outgoing transfer; ${code("SETTLEMENT_RAIL")} is the bank/EMI that executes it; neither holds money. ${code("COLLECTION_SENDING_ENTITY")} is provenance only and never a payout destination.`,
+    `A partner operates through one or more legal vehicles (${code("PARTNER_ENTITY")}: PT-tour, PT Global Inc); the deal stamps the vehicle at quote so paperwork names the right company. Each vehicle owns the endpoints a sender can pay into (${code("COLLECTION_RECEIVING_ENDPOINT")}): kind = bank with a currency and ${dl(code("bank_details_ref"))}${mk(code("bank_account_details_id"))}, or kind = wallet with ${code("network")} and ${code("address")}. The partner side therefore mirrors the client side — ${code("PARTNER_CONFIG")} → ${code("PARTNER_ENTITY")} → ${code("COLLECTION_RECEIVING_ENDPOINT")} as ${code("RECEIVER")} → ${code("RECEIVING_ENTITY")} → ${code("RECEIVING_ENTITY_ACCOUNT")} (D15). An endpoint also carries a nullable ${code("rail")}: a bank endpoint must have it before it becomes active, and a wallet may leave it null but must match ${code("network")} when it is set (D18); the endpoint's kind must match the leg's ${code("collection_method")} (D19). Cash-in has no endpoint record; the leg carries the city and the collection the token (D30). The collected cash amount is rounded by the pair's ${code("cash_rounding")} option — truncate, nearest or round up — to ${code("cash_rounding_unit")} (100 / 500 / 1,000 by currency), the same menu as payout rounding (D25).`,
+    `Destination approval is per partner: ${code("DESTINATION_APPROVAL")} is an account of the project's receiving entity as registered with this partner, carrying the partner's approval status and the payout details the partner holds. Those details follow the account's kind: ${dl(code("bank_details_ref"))}${mk(code("bank_account_details_id") + " (the details as registered with this partner)")} for a bank account, ${code("network")} and ${code("address")} for a wallet (D16). ${code("SETTLEMENT_SENDING_ENTITY")} is the narrative on an outgoing transfer; ${code("SETTLEMENT_RAIL")} is the bank/EMI that executes it; neither holds money. ${code("COLLECTION_SENDING_ENTITY")} is provenance only and never a payout destination${mk(`; its source account, when known, is a ${code("BANK_ACCOUNT_DETAILS")} row too`)}.`,
     `${code("OWN_WALLET")} has a role: reroute contingency (AQN-LT-Sub at Aquanow), own desk, or a collection bridge on a network a partner lacks, forwarded to the partner as a hop within the wallet's custody limit (D40); ${code("PARTNER_CONFIG.applicable_for_reroute")} defines the alternate-partner set. ${code("PARTNER.supported_methods")} declares what a partner offers — cash and local deposits have no standing endpoint to read it from (D39). ${code("WALLET_REGISTRY")} lists every known address with its owner and role. Under an <b>own-desk</b> partner configuration (${code("is_own_desk")}, the NPL-GR game-reseller project) NPL itself is the converting party: its pairs are priced market plus NPL's markup and its collection endpoints are NPL's own wallets (${code("COLLECTION_RECEIVING_ENDPOINT.own_wallet_id")}); the custody view reports every such balance (D23).`,
     `<b>Fees.</b> A ${code("FEE_OVERRIDE")} may carry its own sender / receiver split instead of inheriting the structure's proportion (D20). ${code("FEE_TIER")} rows under a structure price by the project's calendar-month volume; a leg that takes the month past a threshold is split across two tiers (D21). ${code("customer_facing_fee_basis")} / ${code("customer_facing_fee_pct")} on the structure say what the customer's quote prints when it differs from the recorded parts; the printed "source rate" is derived at quote, never typed (D22). ${code("CURRENCY_PAIR.amount_rounding")} is a menu — truncate, nearest or round up, to the unit or to ${code("rounding_unit")} — and a pair may have the same currency on both sides (D25, D33).`,
     `<b>Who else earns on a deal.</b> ${code("MARKUP_SHARE_PARTY")} / ${code("MARKUP_SHARE_RULE")} record a share NPL pays — or, with basis ${code("share_of_net_markup")} and ${code("party_kind")} client_party, the customer who provides a sub-account and shares NPL's markup (Raeen): the base is the leg's fee parts less its partner cost, rebates excluded, several parties may hold rules with different shares, and ${code("settlement_mode")} party_retains means the party holds the converted money and pays NPL the remainder monthly (D26). ${code("PARTNER_REBATE_RULE")} records the rebate a partner pays NPL, with a basis (percentage of amount or of the partner's fee) and an optional scope by sender or fee structure; the rebate is NPL's alone and is reported as its own stream (D27).`,
@@ -137,7 +146,7 @@ const SCOPE_NOTE = `<p><b>Scope (NPL decision, 19 October 2026):</b> the whole m
 
 // Every table belongs to exactly one class; the build refuses a table left out or listed twice.
 const CLASSES = [
-  ["Configuration &amp; master data (dimensions)", ["CLIENT", "PARTNER", "HOLIDAY", "PARTNER_CUTOFF_OVERRIDE", "RATE_SOURCE", "MARKUP_SHARE_PARTY", "SYSTEM_SETTING", "MESSAGE_TEMPLATE", "PROJECT", "THRESHOLD", "CURRENCY_PAIR", "PAIR_RATE_SOURCE", "OWN_WALLET", "SENDER", "SENDER_RECEIVER_ALLOW", "COLLECTION_SENDING_ENTITY", "FEE_OVERRIDE", "RECEIVER_GROUP", "RECEIVER", "RECEIVING_ENTITY", "RECEIVING_ENTITY_ACCOUNT", "WALLET_SCREENING", "PARTNER_CONFIG", "PARTNER_PAIR", "FEE_STRUCTURE", "FEE_TIER", "PARTNER_ENTITY", "COLLECTION_RECEIVING_ENDPOINT", "SETTLEMENT_SENDING_ENTITY", "SETTLEMENT_RAIL", "DESTINATION_APPROVAL", "MARKUP_SHARE_RULE", "PARTNER_REBATE_RULE"]],
+  ["Configuration &amp; master data (dimensions)", ["CLIENT", "PARTNER", "HOLIDAY", "PARTNER_CUTOFF_OVERRIDE", "RATE_SOURCE", "MARKUP_SHARE_PARTY", "SYSTEM_SETTING", "MESSAGE_TEMPLATE", "PROJECT", "THRESHOLD", "CURRENCY_PAIR", "PAIR_RATE_SOURCE", "OWN_WALLET", "SENDER", "SENDER_RECEIVER_ALLOW", "COLLECTION_SENDING_ENTITY", "FEE_OVERRIDE", "RECEIVER_GROUP", "RECEIVER", "RECEIVING_ENTITY", "RECEIVING_ENTITY_ACCOUNT", "WALLET_SCREENING", "BANK_ACCOUNT_DETAILS", "BANK_DETAILS_TEMPLATE", "PARTNER_CONFIG", "PARTNER_PAIR", "FEE_STRUCTURE", "FEE_TIER", "PARTNER_ENTITY", "COLLECTION_RECEIVING_ENDPOINT", "SETTLEMENT_SENDING_ENTITY", "SETTLEMENT_RAIL", "DESTINATION_APPROVAL", "MARKUP_SHARE_RULE", "PARTNER_REBATE_RULE"]],
   ["Rate reference", ["MARKET_RATE", "RATE_COMPARISON", "PARTNER_RATE_VERSION"]],
   ["Transactional events (facts)", ["INVOICE", "DEAL_GROUP", "DEAL", "QUOTE_PACKAGE", "QUOTE_VALIDITY_EXTENSION", "SENDER_CREDIT", "DEAL_FEE_TIER", "COLLECTION", "CONVERSION", "REROUTE", "EARNINGS_RECEIVABLE", "BALANCE_CONVERSION", "ENTITLEMENT_REATTRIBUTION", "EARNINGS_OFFSET", "SETTLEMENT", "SETTLEMENT_LINE", "SETTLEMENT_RETURN", "CONFIRMATION", "SHORTFALL", "BANK_FEE_EVENT", "FEE_DECISION", "MARKUP_SHARE_ACCRUAL", "PARTNER_REBATE_ACCRUAL", "LOSS_EVENT", "LOSS_RECOVERY"]],
   ["Ledger &amp; control (facts of the books; governance)", ["LEDGER_TRANSACTION", "LEDGER_POSTING", "LEDGER_ACCOUNT", "OPENING_ENTRY", "PARTNER_STATEMENT_RECONCILIATION", "USER", "ROLE", "ROLE_RIGHT", "APPROVAL", "AUDIT_LOG", "RECORD_LOCK", "EMERGENCY_ACTION"]],
@@ -150,7 +159,7 @@ const CLASSES = [
 const CLASSIFICATION = `<h2>Classification of the tables (fact and dimension)</h2>
 <p>Pete asked which tables are the facts and which the dimensions. In this model there are five classes; every table belongs to exactly one, and the diagrams (1a to 4) colour each box by its class. Configuration and master data are the dimensions: rows that describe how the business is set up, versioned by effective date and never edited. Rate reference is a time series of reference values. Transactional events are the facts: one row per thing that happened to a deal. Ledger and control tables are the facts of the books and the records that govern them. Derived views are never stored.</p>
 ${table(["Class", "Tables", "Count"], [
-  ...CLASSES.map(([cls, list]) => [cls, `<span class="mono">${list.join(", ")}</span>`, String(list.length)]),
+  ...CLASSES.map(([cls, list]) => [cls, `<span class="mono">${list.map((t) => (REVIEW && REV.tables.has(t) ? mk(t) : t)).join(", ")}</span>`, String(list.length)]),
   ["Derived views (never stored)", `<span class="mono">${views.join(", ")}</span>`, `${views.length} views`],
 ], ["26%", "", "9%"])}
 <p>${tables.length} tables and ${views.length} views. ${code("WALLET_SCREENING")} is configuration-domain data although Operations records it, because its decision binds later deals on the same address; ${code("PARTNER_RATE_VERSION")} is rate reference although Finance confirms it, because deals stamp it as a reference, not as an event of their own.</p>`;
@@ -171,6 +180,10 @@ ${table(["Rule", "Mechanism", "Database level", "Notes"], [
   ["Exactly one default receiver group per project", "Partial unique index on RECEIVER_GROUP(project_id) where is_default", "yes", "Configuration Schema rule 2"],
   ["Accounts unique per entity, currency and rail; endpoints unique per entity, currency, network or rail", "Unique keys", "yes", "rule 4"],
   ["A single-use account or endpoint serves one deal", "Unique key on reserved_for_deal_id where usage = single_use", "yes", ""],
+  [mk("Bank details are write-once; a change is a new version"), mk("Trigger refusing UPDATE on BANK_ACCOUNT_DETAILS except the status column; supersedes_id names the replaced row"), mk("must"), mk("the version current at release stays what a settlement line resolves to")],
+  [mk("A bank account, bank endpoint or settlement rail is active only with active bank details of the same rail"), mk("Trigger on status change checking the BANK_ACCOUNT_DETAILS row and its rail"), mk("yes"), mk("Configuration Schema rule 14")],
+  [mk("rail_fields match the rail's template: required fields present, format rules pass (IBAN check digits, BIC length, sort-code pattern)"), mk("Application validation on save against BANK_DETAILS_TEMPLATE"), mk("no"), mk("Configuration Schema rule 14")],
+  [mk("Every full read of a bank-details row is logged"), mk("Application: the read endpoint writes an AUDIT_LOG row (record_type BANK_ACCOUNT_DETAILS, field read, actor, time)"), mk("no"), mk("Roles &amp; Visibility rule 10")],
   ["One open lock per record", "Partial unique index on RECORD_LOCK(record_type, record_id) where released_at is null", "yes", "Lifecycle &amp; Approvals 6a"],
   ["One reconciliation per partner configuration, currency and statement date", "Unique key on PARTNER_STATEMENT_RECONCILIATION", "yes", ""],
   ["sender_pays_pct + receiver_pays_pct = pct; min_markup ≤ max_markup; a fixed customer-facing fee names its pct", "CHECK on FEE_STRUCTURE and FEE_OVERRIDE", "yes", "rule 6"],
@@ -218,6 +231,7 @@ ${table(["Index", "Serves"], [
 const RUN =`NPLify · P0 Technical Baseline · ERD &amp; Data Model · Draft v${V}`;
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify · P0 Technical Baseline — ERD & Data Model · Draft v${V}</title>
 <style>
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 @page { size: A4; margin: 16mm 18mm 16mm 18mm; @top-left { content: "${RUN.replace(/&amp;/g, "&")}"; font: 8pt Helvetica, Arial, sans-serif; color: #666 } @bottom-right { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
 @page land { size: A4 landscape; margin: 12mm 12mm 10mm 12mm; }
 html,body{margin:0;padding:0}
@@ -257,6 +271,7 @@ tr{break-inside:avoid}
 <p class="date">${DATE} · Confidential</p>
 </div>
 
+${REVIEW ? `<p class="rev-note"><b>Round-2 review draft, 26 October 2026 (D58, bank account details).</b> Yellow = text, fields and tables added or replaced; red strike = what goes. Nothing else has changed.</p>` : ""}
 ${READING_NOTE}
 <h2>Conventions</h2>
 <p><b>Convention:</b> all monetary amounts are stored as exact decimals; every table carries ${code("created_at")} / ${code("created_by")}; audit, approvals and locking are modelled once (domain 4) and apply to all master data. Derived figures (client balance, group entitlement, offsets, custody) are <b>views over postings and deals — never stored</b>.</p>
@@ -306,11 +321,12 @@ ${APPENDIX_C}
 ${APPENDIX_D}
 </body></html>`;
 
-const htmlPath = path.join(outDir, `NPLify-P0-ERD-v${V}.html`);
+const base = REVIEW ? "NPLify-P0-ERD-review" : `NPLify-P0-ERD-v${V}`;
+const htmlPath = path.join(outDir, `${base}.html`);
 // The client-facing pass knows the v1–v5 edition tokens; this edition's own token and draft marker are removed here.
 const thisEdition = (s) => s.replace(/\s*[·—–-]\s*Draft v6\.0\b/g, "").replace(/\bDraft v6\.0\b/g, "").replace(/\(v6\.0,\s*/g, "(").replace(/\bv6\.0[,:]?\s*/g, "").replace(/\(scope:\s*/g, "(");
 fs.writeFileSync(htmlPath, thisEdition(clientFacing(html)));
-const pdfPath = path.join(outDir, `NPLify-P0-ERD-v${V}.pdf`);
+const pdfPath = path.join(outDir, `${base}.pdf`);
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${pdfPath}`, "file://" + htmlPath], { stdio: "ignore" });
 fs.rmSync(path.join(outDir, ".mermaid-work"), { recursive: true, force: true });
