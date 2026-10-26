@@ -11,7 +11,10 @@ import { clientFacing } from "./client-facing.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
-const outDir = path.join(root, "docs");
+const REVIEW = !!process.env.NPLIFY_REVIEW;                                   // round-2 review draft: yellow = new, red strike = goes
+const outDir = process.env.NPLIFY_OUT || path.join(root, "docs");
+const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
+const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const V = D.version, DATE = "22 October 2026";
 const CAT = D.SCENARIO_CATALOGUE, WALKS = D.WALKS;
@@ -48,14 +51,17 @@ table.x{font-size:8.6pt} table.x td,table.x th{padding:3pt 4pt}
 .small{font-size:9pt;color:#444}
 .flow{break-inside:avoid;margin:0 0 10pt}
 .flow .fid{font:700 10pt Helvetica,Arial,sans-serif;color:#fff;background:#2f5d9e;padding:1pt 6pt;border-radius:3pt;margin-right:6pt}
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 `;
+const isDormant = (name) => /— dormant$/.test(name);
+const dormantIds = [];
 
 const clients = CAT.projects.map((p, pi) => `<section class="client">
 <h2>${pi + 1} · ${esc(p.client)}</h2>
 <p><b>Projects:</b> ${mono(p.projects)}</p>
-<p class="lead">${esc(p.lead)}</p>
+<p class="lead">${esc(p.lead)}${p.scenarios.some(([n]) => isDormant(n)) ? " " + mk("In the system they are dormant routes: configured, disabled by default, not offered on the quote screen, and reactivated only through the checklist at the end of Part 1.") : ""}</p>
 ${p.scenarios.map(([name, story, mech, tables], i) => `<div class="scn"><h4><span class="num">${pi + 1}.${i + 1}</span>${esc(name)}</h4>
-<p>${esc(story)}</p>
+<p>${esc(story)}</p>${isDormant(name) ? (dormantIds.push(`${pi + 1}.${i + 1}`), `<p>${mk("<span class=\"lbl\">Status</span> Dormant: kept in the configuration as a disabled route (partner pair, endpoints and rails inactive, destination approvals suspended, fee structure kept with its version). It cannot price a quote or receive a collection until it is reactivated under the checklist at the end of Part 1.")}</p>`) : ""}
 ${mech ? `<p><span class="lbl">Fee and flow</span> ${mono(mech)}</p>` : ""}
 ${tables ? `<p class="small"><span class="lbl">In the model</span> ${mono(tables)}</p>` : ""}</div>`).join("")}
 </section>`).join("");
@@ -71,7 +77,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Scenario Catalogue · Draft v${V}</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <p>Every scenario NPL runs today, grouped by client and project: ${total} scenarios across ${CAT.projects.length} client groups. Each scenario is given as NPL described it (the story), the fee and the operational flow it uses, and the parts of the model that carry it. The ten operational flows the scenarios share are defined once in Part 2 and referenced by number (F1–F10); Part 3 lists the guided walkthroughs that trace a deal through the model entity by entity, as they appear on the interactive map; Part 4 walks one deal through the model class by class (X1–X7).</p>
 <div class="rule"></div>
-
+${REVIEW ? `<p class="rev-note"><b>Round-2 review draft, 27 October 2026 (finding 04.1 of the v6.0 design review).</b> Yellow = added text; nothing is struck.</p>` : ""}
 <h2>How to read this pack</h2>
 <p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
 
@@ -85,6 +91,20 @@ ${CAT.projects.map((p) => `<tr><td><b>${esc(p.client)}</b></td><td>${mono(p.proj
 </tbody></table>
 <p>The fees, rebates and rates quoted in the scenarios below are NPL's figures of 8 to 9 October 2026 and are illustrative: each is a configured value of the project (a FEE_STRUCTURE, FEE_OVERRIDE, MARKUP_SHARE_RULE or PARTNER_REBATE_RULE row, versioned by effective date), never a constant in code. In particular the Jeton rebate of 0.4 % (scenarios 1.1, 1.6, 2.5) is set per project (NPL, 20 October), and the figures of the fee table may differ from the values in force when a project goes live.</p>
 ${clients}
+
+<h2>${mk("Dormant scenarios: disabled by default, and the reactivation checklist")}</h2>
+<p>${mk(`A dormant scenario (today ${dormantIds.join(" and ")}) is listed so that the configuration, the fee sheet and this catalogue agree, not so that it can be chosen. Its rows are kept and disabled: the partner pair carries status dormant, its collection endpoints and settlement rails are inactive, its destination approvals are suspended, and its fee structure and tiers keep their last version. A dormant route is not offered on the quote screen, and the server refuses a quote, a collection instruction and a settlement line on it, for every role and channel, with the reason "route dormant". A dormant route needs no deal in the parallel run (Cutover Approach, Section 6) and is not a test of the Test Strategy until it is reactivated.`)}</p>
+<p>${mk("<b>Reactivation</b> is a configuration change like any other (Finance proposes, Management approves) with a checklist whose evidence is attached to the proposal; a step without evidence keeps the route dormant. The route becomes active only when every step is done, the partner configuration block passes the validation rules of the Configuration Schema (Section 6, rules 13 and 15) and Management activates it.")}</p>
+<table><thead><tr><th style="width:5%">${mk("#")}</th><th style="width:33%">${mk("Step")}</th><th style="width:20%">${mk("Who")}</th><th>${mk("Evidence attached to the proposal")}</th></tr></thead><tbody>
+<tr><td>${mk("1")}</td><td>${mk("Partner confirms the route today: method, currency pair, rail, its cost and pricing style, cutoff and holidays, the correspondent or account arrangement still in place")}</td><td>${mk("Operations obtains; Finance records")}</td><td>${mk("The partner's written confirmation and its reference; PARTNER_PAIR and PARTNER fields compared with it")}</td></tr>
+<tr><td>${mk("2")}</td><td>${mk("Endpoints and rails re-activated, bank account details current")}</td><td>${mk("Operations proposes; Finance approves (Configuration Schema rules 7 and 14)")}</td><td>${mk("Each COLLECTION_RECEIVING_ENDPOINT and SETTLEMENT_RAIL active with an active BANK_ACCOUNT_DETAILS row of the same currency and rail; a wallet endpoint's network one the partner offers")}</td></tr>
+<tr><td>${mk("3")}</td><td>${mk("Destination approvals renewed by the partner")}</td><td>${mk("Operations records; the partner approves")}</td><td>${mk("DESTINATION_APPROVAL pending_partner → approved for every receiving account the route will pay, with the partner's reference")}</td></tr>
+<tr><td>${mk("4")}</td><td>${mk("Rates: the pair's rate-source chain confirmed and a fresh partner rate version confirmed")}</td><td>${mk("Operations enters; Finance confirms")}</td><td>${mk("PAIR_RATE_SOURCE rows present; one PARTNER_RATE_VERSION usable (not breached, not flagged); the breach rules of Calculation Specification 2a applied with the thin-history fallback")}</td></tr>
+<tr><td>${mk("5")}</td><td>${mk("Fees validated: the fee structure, tiers, rounding and partner fee re-stated as a new version with an effective date")}</td><td>${mk("Finance proposes; Management approves")}</td><td>${mk("The acceptance vector of the product recomputed (the B row of the Calculation Specification for its fee-sheet line, or a new B row NPL supplies) and matching")}</td></tr>
+<tr><td>${mk("6")}</td><td>${mk("Test deal on staging through the whole flow on the project's dummy twin: quote, collection, conversion, settlement, confirmation")}</td><td>${mk("Operations runs; Finance checks the postings")}</td><td>${mk("The deal's identifiers, the ledger identities after it, the reconciliation against the partner's statement")}</td></tr>
+<tr><td>${mk("7")}</td><td>${mk("Activation and UAT sign-off")}</td><td>${mk("Management activates; NPL signs off")}</td><td>${mk("The validation report of the block with every rule passed; the APPROVAL that set PARTNER_PAIR.status to active; the sign-off recorded with the proposal")}</td></tr>
+</tbody></table>
+<p>${mk("The acceptance test (Test Strategy S-DORM) attempts a quote and a collection on a dormant route before, during and after the checklist: refused until the last step, then priced; a route reactivated with a step missing stays refused. Deactivation is the same change in reverse: a route not used for a period NPL sets (a THRESHOLD of the project) is reported on the quarterly review and may be set dormant again by the same proposal path, which suspends its approvals and endpoints without deleting anything.")}</p>
 
 <h2>Workflow names (awaiting NPL)</h2>
 <p>Pete asked for more intuitive names for several workflows without saying which. The renaming waits for NPL's list. When it arrives, the names change in the Workflow Tree, the common procedures (C1 to C10), the state tables of the Lifecycle &amp; Approvals document and this catalogue, and the old names are kept in the glossary (ERD Appendix A.1) with a pointer to the new ones, so that older references still resolve. Nothing else in the pack depends on a workflow's name: codes and identifiers are unchanged by a rename.</p>
@@ -159,7 +179,8 @@ ${walks}
 <p class="small"><i>Draft v${V} — for review with NPL. Source: NPL's Fee Outlines workbook and NPL's answers of 8–9 October 2026, consolidated into the model.</i></p>
 </body></html>`;
 
-const h = path.join(outDir, `NPLify-Scenario-Catalogue-v${V}.html`), p = path.join(outDir, `NPLify-Scenario-Catalogue-v${V}.pdf`);
+const base = REVIEW ? "NPLify-Scenario-Catalogue-review" : `NPLify-Scenario-Catalogue-v${V}`;
+const h = path.join(outDir, base + ".html"), p = path.join(outDir, base + ".pdf");
 fs.writeFileSync(h, clientFacing(html));
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
