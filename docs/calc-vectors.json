@@ -254,6 +254,24 @@
    "payable": 20000,
    "residual": 0,
    "blended": 0.02375
+  },
+  "L14": {
+   "name": "Opening volume in the counter: GDC opens on day 20 with USD 480,000.00 month-to-date (opening line), target_out USD 40,000.00 at rate 1; 20,000.00 at 2.5 % and 20,000.00 at 2.25 % (blended 2.375 %); counter afterwards 520,950.00",
+   "in": "USDT",
+   "out": "USD",
+   "amountIn": 40950,
+   "Rs": 0.9768009768009768,
+   "grossOut": 40000,
+   "feeSender": 950,
+   "feeReceiver": 0,
+   "clientNet": 40000,
+   "actualOut": 40950,
+   "partnerCost": 0,
+   "earnings": 950,
+   "payable": 40000,
+   "residual": 0,
+   "blended": 0.02375,
+   "counterAfter": 520950
   }
  },
  "npl": [

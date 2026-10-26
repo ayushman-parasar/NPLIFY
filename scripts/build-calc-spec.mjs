@@ -11,14 +11,18 @@ import * as M from "./build-ledger-doc.mjs";
 
 const { price, roundUpN, fmt, pct, esc, r2, EX, JET, D1, DJ, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, RESALE_INV, VENDOR_INV, marginEur, Rq, Rd2, paid1, paid2, fx2, fx3, inst1Eur, inst2Eur, thbIn, thbExact, surplus, targetOut, RmT, RpT, shares, lossAmt, bounce, squareUsdt } = M;
 const here = path.dirname(fileURLToPath(import.meta.url));
-const outDir = path.join(path.resolve(here, ".."), "docs");
+const REVIEW = !!process.env.NPLIFY_REVIEW;                                   // round-2 review draft: yellow = new, red strike = goes
+const outDir = process.env.NPLIFY_OUT || path.join(path.resolve(here, ".."), "docs");
+const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
+const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
 const VERSION = JSON.parse(fs.readFileSync(path.join(path.resolve(here, ".."), "data/erd.v5.json"), "utf8")).version, DATE = "22 October 2026";
 const code = (s) => `<code>${esc(s)}</code>`;
 const F = (s) => `<div class="formula">${esc(s)}</div>`;
+const FR = (s) => `<div class="formula">${s}</div>`;                              // formula from pre-escaped parts (review marks inside)
 const rdN = (x, n) => Math.round(x * 10 ** n + 1e-9) / 10 ** n;
 const n = (x, dp = 2) => x.toLocaleString("en-GB", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 // a plain table from rows of strings (first row the header); numeric columns right-aligned
-const T = (rows, numCols = [], cls = "") => `<table${cls ? ` class="${cls}"` : ""}><thead><tr>${rows[0].map((c, i) => `<th${numCols.includes(i) ? ' class="n"' : ""}>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map((r) => `<tr>${r.map((c, i) => `<td${numCols.includes(i) ? ' class="n"' : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+const T = (rows, numCols = [], cls = "") => `<table${cls ? ` class="${cls}"` : ""}><thead><tr>${rows[0].map((c, i) => `<th${numCols.includes(i) ? ' class="n"' : ""}>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.slice(1).map((r) => `<tr>${r.map((c, i) => `<td${numCols.includes(i) ? ' class="n"' : ""}>${Array.isArray(c) ? c[0] : esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;   // a cell given as [html] is inserted raw
 
 // ------------------------------------------------------------------ acceptance vectors from NPL's own fee-table figures (FEE_PRACTICE)
 // Each row: what NPL's sheet shows, what the formulas of this document give, and whether they agree.
@@ -83,6 +87,13 @@ const D13 = (() => {                                                            
   const amountIn = r2(portions.reduce((a, [t, s]) => a + t * (1 + s), 0)), feeSender = r2(amountIn - targetOut), Rs = targetOut / amountIn;
   return { amountIn, Rs, grossOut: targetOut, feeSender, feeReceiver: 0, clientNet: targetOut, actualOut: amountIn, partnerCost: 0, earnings: feeSender, payable: targetOut, residual: 0, blended: feeSender / targetOut };
 })();
+// ------------------------------------------------------------------ L14: round 2 of the review (07.1) — the opening volume in the counter, a deal straddling the threshold on the opening day
+const OPEN14 = 480000;                                                                                         // GDC's month-to-date on the opening day (OPENING_ENTRY month_volume)
+const D14 = (() => {                                                                                           // 20,000 at 2.5 % (up to the 500,000 threshold) and 20,000 at 2.25 %
+  const portions = [[20000, 0.025], [20000, 0.0225]], targetOut = 40000;
+  const amountIn = r2(portions.reduce((a, [t, s]) => a + t * (1 + s), 0)), feeSender = r2(amountIn - targetOut), Rs = targetOut / amountIn;
+  return { amountIn, Rs, grossOut: targetOut, feeSender, feeReceiver: 0, clientNet: targetOut, actualOut: amountIn, partnerCost: 0, earnings: feeSender, payable: targetOut, residual: 0, blended: feeSender / targetOut, counterAfter: r2(OPEN14 + amountIn) };
+})();
 
 // ------------------------------------------------------------------ vectors from the ledger's worked deals (identical figures to the Ledger Posting Design)
 const LV = [
@@ -99,8 +110,9 @@ const LV = [
   ["L11", "Eight-decimal asset: 0.12345678 BTC → EUR at Ali, market 60,000.00000000 EUR per BTC, Ali 59,400.00000000 (1 % inside), sender 1.4 % + receiver 0.6 %; rate_precision 8, amounts 2 dp", D11, "BTC", "EUR", 8],
   ["L12", "Tier boundary, exactly reached: GDC, month-to-date USD 450,000.00, target_out USD 50,000.00 at rate 1; the deal ends the month-to-date at exactly 500,000.00, so the whole deal is tier 1 (2.5 %) and the next deal, of any size, is tier 2", D12, "USDT", "USD"],
   ["L13", `Tier boundary, crossed: GDC, month-to-date USD 490,000.00, target_out USD 20,000.00; 10,000.00 at 2.5 % and 10,000.00 at 2.25 % (two DEAL_FEE_TIER portions, blended ${(D13.blended * 100).toFixed(3)} %)`, D13, "USDT", "USD"],
+  ["L14", `Opening volume in the counter: GDC opens on day 20 with USD ${n(OPEN14)} month-to-date (opening line), target_out USD 40,000.00 at rate 1; 20,000.00 at 2.5 % and 20,000.00 at 2.25 % (blended ${(D14.blended * 100).toFixed(3)} %); counter afterwards ${n(D14.counterAfter)}`, D14, "USDT", "USD", 6, true],
 ];
-const lvRow = ([id, name, D, cin, cout, rateDp = 6]) => `<tr><td>${id}</td><td>${esc(name)}</td><td class="n">${cin === "BTC" ? D.amountIn.toFixed(8) : fmt(D.amountIn, cin)} ${cin}</td><td class="n">${n(D.Rs, rateDp)}</td><td class="n">${fmt(D.grossOut, cout)}</td><td class="n">${fmt(D.feeSender, cout)}</td><td class="n">${fmt(D.feeReceiver, cout)}</td><td class="n">${fmt(D.clientNet, cout)}</td><td class="n">${fmt(D.actualOut, cout)}</td><td class="n">${fmt(D.partnerCost, cout)}</td><td class="n">${fmt(D.earnings, cout)}</td><td class="n">${fmt(D.payable, cout)}</td><td class="n">${fmt(D.residual, cout)}</td></tr>`;
+const lvRow = ([id, name, D, cin, cout, rateDp = 6, rv = false]) => `<tr><td>${rv ? mk(id) : id}</td><td>${rv ? mk(esc(name)) : esc(name)}</td><td class="n">${cin === "BTC" ? D.amountIn.toFixed(8) : fmt(D.amountIn, cin)} ${cin}</td><td class="n">${n(D.Rs, rateDp)}</td><td class="n">${fmt(D.grossOut, cout)}</td><td class="n">${fmt(D.feeSender, cout)}</td><td class="n">${fmt(D.feeReceiver, cout)}</td><td class="n">${fmt(D.clientNet, cout)}</td><td class="n">${fmt(D.actualOut, cout)}</td><td class="n">${fmt(D.partnerCost, cout)}</td><td class="n">${fmt(D.earnings, cout)}</td><td class="n">${fmt(D.payable, cout)}</td><td class="n">${fmt(D.residual, cout)}</td></tr>`;
 
 // ------------------------------------------------------------------ worked arithmetic blocks (numbers from the same objects the ledger posts)
 const W = {
@@ -142,12 +154,13 @@ ul.nums{font-size:9.3pt;font-variant-numeric:tabular-nums;background:#fbfbf6;bor
 .small{font-size:9pt;color:#444}
 table.vec td,table.vec th{font-size:8.2pt;padding:2pt 3pt}
 .ok{color:#1a7f37;font-weight:700} .chk{color:#8a4b00;font-weight:700}
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 `;
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Calculation Specification v${VERSION}</title><style>${CSS}</style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Calculation Specification · Draft v${VERSION}</p><p>New XP Technologies Limited</p><p>${DATE} · Confidential</p><p class="small" style="margin-top:14pt">Numbered with the ERD edition it is built against.</p></div>
 <div class="rule"></div>
-
+${REVIEW ? `<p class="rev-note">Round-2 review draft, 27 October 2026 (findings 07.1 and 07.2 of the v6.0 design review). Yellow = added or replaced text; red strike = text that goes. The client version is the same document without the marks.</p>` : ""}
 <h2>How to read this pack</h2>
 <p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
 
@@ -172,15 +185,16 @@ breach         = spread > avg_2w_spread × (1 + variance_threshold_rel)   → th
 <p>The breach check of Section 2 compares today's spread with the average spread of the previous two weeks. Three situations make that comparison unreliable; each has its own rule. The three values the rules use are project thresholds set by NPL Finance (THRESHOLD kinds ${code("rate_min_observations")}, ${code("rate_fallback_spread_abs")} and ${code("rate_abs_tolerance")}); the figures below are illustrative. Stale rates, the freeze on a breached pair and the use of confirmed versions only are unchanged.</p>
 ${T([["Situation", "Rule", "What the system does"],
   ["Too little history", "With fewer than rate_min_observations confirmed rate versions in the two-week window (a new partner, a new pair, a long holiday), the two-week average is not used.", "The spread is compared with the Management-approved fallback threshold instead: breach = spread > rate_fallback_spread_abs. Finance confirms the version with a reason; the pair is not frozen merely for lack of history."],
-  ["Unusable baseline", "When avg_2w_spread is zero or negative (the partner has been pricing at or better than market), the percentage formula has no meaning.", "The percentage formula is not run. The fallback threshold applies as above, and the version is flagged for Finance to confirm."],
-  ["Unusual rate, favourable or not", "A spread outside an absolute tolerance around the two-week average, in either direction: spread < avg_2w_spread − rate_abs_tolerance or spread > avg_2w_spread + rate_abs_tolerance.", "The version is flagged for Finance to verify, not rejected and not frozen: an unusually favourable rate is checked (direction slip, wrong pair, stale partner) before it is used. The existing breach rule still applies on top for an unfavourable spread."]])}
-${F(`observations = count of confirmed PARTNER_RATE_VERSION rows for the partner × pair in the last 14 days
+  ["Unusable baseline", "When avg_2w_spread is zero or negative (the partner has been pricing at or better than market), the percentage formula has no meaning.", ["The percentage formula is not run. The fallback threshold applies as above, and the version is flagged for Finance to confirm" + mk(" (the guard of the next row applies: the version is not usable until confirmed)") + "."]],
+  ["Unusual rate, favourable or not", "A spread outside an absolute tolerance around the two-week average, in either direction: spread < avg_2w_spread − rate_abs_tolerance or spread > avg_2w_spread + rate_abs_tolerance.", [dl("The version is flagged for Finance to verify, not rejected and not frozen: an unusually favourable rate is checked (direction slip, wrong pair, stale partner) before it is used.") + mk("The version is flagged, not rejected: it enters the state <i>flagged</i> and cannot price a quote or instruct a conversion until Finance confirms it with a reason, or rejects it. The pair itself is not frozen: the last usable version keeps serving until it expires, and a corrected version may be entered. An unusually favourable rate is checked (direction slip, wrong pair, stale partner) before it is used, not after.") + " The existing breach rule still applies on top for an unfavourable spread."]]])}
+${FR(esc(`observations = count of confirmed PARTNER_RATE_VERSION rows for the partner × pair in the last 14 days
 if observations < rate_min_observations or avg_2w_spread ≤ 0:
     breach = spread > rate_fallback_spread_abs            (fallback; no percentage formula)
 else:
     breach = spread > avg_2w_spread × (1 + variance_threshold_rel)   (Section 2, unchanged)
-flag_for_verification = |spread − avg_2w_spread| > rate_abs_tolerance   (either direction; Finance confirms, nothing freezes)`)}
-<div class="box">Typical Ali spread 1.00 %, variance_threshold_rel 20 %: a spread above 1.20 % breaches as today. New partner with four confirmed versions and rate_min_observations 10: the average is ignored and a spread above the fallback 1.50 % breaches. A day on which Ali quotes 0.30 % below market (spread −0.30 %) with rate_abs_tolerance 0.50 %: no breach, but the version is flagged and Finance verifies the direction and the pair before it is used. The three rules are tested in Phase 1 (M1) with one case each.</div>
+flag_for_verification = |spread − avg_2w_spread| > rate_abs_tolerance   (either direction; `) + dl("Finance confirms, nothing freezes") + mk("the version waits as flagged, unusable; the pair does not freeze") + ")")}
+<div class="box">Typical Ali spread 1.00 %, variance_threshold_rel 20 %: a spread above 1.20 % breaches as today. New partner with four confirmed versions and rate_min_observations 10: the average is ignored and a spread above the fallback 1.50 % breaches. A day on which Ali quotes 0.30 % below market (spread −0.30 %) with rate_abs_tolerance 0.50 %: no breach, but the version is flagged and ${dl("Finance verifies the direction and the pair before it is used.")}${mk("no quote or conversion can use it until Finance has confirmed the direction and the pair; a quote attempted meanwhile is refused and the refusal is logged.")} The ${dl("three")}${mk("four")} rules are tested in Phase 1 (M1) with one case each${mk(" (the fourth: a quote and a conversion attempted against a flagged version, Test Strategy V-RB4)")}.</div>
+<p>${mk("<b>A flagged version is a guard, not a warning.</b> The states of a version are those of the Lifecycle &amp; Approvals document (Figure 3) with one state added: a new version becomes usable, breached (the pair frozen) or <i>flagged</i>; a flagged version becomes usable when Finance confirms it with a reason (confirmed_by, approval_reason), or is rejected, and one that expires unconfirmed is simply expired. Only a usable version prices a quote or instructs a conversion: the engine refuses a quote and a conversion that would use a flagged version, tells the user that the version awaits Finance, and writes the refusal to AUDIT_LOG (record PARTNER_RATE_VERSION, action quote_refused or conversion_refused, with the user and the version). Operations cannot issue the quote first and have Finance check afterwards; there is no monitored-use policy. The acceptance test attempts a quote and a conversion while the flag awaits review: both are refused and the audit record exists; after Finance confirms, the same quote prices on the confirmed version.")}</p>
 
 <h2>3 · Fee parts on the principal</h2>
 <p>The sender's part and the receiver's part are each a percentage of the <b>principal at the basis rate</b>. They are never compounded on each other (300,000 USDT × 0.9000 − 2 % = 264,600).</p>
@@ -217,10 +231,15 @@ fee_parts      = Σ portions × basis_rate × pct (sender and receiver parts in 
 <p>GDC: 2.5 % up to USD 500,000 a month, 2.25 % above; a leg that takes the month past the threshold is split into two DEAL_FEE_TIER portions.</p>
 
 <h2>5a · The month-volume counter and what a void does to it</h2>
-${F(`PROJECT_MONTH_VOLUME(project, month, ccy) = Σ amount_in × basis_rate of forward legs priced in the calendar month,
+${FR(esc(`PROJECT_MONTH_VOLUME(project, month, ccy) = `) + mk(esc(`opening_volume(project, month, ccy)
+                                          + `)) + esc(`Σ amount_in × basis_rate of forward legs priced in the calendar month`) + mk(esc(` from the opening date`)) + esc(`,
                                             in FEE_TIER.volume_currency, excluding legs voided before or after money moved
-tier at quote = the tier with the highest min_monthly_volume ≤ PROJECT_MONTH_VOLUME at the moment of pricing`)}
+`) + mk(esc(`opening_volume = the approved OPENING_ENTRY of kind month_volume for the project, the opening month and the currency
+                 (Cutover Approach §4: the month-to-date Σ amount_in × basis_rate of the deals priced before the opening date),
+                 less the volume of any of those deals voided after the opening date; zero in every later month
+`)) + esc(`tier at quote = the tier with the highest min_monthly_volume ≤ PROJECT_MONTH_VOLUME at the moment of pricing`))}
 <p>A void lowers the counter for every quote priced after it; it never re-prices a leg already priced (pricing fields are write-once), so a leg that was split across two tiers keeps its split even if an earlier deal in the month is later voided. A return leg and a balance conversion do not count. Two quotes priced at the same moment read the counter under the lock on the month-volume row, so they are ordered and the second sees the first (the one-line database rule of Phase 1, M0 and M3); this is tested with real GDC data rather than designed for every edge case now. A backdated correction is a new leg priced today and counts in today's month.</p>
+<p>${mk("<b>The opening volume.</b> A project that opens in the middle of a month carries its month-to-date volume into the counter as the opening line (OPENING_ENTRY of kind month_volume: one figure per project, month and volume currency, taken from the sheet, verified by Finance against the deals it sums and approved by Management like every other opening entry; it is a counter, not a posting). Tier evaluation reads the counter and never asks where its volume came from: with GDC at USD 480,000.00 on an opening day 20, the next target_out of USD 40,000.00 is split at the USD 500,000.00 threshold into 20,000.00 at 2.5 % and 20,000.00 at 2.25 % (L14), and the counter stands at 520,950.00 afterwards. Three rules keep the opening line honest. (1) The system's own legs count only from the opening date: an in-flight deal entered in its current state keeps its original priced_at, before the opening date, so its volume is inside the opening line and is never added a second time. (2) A void after the opening date of a deal whose volume is in the opening line lowers the counter by that deal's volume, exactly as a void of a system-priced leg does; the opening line itself is never edited, the void is what the counter reads. (3) In turnover reporting the opening month shows the opening line as one figure, volume before the opening date from the sheet, beside the system's legs priced from the opening date; the in-flight deals are reported under that line and not as system turnover, and from the following month the opening line is in no figure at all. A project opened on the first of a month has an opening volume of zero.")}</p>
 
 <h2>6 · Amount modes: fixed_in and target_out</h2>
 <p>A collect-first deal prices what arrived (<b>fixed_in</b>, §3). A quote-first deal for a given out amount (<b>target_out</b>: an invoice, a GDC USD amount, a reseller's EUR) applies the fee as a markup on the target, which is how NPL's sheets print it (EUR 50,000 × 1.01 ÷ rate; USD 84,482 + 2.5 %).</p>
@@ -319,12 +338,12 @@ ${F(`REPORTING_VALUE(figure, ccy, as_of) = figure × latest market_rate(platform
 never posted, quoted or settled; the only control reading it is a ceiling stated in the reporting currency`)}
 
 <section class="land"><h2>18 · Acceptance vectors A — the ledger's worked deals</h2>
-<p>Produced by the pricing function the Ledger Posting Design v${VERSION} imports; the posting tables there show the same figures line by line. Rates: market 0.9000 EUR per USDT, Ali 0.8910; Evo sender 1.4 %, receiver 0.6 % (L3: 1.4 / 1.4; L6: 4 % / 0; L7: 2 % markup on the target, receiver 0). L10 to L13 are the cases added in the design review: a part collection, an eight-decimal asset and two deals on a tier boundary; figures to the cent, BTC amounts to eight decimals.</p>
+<p>Produced by the pricing function the Ledger Posting Design v${VERSION} imports; the posting tables there show the same figures line by line. Rates: market 0.9000 EUR per USDT, Ali 0.8910; Evo sender 1.4 %, receiver 0.6 % (L3: 1.4 / 1.4; L6: 4 % / 0; L7: 2 % markup on the target, receiver 0). L10 to L13 are the cases added in the design review: a part collection, an eight-decimal asset and two deals on a tier boundary; figures to the cent, BTC amounts to eight decimals.${mk(" L14 is the case added in round 2 of the review: a deal priced on the opening day that straddles the tier threshold, with the opening volume in the counter (§5a).")}</p>
 <table class="vec"><thead><tr><th>#</th><th>Case</th><th class="n">amount_in</th><th class="n">sender rate</th><th class="n">gross out</th><th class="n">sender part</th><th class="n">receiver part</th><th class="n">client net</th><th class="n">delivered</th><th class="n">partner cost</th><th class="n">NPL earnings</th><th class="n">payable</th><th class="n">residual</th></tr></thead><tbody>
 ${LV.map(lvRow).join("")}
 </tbody></table>
 <p class="small">L4's payable is the cash hand-over rounded up to 1,000 THB (residual negative, NPL's cost). L7's client net includes the ${n(surplus)} USDT cash-rounding surplus. Variances, offsets and the forex true-ups are in §12–§14 with their figures.</p>
-<p class="small">L11: principal 0.12345678 × 60,000 = ${n(D11.principal)}; sender part 1.4 % = ${n(D11.feeSender)}, receiver part 0.6 % = ${n(D11.feeReceiver)}, client net ${n(D11.principal)} × 0.98 = ${n(D11.clientNet)} = gross out ${n(D11.grossOut)} − ${n(D11.feeReceiver)}; delivered 0.12345678 × 59,400 = ${n(D11.actualOut)}; earnings ${n(D11.earnings)}. L12 and L13: GDC converts at a rate of 1 and the partner's cost is inside it, so delivered = amount_in and NPL's earnings are the markup; the sender rate is printed as target ÷ amount_in. NPL supplied its own figures for these four cases on 21 October 2026; they are vectors B19 to B22 (§19) and all four match.</p>
+<p class="small">L11: principal 0.12345678 × 60,000 = ${n(D11.principal)}; sender part 1.4 % = ${n(D11.feeSender)}, receiver part 0.6 % = ${n(D11.feeReceiver)}, client net ${n(D11.principal)} × 0.98 = ${n(D11.clientNet)} = gross out ${n(D11.grossOut)} − ${n(D11.feeReceiver)}; delivered 0.12345678 × 59,400 = ${n(D11.actualOut)}; earnings ${n(D11.earnings)}. L12 and L13: GDC converts at a rate of 1 and the partner's cost is inside it, so delivered = amount_in and NPL's earnings are the markup; the sender rate is printed as target ÷ amount_in. NPL supplied its own figures for these four cases on 21 October 2026; they are vectors B19 to B22 (§19) and all four match.${mk(` L14: opening line ${n(OPEN14)} + target 40,000.00: portions 20,000.00 at 2.5 % and 20,000.00 at 2.25 %, amount_in ${n(D14.amountIn)}, markup ${n(D14.feeSender)} (blended ${(D14.blended * 100).toFixed(3)} %); counter afterwards ${n(D14.counterAfter)} = ${n(OPEN14)} + ${n(D14.amountIn)}. NPL's own figure for this case is requested; it will be B24.`)}</p>
 
 <h2>19 · Acceptance vectors B — NPL's own figures, recomputed</h2>
 <p>Each row takes the inputs NPL's fee sheet shows, applies this document's formulas, and compares with the figure the sheet prints. "matches" means to the cent, or to the unit where the sheet rounds. Rows are numbered B1 to B23 (19b). B2 is compared with NPL's corrected sheet of 21 October 2026; B18 to B23 were added on 21 October: the receiver side of the Evo selected-senders deal from the corrected sheet, and the five figures NPL supplied for the cases its sheet had no line for.</p>
@@ -335,13 +354,13 @@ ${NPL.map((v) => `<tr><td>${v.id}</td><td>${esc(v.name)}</td><td>${esc(v.inputs)
 </section>
 
 <h2 class="pb">19a · Machine-readable vectors and the regression gate</h2>
-<p>Vector sets A (L1 to L13) and B (B1 to B23, numbered as in the Reading Companion's identifier appendix) are published with this document as one machine-readable file (${code("vectors-v5.9.csv")}: one row per vector with every input and every expected figure), which is the file the automated tests read. Every release runs the full vector set together with the ledger fixtures (the 61 worked transactions), the state-machine tests and the visibility tests; a failing exact test blocks the release. The gate is stated in the Test Strategy &amp; Coverage document and continues under the support bundle after go-live; the first automated runs are in Phase 1 (M4).</p>
+<p>Vector sets A (L1 to ${dl("L13")}${mk("L14")}) and B (B1 to B23, numbered as in the Reading Companion's identifier appendix) are published with this document as one machine-readable file (${code("vectors-v5.9.csv")}: one row per vector with every input and every expected figure), which is the file the automated tests read. Every release runs the full vector set together with the ledger fixtures (the 61 worked transactions), the state-machine tests and the visibility tests; a failing exact test blocks the release. The gate is stated in the Test Strategy &amp; Coverage document and continues under the support bundle after go-live; the first automated runs are in Phase 1 (M4).</p>
 
 <h2>19b · Identifiers of the vector B rows</h2>
 <p>The rows of Section 19 are numbered B1 to B23 in the order printed, so that the test suite, the Reading Companion's identifier register and NPL's sheet can refer to one row by one name. The numbers are frozen: a row is never renumbered and a number is never reused; a new case takes the next number (B24).</p>
 
 <h2>19c · Which cases the two vector sets cover</h2>
-<p>A vector is one worked deal: its inputs (amount, rates, fee parts) and the figure the system must produce. Set A (L1 to L13, Section 18 and 18a) are examples New XP wrote and worked through the pricing formula by hand; they prove the formula does what this specification says, not that NPL agrees with the result. Set B (B1 to B23, Section 19) are NPL's own numbers: each row takes a line from NPL's fee sheet of 8 October (corrected 21 October) or a figure NPL supplied on 21 October for the cases the sheet had no line for, recomputes it with the formula and shows whether the two agree. A matching B row means the system reproduces what NPL charges today, which is the acceptance test NPL cares about; a matching A row means the system matches our reading of the rules.</p>
+<p>A vector is one worked deal: its inputs (amount, rates, fee parts) and the figure the system must produce. Set A (L1 to ${dl("L13")}${mk("L14")}, Section 18 and 18a) are examples New XP wrote and worked through the pricing formula by hand; they prove the formula does what this specification says, not that NPL agrees with the result. Set B (B1 to B23, Section 19) are NPL's own numbers: each row takes a line from NPL's fee sheet of 8 October (corrected 21 October) or a figure NPL supplied on 21 October for the cases the sheet had no line for, recomputes it with the formula and shows whether the two agree. A matching B row means the system reproduces what NPL charges today, which is the acceptance test NPL cares about; a matching A row means the system matches our reading of the rules.</p>
 <p>The table below puts the two sets side by side, by case, so that one page answers what is covered by NPL's own figure and what is not.</p>
 ${T([["Case", "Vector A", "Vector B", "Status"],
   ["Fixed amount in, partner fee inside the rate, sender and receiver parts", "L1, L5, L9", "B1, B2, B5", "covered (B2 on the corrected sheet of 21 October, 19a)"],
@@ -357,8 +376,9 @@ ${T([["Case", "Vector A", "Vector B", "Status"],
   ["Deal collected in parts, priced once on the whole", "L10", "B19", "covered"],
   ["Asset quoted to eight decimals (BTC)", "L11", "B20", "covered"],
   ["Monthly tier reached exactly on the deal", "L12", "B21", "covered"],
-  ["Monthly tier crossed inside one deal, two portions", "L13", "B22", "covered (NPL confirms the two-portion split)"]])}
-<p>Every case now has a B row. NPL supplied the figures for the five cases its sheet had no line for on 21 October 2026, each worked on its own sheet convention (sender side and receiver side, rounded to the unit); all five agree with the formula and are frozen as B19 to B23 under the rule of 19b. A new case takes B24.</p>
+  ["Monthly tier crossed inside one deal, two portions", "L13", "B22", "covered (NPL confirms the two-portion split)"],
+  [[mk("Opening tier volume: a deal straddling the threshold on the opening day (§5a)")], [mk("L14")], [mk("—")], [mk("open: NPL's figure requested in round 2; it becomes B24")]]])}
+<p>${dl("Every case now has a B row.")}${mk("Every case but the last has a B row; L14 (round 2) waits for NPL's figure.")} NPL supplied the figures for the five cases its sheet had no line for on 21 October 2026, each worked on its own sheet convention (sender side and receiver side, rounded to the unit); all five agree with the formula and are frozen as B19 to B23 under the rule of 19b. A new case takes B24.</p>
 
 <h2 class="pb">20 · Acceptance</h2>
 <ol>
@@ -373,9 +393,19 @@ ${T([["Case", "Vector A", "Vector B", "Status"],
 
 fs.mkdirSync(outDir, { recursive: true });
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const name = `NPLify-Calculation-Specification-v${VERSION}`;
+const name = REVIEW ? "NPLify-Calculation-Specification-review" : `NPLify-Calculation-Specification-v${VERSION}`;
 const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
 fs.writeFileSync(h, clientFacing(html));
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
 fs.writeFileSync(path.join(outDir, "calc-vectors.json"), JSON.stringify({ version: VERSION, ledger: Object.fromEntries(LV.map(([id, name, D, cin, cout]) => [id, { name, in: cin, out: cout, ...D }])), npl: NPL }, null, 1));
+if (!REVIEW) {                                                                   // the published vector file gains L14 (round 2) if it lacks it
+  const csvPath = path.join(outDir, "vectors-v5.9.csv");
+  if (fs.existsSync(csvPath) && !fs.readFileSync(csvPath, "utf8").includes("\nL14,")) {
+    const row = `L14,A,"Opening volume in the counter: GDC opens on day 20 with USD 480,000 month-to-date (opening line), target_out USD 40,000 at rate 1; 20,000 at 2.5 % and 20,000 at 2.25 % (blended 2.375 %)",${D14.amountIn.toFixed(2)},USDT,target_out,market,1,1,fee_in_rate,,0.02375,0,${D14.Rs.toFixed(6)},${D14.grossOut.toFixed(2)},${D14.feeSender.toFixed(2)},0.00,${D14.clientNet.toFixed(2)},${D14.actualOut.toFixed(2)},0.00,${D14.earnings.toFixed(2)},${D14.payable.toFixed(2)},0.00,,worked example (round 2),"opening line 480,000.00; counter afterwards ${D14.counterAfter.toFixed(2)}; two DEAL_FEE_TIER portions"\n`;
+    const lines = fs.readFileSync(csvPath, "utf8").split("\n");
+    const i = lines.findIndex((l) => l.startsWith("L13,"));
+    lines.splice(i + 1, 0, row.trimEnd());
+    fs.writeFileSync(csvPath, lines.join("\n"));
+  }
+}
 console.log("wrote", p, `(${(fs.statSync(p).size / 1024).toFixed(0)} KB)`, "· NPL vectors matching:", NPL.filter((v) => v.ok).length, "/", NPL.length);
