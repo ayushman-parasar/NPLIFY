@@ -11,7 +11,10 @@ import { clientFacing } from "./client-facing.mjs";
 
 const { RO, oEur, oUsdt, oGross, oFee, oDelivered, oVar, oPoolShort, BAL_O, staticBalancesHtml, stmtAli, ledgerAli, reconDiff, L, fmt, pct, esc, r2, EX, JET, D1, D2, DJ, squareUsdt, surplus, thbExact, DT, D4, DS, DR, DM, DN_J, DN_A, offsetEur, offsetUsdt, retainUsdt, convertUsdt, eurOut, shares, lossAmt, poolPart, walletPart, bankFee, recover, bounce, netFee, referral, rebateAqn, stmtRebate, nplRemainder, raeenShare, shareBase, VENDOR_INV, RESALE_INV, marginEur, thbIn, paid1, paid2, paid3, fx2, fx3, inst1Eur, inst2Eur, Rq, Rd2, hop, line1, line2, dueWhole, dust, retOut, bcOut, gas } = M;
 const here = path.dirname(fileURLToPath(import.meta.url));
-const outDir = path.join(path.resolve(here, ".."), "docs");
+const REVIEW = !!process.env.NPLIFY_REVIEW;                      // round-2 review marks: yellow = new, red strike = goes
+const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
+const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
+const outDir = process.env.NPLIFY_OUT || path.join(path.resolve(here, ".."), "docs");
 const VERSION = M.ERD_VERSION, DATE = "22 October 2026";
 const e = (x) => fmt(x);
 const u = (x) => fmt(x, "USDT");
@@ -83,7 +86,7 @@ const X = {
   T57: `Ali sends the USDT to NPL's own wallet: the money goes IN to the “held in NPL's wallet” jar and OUT of the client's jar at Ali. Then NPL forwards it to Jeton: OUT of the held jar, IN to the client's USDT jar at Jeton. The promise does not change at either step, because nothing has been delivered. If the network charges a fee for the forward, NPL pays it as in T17.`,
   T58: `Jeton converts at the market rate and charges its own fee separately. ${u(oUsdt)} USDT × ${EX.Rm.toFixed(4)} = ${e(oGross)} EUR; Jeton keeps ${pct(JET)} = ${e(oFee)} and delivers ${e(oDelivered)}. But the client was promised ${e(oEur)}, and that promise never changes, so ${e(oEur)} goes IN to the client's euro jar at Jeton and the promise is re-stated in euros. The ${e(oPoolShort)} Jeton delivered short of that is NPL's: Jeton's fee (${e(oFee)}, into NPL's partner-cost jar) less a small gain because ${e(oGross)} at market was more than the ${e(oEur)} the client is owed (${e(oVar)}, into the variance jar as a gain). NPL's pool at Jeton goes ${e(oPoolShort)} below zero, exactly as after the bounce fee in T24, and is squared at the next conversion there (T24a). NPL's ${e(D1.earnings)} margin from the first conversion is still sitting in its pool at Ali; a reroute never claws back what was earned.`,
   T59: `The ledger says Ali holds ${e(ledgerAli)} EUR for NPL: ${e(oEur)} of the client's (deal 1) and ${e(D1.earnings)} of NPL's fee. Ali's statement says ${e(stmtAli)}. The detail shows a ${e(reconDiff)} transfer charge Ali took on the day. NPL bears it: ${e(reconDiff)} goes IN to NPL's bank-fee cost jar and OUT of NPL's pool at Ali. The client's jar is untouched, because the charge was Ali's, not the receiver's. Now NPL's books say ${e(oEur)} + ${e(D1.earnings - reconDiff)} = ${e(stmtAli)}, the same as Ali.`,
-  T60: `The client's ${e(oEur)} EUR waiting at Ali goes IN to the client's euro jar at Ali, and the promise to deliver it goes OUT, exactly the shape the conversion T2 would have left; the receiver group is on the promise line, so the entitlement view is right from the first day. No NPL account is involved: it is the client's money and the client's promise.`,
+  T60: `The client's ${e(oEur)} EUR waiting at Ali goes IN to the client's euro jar at Ali, and the promise to deliver it goes OUT, exactly the shape the conversion T2 would have left; the receiver group is on the promise line, so the entitlement view is right from the first day. No NPL account is involved: it is the client's money and the client's promise.${mk(" With two receiver groups there would be two such transactions, one promise line each; with three senders in a group, three rows on the list behind the one line.")}`,
   T61: `NPL's own ${e(D1.earnings)} EUR at Ali goes IN to NPL's pool jar at Ali, and OUT of a jar used only on this day: “what NPL brought in”. That jar is never touched again; its total is simply the starting point of NPL's own money. Now Ali's one balance of ${e(ledgerAli)} is the client's ${e(oEur)} plus NPL's ${e(D1.earnings)}, as the identity requires. A balance that NPL is owed (a rebate not yet paid) or owes (a markup share) opens the same way against that one jar.`,
 };
 
@@ -159,7 +162,7 @@ const PATTERNS = [
   ["O", "Reroute after conversion", `Sometimes a partner has already turned the client's money into euros and then cannot pay them out: it is suspended, its bank is down, a limit is hit, or it is a holiday. NPL decided on 20 October that in that case the money does not simply wait. It is moved to another partner: the first partner turns the euros back into USDT at its rate of the day, sends the USDT to NPL's own wallet, NPL forwards it to the second partner, and the second partner turns it into euros again at its own rate. The client is promised exactly what it was promised before; whatever the round trip costs or gains is NPL's. Management must approve, because for a while NPL's own wallet is holding the client's money, which is the fourth of the cases in which that is allowed.`, ["T56", "T57", "T58"], staticBalancesHtml(BAL_O, "Balances after Pattern O")],
   ["P", "Interruptions between instruction and recording", `What happens when something breaks in the middle: the partner has done its part but NPLify did not record it, a receiver never says the money arrived, or the blockchain explorer is down. The rule that keeps the books safe is simple: no automatic process ever moves value between jars. A person records what happened, once, with the evidence, and the system refuses to record the same event twice. So a breakdown can make a posting late; it can never make it double. The three cases and how each is resolved are set out in Pattern P of the Ledger Posting Design; the worked postings are added once the real behaviour has been exercised on staging.`, []],
   ["Q", "Month-end reconciliation with a partner statement", `Once a month, and every evening during the parallel run, Finance puts the partner's statement next to the ledger. For each partner and currency the partner holds one balance; NPL's books say the same money is partly the client's jar and partly NPL's pool jar, and the two jars must add up to the partner's figure. When they do not, Finance finds out why before anything is posted: a payout the partner has already sent but the receiver has not yet confirmed (a timing difference, nothing to post), a charge the partner took and did not advise (a true-up, below), or a mistake on the partner's side (a query to the partner, nothing to post). Each reconciliation is kept as a record with the figures, the cause and who resolved it.`, ["T59"]],
-  ["R", "Opening entries on the opening date", `On the day NPLify takes over, the money is already where it is: the client's euros are waiting at Ali, NPL's fees are resting there too, a rebate is owed by Jeton, a sender has a credit. Rather than re-typing months of old deals to arrive at those figures, Finance lists every such balance from the sheets, checks each one against the partner's statement or the wallet, Management approves the list, and each line is posted once as an opening entry with the statement attached. The jars start full, and everything that happens afterwards is an ordinary posting on top.`, ["T60", "T61"]],
+  ["R", "Opening entries on the opening date", `On the day NPLify takes over, the money is already where it is: the client's euros are waiting at Ali, NPL's fees are resting there too, a rebate is owed by Jeton, a sender has a credit. Rather than re-typing months of old deals to arrive at those figures, Finance lists every such balance from the sheets, checks each one against the partner's statement or the wallet, Management approves the list, and each line is posted once as an opening entry with the statement attached. The jars start full, and everything that happens afterwards is an ordinary posting on top.${mk(" The list is never a lump sum per partner: one line per receiver group and per sender, so the entitlement of each group and the balance of each sender start right; Finance adds the lines up three ways — per partner against the partner's statement, per group against the sheet, per sender against the sheet — before Management approves, and a line put under the wrong group shows up in the second and third sums even though the partner total still agrees.")}`, ["T60", "T61"]],
 ];
 
 const STACK_AT = 6; // tables with this many lines or more get the explanation on top
@@ -173,6 +176,7 @@ const pair = (key) => {
 };
 
 const CSS = `
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 @page { size: A4 landscape; margin: 12mm 14mm 12mm 14mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
 body{font:10pt/1.42 Georgia,"Times New Roman",serif;color:#111;margin:0}
 h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
@@ -207,8 +211,9 @@ ul.nums{margin:0 0 2pt 14pt;font-size:8.8pt;font-variant-numeric:tabular-nums} u
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Ledger Patterns, a Reading Companion v${VERSION}</title><style>${CSS}</style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Ledger Patterns — a Reading Companion · Draft v${VERSION}</p><p>New XP Technologies Limited</p><p>${DATE} · Confidential</p>
-<p class="small" style="margin-top:14pt">Companion to the Ledger Posting Design &amp; Chart of Accounts v${VERSION}: the same ${L.txs.length} worked transactions, each with a plain-language explanation beside it.</p></div>
+<p class="small" style="margin-top:14pt">Companion to the Ledger Posting Design &amp; Chart of Accounts v${VERSION}: the same ${L.txs.length} worked transactions, each with a plain-language explanation beside it.${mk(` The count: 61 numbered transactions, T1 to T61, and ${L.txs.length} once the variants are counted (T3a, T22a, T24a, T41a, T41b and T41c in place of T41, T52a); each is one fixture of the Test Strategy's manifest, F-T1 to F-T61 with the same suffixes, so the ${L.txs.length} here, the ${L.txs.length} rows of that manifest and the ${L.txs.length} fixtures of the build reconcile one to one.`)}</p></div>
 
+${REVIEW ? `<p class="rev-note"><b>Round-2 review draft, 26 October 2026 (finding 10.1).</b> Yellow = added or replaced; red strike = what goes. Nothing else has changed.</p>` : ""}
 <h2 class="pb">How to read this pack</h2>
 <div class="intro">Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</div>
 
@@ -263,6 +268,7 @@ ${PATTERNS.map(([letter, name, intro, keys, extra]) => name === null ? `<div cla
 <tr><td>T56 to T58</td><td>Pattern O — reroute after conversion</td><td>§19a</td></tr>
 <tr><td>T59</td><td>Pattern Q — month-end reconciliation true-up</td><td>§19c</td></tr>
 <tr><td>T60, T61</td><td>Pattern R — opening entries on the opening date</td><td>§19d</td></tr>
+<tr><td>${mk("F-T1 to F-T61, with the suffixes of the T ids (67 fixtures)")}</td><td>${mk("One executable fixture per worked transaction above: id, pattern, source type, posting lines, accounts, page; the build refuses a fixture without a transaction and a transaction without a fixture")}</td><td>${mk("Test Strategy &amp; Coverage, Appendix A; fixtures-manifest-v6.0.csv")}</td></tr>
 <tr><td>L1 to L13</td><td>Acceptance vectors A, the ledger's worked deals (L10 to L13 added in 18a)</td><td>Calculation Specification §18</td></tr>
 <tr><td>B1 to B23</td><td>Acceptance vectors B, NPL's own figures recomputed (B18 to B23 added in 19b)</td><td>Calculation Specification §19, numbered in 19b</td></tr>
 <tr><td>W1 to W8</td><td>Guided walkthroughs through the model</td><td>Scenario Catalogue Part 3</td></tr>
@@ -270,13 +276,13 @@ ${PATTERNS.map(([letter, name, intro, keys, extra]) => name === null ? `<div cla
 <tr><td>C1 to C10, C6a</td><td>Common procedures</td><td>Operating Procedures Part A</td></tr>
 <tr><td>A.1 to A.10, D.1 to D.5</td><td>Daily rhythm, quick reference, access review; exception playbooks</td><td>Operating Procedures Parts A and D</td></tr>
 </tbody></table>
-<p>Pattern G has no transactions: an offset is a view, not a posting. Pattern P (interruptions) has none yet; its worked postings take the next free T numbers when they are written.</p>
+<p>Pattern G has no transactions: an offset is a view, not a posting. Pattern P (interruptions) has none yet; its worked postings take the next free T numbers when they are written${mk(", and the manifest gains a fixture for each at the same time, so the two lists never differ: a T id without an F-T fixture, or the reverse, is a build failure")}.</p>
 <p class="small"><i>Draft v${VERSION} — companion for review with NPL. Figures are worked examples, not NPL data, except where the main document says otherwise.</i></p>
 </body></html>`;
 
 fs.mkdirSync(outDir, { recursive: true });
 const chrome = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const name = `NPLify-Ledger-Patterns-Companion-v${VERSION}`;
+const name = REVIEW ? "NPLify-Ledger-Patterns-Companion-review" : `NPLify-Ledger-Patterns-Companion-v${VERSION}`;
 const h = path.join(outDir, name + ".html"), p = path.join(outDir, name + ".pdf");
 fs.writeFileSync(h, clientFacing(html));
 execFileSync(chrome, ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", `--print-to-pdf=${p}`, "file://" + h], { stdio: "ignore" });
