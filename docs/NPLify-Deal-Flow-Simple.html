@@ -12,11 +12,13 @@
   p { font-size: 13px; color: #4B5563; margin: 0 0 14px; }
   svg { display: block; width: 100%; height: auto; }
   @media print { body { padding: 0; max-width: none; } svg { max-height: 165mm; } }
+
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:2px 6px;font-size:12px}
 </style>
 </head>
 <body>
 <h1>How an NPLify deal flows</h1>
-<p>Operations starts each step and Finance approves it, money passes from sender to partner to receiver, and exceptions and the daily close hang off the side of the deal.</p>
+<p><del class="rev">Operations starts each step and Finance approves it,</del> <mark class="rev">Operations starts each step and Finance approves the controlled actions where the Lifecycle &amp; Approvals document says so (never the person who initiated);</mark> money passes from sender to partner to receiver, and exceptions and the daily close hang off the side of the deal. <mark class="rev">The drawing is the quote-first flow, simplified: a collect-first deal enters at Collected and an estimate-first deal at Collecting (Lifecycle Figure 1); verification of a collection is an Operations step with no approval.</mark></p>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1128 516" width="100%" role="img" aria-label="How NPLify deal flows connect" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
 <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L8,4 L0,8 z" fill="#6B7280"/></marker></defs>
 <rect x="250" y="186" width="856" height="204" rx="12" fill="#FAFAFB" stroke="#D1D5DB" stroke-width="1.2"/>
@@ -72,8 +74,9 @@
 <text x="390.0" y="345.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Operations initiates</text>
 <text x="390.0" y="361.0" text-anchor="middle" font-size="11.5" fill="#4C1D95">quotes, verifies, instructs, prepares</text>
 <rect x="560" y="318" width="250" height="56" rx="7" fill="#F5F3FF" stroke="#7048E8" stroke-width="1.5"/>
-<text x="685.0" y="345.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Finance approves</text>
-<text x="685.0" y="361.0" text-anchor="middle" font-size="11.5" fill="#4C1D95">a different person, every time</text>
+<rect class="rev" x="562" y="320" width="246" height="52" rx="6" fill="#ffe58a"/>
+<text x="685.0" y="345.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Finance approves controlled actions</text>
+<text x="685.0" y="361.0" text-anchor="middle" font-size="11.5" fill="#4C1D95">where specified; never the initiator</text>
 <rect x="855" y="318" width="235" height="56" rx="7" fill="#F5F3FF" stroke="#7048E8" stroke-width="1.5"/>
 <text x="972.5" y="345.0" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">Management steps in</text>
 <text x="972.5" y="361.0" text-anchor="middle" font-size="11.5" fill="#4C1D95">escalations and above limits</text>
