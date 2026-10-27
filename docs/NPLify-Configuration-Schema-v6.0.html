@@ -148,9 +148,9 @@ pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left
 <ul class="rules"><li>The allow-list (sendable_to). A sender may pay only the groups listed here; the group belongs to the same project.</li></ul><h4 id="COLLECTION_SENDING_ENTITY">COLLECTION_SENDING_ENTITY <span class="scope">· Per sender</span></h4>
 <p class="desc">Provenance: where the sender’s funds originated. Reference only; never a payout destination (a refund goes to the sender_return receiver’s chosen account, not back to the source wallet). the source account, when known, is a BANK_ACCOUNT_DETAILS row.</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
-<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>sender’s own account or a client’s account</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>nullable; the source account when it is known</td></tr>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>sender’s own account or a client’s account</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>nullable; the source account when it is known</td></tr><tr><td class="mono">wallet_network</td><td>string</td><td>no</td><td>TRC-20, ERC-20, … · the network of a source wallet; required with wallet_address</td></tr><tr><td class="mono">wallet_address</td><td>string</td><td>no</td><td>the address the funds come from; required with wallet_network; never a payout destination</td></tr>
 </tbody></table>
-<ul class="rules"><li>Provenance only: where the sender's funds come from. Never a payout destination.</li></ul><h4 id="FEE_OVERRIDE">FEE_OVERRIDE <span class="scope">· Per sender × partner pair</span></h4>
+<ul class="rules"><li>Provenance only: where the sender's funds come from. Never a payout destination.</li><li>A source is one of two kinds. A bank source is a BANK_ACCOUNT_DETAILS row (bank_account_details_id). A wallet source is recorded on this row as its network and its address (wallet_network, wallet_address, both or neither), beside the label, so that the screening report and the collection can be tied to the address the funds left. A row carries exactly one of the two kinds; the server refuses a row with both or with neither (NPL, 28 October 2026).</li></ul><h4 id="FEE_OVERRIDE">FEE_OVERRIDE <span class="scope">· Per sender × partner pair</span></h4>
 <p class="desc">A standing sender-specific override of the fee on a partner × pair. One-off decisions on a single transaction are FEE_DECISION. may carry its own sender / receiver split instead of inheriting the structure’s proportion (Evo’s selected senders pay 1.0 % while Evo still pays 0.6 %).</p>
 <table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
 <tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">approved_by</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">sender_pays_pct</td><td>decimal</td><td>no</td><td>optional; with receiver_pays_pct replaces the structure’s proportion</td></tr><tr><td class="mono">receiver_pays_pct</td><td>decimal</td><td>no</td><td>optional; both blank → structure’s proportion; both set → sum = pct</td></tr>
@@ -606,6 +606,8 @@ senders:
  provenance:
  - label: own wallet (TRC-20)
  bank_account_details: null
+ wallet_network: TRC-20
+ wallet_address: TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE
  fee_overrides: []
  - code: SND_B
  name: Sender B
@@ -615,6 +617,8 @@ senders:
  provenance:
  - label: own wallet (TRC-20)
  bank_account_details: null
+ wallet_network: TRC-20
+ wallet_address: TAzsQ9Gx8eqFNFSKbeXrbi45CuVPHzA8wr
  fee_overrides:
  - partner_pair: CLIENT1-ALI/USDT-EUR
  pct: 0.012

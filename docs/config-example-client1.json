@@ -492,7 +492,9 @@
       "provenance": [
         {
           "label": "own wallet (TRC-20)",
-          "bank_account_details": null
+          "bank_account_details": null,
+          "wallet_network": "TRC-20",
+          "wallet_address": "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE"
         }
       ],
       "fee_overrides": []
@@ -508,7 +510,9 @@
       "provenance": [
         {
           "label": "own wallet (TRC-20)",
-          "bank_account_details": null
+          "bank_account_details": null,
+          "wallet_network": "TRC-20",
+          "wallet_address": "TAzsQ9Gx8eqFNFSKbeXrbi45CuVPHzA8wr"
         }
       ],
       "fee_overrides": [
