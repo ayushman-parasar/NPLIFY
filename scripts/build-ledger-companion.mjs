@@ -270,7 +270,7 @@ ${PATTERNS.map(([letter, name, intro, keys, extra]) => name === null ? `<div cla
 <tr><td>T60, T61</td><td>Pattern R — opening entries on the opening date</td><td>§19d</td></tr>
 <tr><td>${mk("F-T1 to F-T61, with the suffixes of the T ids (67 fixtures)")}</td><td>${mk("One executable fixture per worked transaction above: id, pattern, source type, posting lines, accounts, page; the build refuses a fixture without a transaction and a transaction without a fixture")}</td><td>${mk("Test Strategy &amp; Coverage, Appendix A; fixtures-manifest-v6.0.csv")}</td></tr>
 <tr><td>L1 to ${dl("L13")}${mk("L14")}</td><td>Acceptance vectors A, the ledger's worked deals (L10 to L13 added in 18a${mk("; L14, the opening tier volume, in round 2")})</td><td>Calculation Specification §18</td></tr>
-<tr><td>B1 to B23</td><td>Acceptance vectors B, NPL's own figures recomputed (B18 to B23 added in 19b)</td><td>Calculation Specification §19, numbered in 19b</td></tr>
+<tr><td>B1 to ${dl("B23")}${mk("B24")}</td><td>Acceptance vectors B, NPL's own figures recomputed (B18 to B23 added in 19b${mk("; B24, NPL's figure for L14, in round 2")})</td><td>Calculation Specification §19, numbered in 19b</td></tr>
 <tr><td>W1 to W8</td><td>Guided walkthroughs through the model</td><td>Scenario Catalogue Part 3</td></tr>
 <tr><td>F1 to F10</td><td>Shared operational flows</td><td>Scenario Catalogue Part 2</td></tr>
 <tr><td>C1 to C10, C6a</td><td>Common procedures</td><td>Operating Procedures Part A</td></tr>

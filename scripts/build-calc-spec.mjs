@@ -26,7 +26,7 @@ const T = (rows, numCols = [], cls = "") => `<table${cls ? ` class="${cls}"` : "
 
 // ------------------------------------------------------------------ acceptance vectors from NPL's own fee-table figures (FEE_PRACTICE)
 // Each row: what NPL's sheet shows, what the formulas of this document give, and whether they agree.
-// Rows are numbered B1 to B23 in the order printed (§19b); the numbers are frozen, a new case takes B24.
+// Rows are numbered B1 to B24 in the order printed (§19b); the numbers are frozen, a new case takes B25.
 const NPL = [];
 const dpOf = (x) => (Number.isInteger(x) ? 0 : (String(x).split(".")[1] || "").length);
 const add = (name, inputs, computed, shown, note = "") => NPL.push({ id: "B" + (NPL.length + 1), name, inputs, computed: n(computed, dpOf(shown)), shown: n(shown, dpOf(shown)), ok: Math.abs(computed - shown) < 0.5 + 1e-9, note });
@@ -71,7 +71,10 @@ add2("Eight-decimal asset: 0.12345678 BTC → EUR at Ali, market 60,000, Ali 59,
 add("Tier reached exactly: GDC, month-to-date USD 450,000, USD 50,000 target out", "target_out; 50,000 × (1 + 2.5 %), tier 1 on the whole deal", rdN(50000 * 1.025, 0), 51250, "NPL's figure of 21 October; the next deal of any size is tier 2 (L12)");
 add("Tier crossed inside one deal: GDC, month-to-date USD 490,000, USD 20,000 target out", "target_out; 10,000 × (1 + 2.5 %) + 10,000 × (1 + 2.25 %)", rdN(10000 * 1.025 + 10000 * 1.0225, 0), 20475, "NPL's figure of 21 October, the two-portion split confirmed (L13)");
 add("Same-currency: 5,000 EUR → EUR at rate 1, Evo 2.8 % split 1.4 / 1.4", "fixed_in at rate 1; client net 5,000 × (1 − 2.8 %)", rdN(5000 * (1 - 0.028), 0), 4860, "NPL's figure of 21 October (L3)");
-if (NPL.length !== 23) throw new Error("vector B numbering is frozen at B1 to B23; got " + NPL.length);
+// B24, added 27 October 2026 (round 2 of the review): NPL confirmed the figures of L14, the opening-volume case of §5a.
+add("Opening tier volume: GDC opens on day 20 at USD 480,000 month-to-date, USD 40,000 target out", "target_out; 20,000 × (1 + 2.5 %) + 20,000 × (1 + 2.25 %); counter afterwards 480,000 + 40,950", rdN(20000 * 1.025 + 20000 * 1.0225, 2), 40950, "NPL's figure of 27 October 2026: amount in 40,950.00, markup 950.00, counter 520,950.00 (L14)");
+NPL[NPL.length - 1].rv = true;
+if (NPL.length !== 24) throw new Error("vector B numbering is frozen at B1 to B24; got " + NPL.length);
 
 // ------------------------------------------------------------------ L10 to L13: the cases added in the design review (a part collection, an eight-decimal asset, two deals on a tier boundary)
 const D10 = price({ amountIn: 5000, Rm: EX.Rm, Rp: EX.Rp, basis: "market", s: EX.s, r: EX.r });            // deal 2 collected as 4,000 + 1,000, priced once on the whole
@@ -343,24 +346,24 @@ never posted, quoted or settled; the only control reading it is a ceiling stated
 ${LV.map(lvRow).join("")}
 </tbody></table>
 <p class="small">L4's payable is the cash hand-over rounded up to 1,000 THB (residual negative, NPL's cost). L7's client net includes the ${n(surplus)} USDT cash-rounding surplus. Variances, offsets and the forex true-ups are in §12–§14 with their figures.</p>
-<p class="small">L11: principal 0.12345678 × 60,000 = ${n(D11.principal)}; sender part 1.4 % = ${n(D11.feeSender)}, receiver part 0.6 % = ${n(D11.feeReceiver)}, client net ${n(D11.principal)} × 0.98 = ${n(D11.clientNet)} = gross out ${n(D11.grossOut)} − ${n(D11.feeReceiver)}; delivered 0.12345678 × 59,400 = ${n(D11.actualOut)}; earnings ${n(D11.earnings)}. L12 and L13: GDC converts at a rate of 1 and the partner's cost is inside it, so delivered = amount_in and NPL's earnings are the markup; the sender rate is printed as target ÷ amount_in. NPL supplied its own figures for these four cases on 21 October 2026; they are vectors B19 to B22 (§19) and all four match.${mk(` L14: opening line ${n(OPEN14)} + target 40,000.00: portions 20,000.00 at 2.5 % and 20,000.00 at 2.25 %, amount_in ${n(D14.amountIn)}, markup ${n(D14.feeSender)} (blended ${(D14.blended * 100).toFixed(3)} %); counter afterwards ${n(D14.counterAfter)} = ${n(OPEN14)} + ${n(D14.amountIn)}. NPL's own figure for this case is requested; it will be B24.`)}</p>
+<p class="small">L11: principal 0.12345678 × 60,000 = ${n(D11.principal)}; sender part 1.4 % = ${n(D11.feeSender)}, receiver part 0.6 % = ${n(D11.feeReceiver)}, client net ${n(D11.principal)} × 0.98 = ${n(D11.clientNet)} = gross out ${n(D11.grossOut)} − ${n(D11.feeReceiver)}; delivered 0.12345678 × 59,400 = ${n(D11.actualOut)}; earnings ${n(D11.earnings)}. L12 and L13: GDC converts at a rate of 1 and the partner's cost is inside it, so delivered = amount_in and NPL's earnings are the markup; the sender rate is printed as target ÷ amount_in. NPL supplied its own figures for these four cases on 21 October 2026; they are vectors B19 to B22 (§19) and all four match.${mk(` L14: opening line ${n(OPEN14)} + target 40,000.00: portions 20,000.00 at 2.5 % and 20,000.00 at 2.25 %, amount_in ${n(D14.amountIn)}, markup ${n(D14.feeSender)} (blended ${(D14.blended * 100).toFixed(3)} %); counter afterwards ${n(D14.counterAfter)} = ${n(OPEN14)} + ${n(D14.amountIn)}. NPL confirmed these figures on 27 October 2026; they are vector B24 (§19) and it matches.`)}</p>
 
 <h2>19 · Acceptance vectors B — NPL's own figures, recomputed</h2>
-<p>Each row takes the inputs NPL's fee sheet shows, applies this document's formulas, and compares with the figure the sheet prints. "matches" means to the cent, or to the unit where the sheet rounds. Rows are numbered B1 to B23 (19b). B2 is compared with NPL's corrected sheet of 21 October 2026; B18 to B23 were added on 21 October: the receiver side of the Evo selected-senders deal from the corrected sheet, and the five figures NPL supplied for the cases its sheet had no line for.</p>
+<p>Each row takes the inputs NPL's fee sheet shows, applies this document's formulas, and compares with the figure the sheet prints. "matches" means to the cent, or to the unit where the sheet rounds. Rows are numbered B1 to ${dl("B23")}${mk("B24")} (19b). B2 is compared with NPL's corrected sheet of 21 October 2026; B18 to B23 were added on 21 October: the receiver side of the Evo selected-senders deal from the corrected sheet, and the five figures NPL supplied for the cases its sheet had no line for.${mk(" B24 was added on 27 October 2026 in round 2 of the review: NPL's figure for the opening-volume case L14.")}</p>
 <table class="vec"><thead><tr><th>Id</th><th>Case</th><th>Formula applied</th><th class="n">Computed</th><th class="n">NPL's sheet</th><th>Result</th><th>Note</th></tr></thead><tbody>
-${NPL.map((v) => `<tr><td>${v.id}</td><td>${esc(v.name)}</td><td>${esc(v.inputs)}</td><td class="n">${v.computed}</td><td class="n">${v.shown}</td><td>${v.ok ? '<span class="ok">matches</span>' : '<span class="chk">sheet differs</span>'}</td><td>${esc(v.note)}</td></tr>`).join("")}
+${NPL.map((v) => { const M = (t) => (v.rv ? mk(t) : t); return `<tr><td>${M(v.id)}</td><td>${M(esc(v.name))}</td><td>${M(esc(v.inputs))}</td><td class="n">${M(v.computed)}</td><td class="n">${M(v.shown)}</td><td>${M(v.ok ? '<span class="ok">matches</span>' : '<span class="chk">sheet differs</span>')}</td><td>${M(esc(v.note))}</td></tr>`; }).join("")}
 </tbody></table>
 <p class="small">${NPL.filter((v) => v.ok).length} of ${NPL.length} match.</p>
 </section>
 
 <h2 class="pb">19a · Machine-readable vectors and the regression gate</h2>
-<p>Vector sets A (L1 to ${dl("L13")}${mk("L14")}) and B (B1 to B23, numbered as in the Reading Companion's identifier appendix) are published with this document as one machine-readable file (${code("vectors-v5.9.csv")}: one row per vector with every input and every expected figure), which is the file the automated tests read. Every release runs the full vector set together with the ledger fixtures (the 61 worked transactions), the state-machine tests and the visibility tests; a failing exact test blocks the release. The gate is stated in the Test Strategy &amp; Coverage document and continues under the support bundle after go-live; the first automated runs are in Phase 1 (M4).</p>
+<p>Vector sets A (L1 to ${dl("L13")}${mk("L14")}) and B (B1 to ${dl("B23")}${mk("B24")}, numbered as in the Reading Companion's identifier appendix) are published with this document as one machine-readable file (${code("vectors-v5.9.csv")}: one row per vector with every input and every expected figure), which is the file the automated tests read. Every release runs the full vector set together with the ledger fixtures (the 61 worked transactions), the state-machine tests and the visibility tests; a failing exact test blocks the release. The gate is stated in the Test Strategy &amp; Coverage document and continues under the support bundle after go-live; the first automated runs are in Phase 1 (M4).</p>
 
 <h2>19b · Identifiers of the vector B rows</h2>
-<p>The rows of Section 19 are numbered B1 to B23 in the order printed, so that the test suite, the Reading Companion's identifier register and NPL's sheet can refer to one row by one name. The numbers are frozen: a row is never renumbered and a number is never reused; a new case takes the next number (B24).</p>
+<p>The rows of Section 19 are numbered B1 to ${dl("B23")}${mk("B24")} in the order printed, so that the test suite, the Reading Companion's identifier register and NPL's sheet can refer to one row by one name. The numbers are frozen: a row is never renumbered and a number is never reused; a new case takes the next number (${dl("B24")}${mk("B25")}).</p>
 
 <h2>19c · Which cases the two vector sets cover</h2>
-<p>A vector is one worked deal: its inputs (amount, rates, fee parts) and the figure the system must produce. Set A (L1 to ${dl("L13")}${mk("L14")}, Section 18 and 18a) are examples New XP wrote and worked through the pricing formula by hand; they prove the formula does what this specification says, not that NPL agrees with the result. Set B (B1 to B23, Section 19) are NPL's own numbers: each row takes a line from NPL's fee sheet of 8 October (corrected 21 October) or a figure NPL supplied on 21 October for the cases the sheet had no line for, recomputes it with the formula and shows whether the two agree. A matching B row means the system reproduces what NPL charges today, which is the acceptance test NPL cares about; a matching A row means the system matches our reading of the rules.</p>
+<p>A vector is one worked deal: its inputs (amount, rates, fee parts) and the figure the system must produce. Set A (L1 to ${dl("L13")}${mk("L14")}, Section 18 and 18a) are examples New XP wrote and worked through the pricing formula by hand; they prove the formula does what this specification says, not that NPL agrees with the result. Set B (B1 to ${dl("B23")}${mk("B24")}, Section 19) are NPL's own numbers: each row takes a line from NPL's fee sheet of 8 October (corrected 21 October) or a figure NPL supplied on 21 October${mk(" or 27 October")} for the cases the sheet had no line for, recomputes it with the formula and shows whether the two agree. A matching B row means the system reproduces what NPL charges today, which is the acceptance test NPL cares about; a matching A row means the system matches our reading of the rules.</p>
 <p>The table below puts the two sets side by side, by case, so that one page answers what is covered by NPL's own figure and what is not.</p>
 ${T([["Case", "Vector A", "Vector B", "Status"],
   ["Fixed amount in, partner fee inside the rate, sender and receiver parts", "L1, L5, L9", "B1, B2, B5", "covered (B2 on the corrected sheet of 21 October, 19a)"],
@@ -377,8 +380,8 @@ ${T([["Case", "Vector A", "Vector B", "Status"],
   ["Asset quoted to eight decimals (BTC)", "L11", "B20", "covered"],
   ["Monthly tier reached exactly on the deal", "L12", "B21", "covered"],
   ["Monthly tier crossed inside one deal, two portions", "L13", "B22", "covered (NPL confirms the two-portion split)"],
-  [[mk("Opening tier volume: a deal straddling the threshold on the opening day (§5a)")], [mk("L14")], [mk("—")], [mk("open: NPL's figure requested in round 2; it becomes B24")]]])}
-<p>${dl("Every case now has a B row.")}${mk("Every case but the last has a B row; L14 (round 2) waits for NPL's figure.")} NPL supplied the figures for the five cases its sheet had no line for on 21 October 2026, each worked on its own sheet convention (sender side and receiver side, rounded to the unit); all five agree with the formula and are frozen as B19 to B23 under the rule of 19b. A new case takes B24.</p>
+  [[mk("Opening tier volume: a deal straddling the threshold on the opening day (§5a)")], [mk("L14")], [mk("B24")], [mk("covered: NPL's figure of 27 October 2026 matches")]]])}
+<p>Every case now has a B row${mk(", L14 included: NPL confirmed its figures on 27 October 2026 and they are B24")}. NPL supplied the figures for the five cases its sheet had no line for on 21 October 2026, each worked on its own sheet convention (sender side and receiver side, rounded to the unit); all five agree with the formula and are frozen as B19 to B23 under the rule of 19b. A new case takes ${dl("B24")}${mk("B25")}.</p>
 
 <h2 class="pb">20 · Acceptance</h2>
 <ol>
@@ -405,6 +408,13 @@ if (!REVIEW) {                                                                  
     const lines = fs.readFileSync(csvPath, "utf8").split("\n");
     const i = lines.findIndex((l) => l.startsWith("L13,"));
     lines.splice(i + 1, 0, row.trimEnd());
+    fs.writeFileSync(csvPath, lines.join("\n"));
+  }
+  if (fs.existsSync(csvPath) && !fs.readFileSync(csvPath, "utf8").includes("\nB24,")) {   // B24 (27 October 2026): NPL's figure for L14
+    const row = `B24,B,"Opening tier volume: GDC opens on day 20 at USD 480,000 month-to-date, USD 40,000 target out",${D14.amountIn.toFixed(2)},USDT,target_out,market,1,1,fee_in_rate,,0.02375,0,${D14.Rs.toFixed(6)},${D14.grossOut.toFixed(2)},${D14.feeSender.toFixed(2)},0.00,${D14.clientNet.toFixed(2)},${D14.actualOut.toFixed(2)},0.00,${D14.earnings.toFixed(2)},${D14.payable.toFixed(2)},0.00,40950,matches,"NPL figure 27 Oct: amount in 40,950; markup 950; counter 520,950; the case of L14"`;
+    const lines = fs.readFileSync(csvPath, "utf8").split("\n");
+    const i = lines.findIndex((l) => l.startsWith("B23,"));
+    lines.splice(i + 1, 0, row);
     fs.writeFileSync(csvPath, lines.join("\n"));
   }
 }

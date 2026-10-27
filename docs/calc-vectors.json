@@ -481,6 +481,16 @@
    "shown": "4,860",
    "ok": true,
    "note": "NPL's figure of 21 October (L3)"
+  },
+  {
+   "id": "B24",
+   "name": "Opening tier volume: GDC opens on day 20 at USD 480,000 month-to-date, USD 40,000 target out",
+   "inputs": "target_out; 20,000 × (1 + 2.5 %) + 20,000 × (1 + 2.25 %); counter afterwards 480,000 + 40,950",
+   "computed": "40,950",
+   "shown": "40,950",
+   "ok": true,
+   "note": "NPL's figure of 27 October 2026: amount in 40,950.00, markup 950.00, counter 520,950.00 (L14)",
+   "rv": true
   }
  ]
 }
