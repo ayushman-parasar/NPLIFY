@@ -163,6 +163,29 @@
       ],
       "effective_from": "2026-10-01",
       "status": "active"
+    },
+    {
+      "code": "email_otp_quote",
+      "version": 1,
+      "channel": "email",
+      "language": "en",
+      "body_ref": "tpl-otp-en-v1",
+      "printed_fields": [
+        "deal_ref",
+        "issue_no",
+        "client_label",
+        "pair",
+        "amount_in",
+        "customer_facing_fee_pct",
+        "printed_amount_out",
+        "collection_method",
+        "effective_valid_until",
+        "code",
+        "code_expires_at",
+        "partial_destination"
+      ],
+      "effective_from": "2026-11-01",
+      "status": "active"
     }
   ],
   "client": {
@@ -190,7 +213,14 @@
     "settlement_policy": "to_zero",
     "shortfall_tolerance": 0,
     "exposure_ceiling": 250000,
-    "status": "active"
+    "status": "active",
+    "email_otp": {
+      "enabled": true,
+      "approver_email": "orders@client1.example",
+      "chat_platform": "Telegram",
+      "chat_group_name": "Client 1 × NPL orders",
+      "chat_group_id": "-1001234567890"
+    }
   },
   "thresholds": [
     {
@@ -213,6 +243,22 @@
     {
       "kind": "rate_variation_rel",
       "value": 0.002,
+      "escalation": "finance"
+    },
+    {
+      "kind": "email_otp_code_window_min",
+      "value": 1440,
+      "escalation": "finance"
+    },
+    {
+      "kind": "email_otp_stepup_amount",
+      "currency": "USD",
+      "value": 50000,
+      "escalation": "management"
+    },
+    {
+      "kind": "email_otp_tripwire_min",
+      "value": 240,
       "escalation": "finance"
     }
   ],
