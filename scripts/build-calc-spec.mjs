@@ -15,7 +15,7 @@ const REVIEW = !!process.env.NPLIFY_REVIEW;                                   //
 const outDir = process.env.NPLIFY_OUT || path.join(path.resolve(here, ".."), "docs");
 const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
 const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
-const VERSION = JSON.parse(fs.readFileSync(path.join(path.resolve(here, ".."), "data/erd.v5.json"), "utf8")).version, DATE = "22 October 2026";
+const VERSION = JSON.parse(fs.readFileSync(path.join(path.resolve(here, ".."), "data/erd.v5.json"), "utf8")).version, DATE = "28 October 2026";
 const code = (s) => `<code>${esc(s)}</code>`;
 const F = (s) => `<div class="formula">${esc(s)}</div>`;
 const FR = (s) => `<div class="formula">${s}</div>`;                              // formula from pre-escaped parts (review marks inside)

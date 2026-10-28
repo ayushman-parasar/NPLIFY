@@ -161,11 +161,11 @@ E["CUSTOMER_APPROVAL_EVENT"] = {"d": "deal", "col": 5, "v": "new", "ch": [f"new 
 o5 = d["ORDER"]["5"]; i = o5.index("QUOTE_PACKAGE") + 1 if "QUOTE_PACKAGE" in o5 else len(o5)
 o5[i:i] = ["CUSTOMER_APPROVAL", "CUSTOMER_APPROVAL_EVENT"]
 R.extend([
-    ["DEAL_GROUP", "CUSTOMER_APPROVAL", "has", "deal_group_id", "the customer's approvals of its quote issues", "1 : n", "new"],
-    ["QUOTE_PACKAGE", "CUSTOMER_APPROVAL", "has", "quote_package_id", "the code bound to this issue", "1 : 0..1", "new"],
+    ["DEAL_GROUP", "CUSTOMER_APPROVAL", "owns", "deal_group_id", "the customer's approvals of its quote issues", "1 : n", "new"],
+    ["QUOTE_PACKAGE", "CUSTOMER_APPROVAL", "refs", "quote_package_id", "the code bound to this issue", "1 : 0..1", "new"],
     ["USER", "CUSTOMER_APPROVAL", "refs", "issued_by", "issued (Operations)", "1 : n", "new"],
     ["USER", "CUSTOMER_APPROVAL", "refs", "decided_by", "entered the code or recorded the rejection", "1 : n", "new"],
-    ["CUSTOMER_APPROVAL", "CUSTOMER_APPROVAL_EVENT", "has", "customer_approval_id", "its trail", "1 : n", "new"],
+    ["CUSTOMER_APPROVAL", "CUSTOMER_APPROVAL_EVENT", "owns", "customer_approval_id", "its trail", "1 : n", "new"],
     ["USER", "CUSTOMER_APPROVAL_EVENT", "refs", "actor_id", "actor (nullable)", "1 : n", "new"],
 ])
 

@@ -109,7 +109,7 @@ export default async function HomePage() {
               <i>{I(ICON.docs)}</i>
               <h2>Documents</h2>
               <p>
-                The document pack: the ERD and its reading guide, the ledger posting design, lifecycle and approvals, roles and
+                The document pack: the four map pages, the ERD, the ledger posting design, lifecycle and approvals, roles and
                 visibility, the calculation specification and the configuration schema.
               </p>
               <span className="go">See the pack {I(ICON.arrow)}</span>
