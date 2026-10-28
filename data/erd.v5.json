@@ -164,13 +164,13 @@
      "archetype_code",
      "string",
      "",
-     "nullable; the archetype the project was created from (Client Operating Procedures Part C)"
+     "nullable; the archetype used to create the project (Client Operating Procedures Part C)"
     ],
     [
      "cloned_from_project_id",
      "int",
      "FK",
-     "nullable; the project it was cloned from; every copied row carries clone_confirmed_at empty until a user confirms or changes it, and activation needs them all confirmed (Configuration Schema 1a and rule 15)"
+     "nullable; the source project of a clone; every copied row carries clone_confirmed_at empty until a user confirms or changes it, and activation needs them all confirmed (Configuration Schema 1a and rule 15)"
     ],
     [
      "email_otp_enabled",
@@ -476,7 +476,7 @@
   "OWN_WALLET": {
    "d": "config",
    "col": 1,
-   "desc": "NPL’s own wallets, by role: reroute contingency (AQN-LT-Sub at Aquanow, Q10), the own desk of the NPL-GR project (D23), and a collection bridge — a wallet on a network a partner does not support (ERC-20 for Ali) or one that isolates risk, on which NPL collects and from which it forwards to the leg’s partner as a hop within custody_max_hours (D40). Custody is allowed only in those three cases (invariant 3); the custody view is the standing control. Also receives recovered dues. v6.0: client money may rest in NPL's own wallet in four cases, not three — an approved reroute before conversion, a reroute after conversion (REROUTE.phase post_conversion), a collection bridge within custody_max_hours, and an own-desk leg; role reroute_contingency serves both reroute phases and the CUSTODY view names the reroute and its phase for every resting balance.",
+   "desc": "NPL’s own wallets, by role: reroute contingency (AQN-LT-Sub at Aquanow, Q10), the own desk of the NPL-GR project (D23), and a collection bridge — a wallet on a network a partner does not support (ERC-20 for Ali) or one that isolates risk, on which NPL collects and from which it forwards to the leg’s partner as a hop within custody_max_hours (D40). Custody is allowed only in those four cases (invariant 3: a reroute before conversion, the balance of a reroute after conversion, an own-desk leg, a bridge collection); the custody view is the standing control. Also receives recovered dues. v6.0: client money may rest in NPL's own wallet in four cases, not three — an approved reroute before conversion, a reroute after conversion (REROUTE.phase post_conversion), a collection bridge within custody_max_hours, and an own-desk leg; role reroute_contingency serves both reroute phases and the CUSTODY view names the reroute and its phase for every resting balance.",
    "f": [
     [
      "id",
@@ -1253,7 +1253,7 @@
      "rate_basis",
      "string",
      "",
-     "market / agent_rate (D37; was market / partner)"
+     "market / agent_rate"
     ],
     [
      "mode",
@@ -1419,7 +1419,7 @@
      "basis",
      "string",
      "",
-     "pct_of_amount — the rebate is a percentage of the amount converted (Jeton 0.4 % of amount on a 1 % or 1.25 % fee, Novi 0.3 %, Aquanow 0.3 %); pct_of_partner_fee, retired by the D27 amendment, is dropped from the value set (v5.8, D46 amendment)"
+     "pct_of_amount — the rebate is a percentage of the amount converted (Jeton 0.4 % of amount on a 1 % or 1.25 % fee, Novi 0.3 %, Aquanow 0.3 %)"
     ],
     [
      "pct",
@@ -3178,6 +3178,12 @@
      "int"
     ],
     [
+     "event",
+     "string",
+     "",
+     "the step of the source the transaction records (released, confirmed, returned, booked, reversed …); (source_type, source_id, event) is unique, so one source event posts once (Ledger Posting Design rule 1b)"
+    ],
+    [
      "description",
      "string"
     ],
@@ -3205,7 +3211,7 @@
      "idempotency_key",
      "string",
      "",
-     "unique; the key of the action that created the transaction, so a retried request on a new transport call is refused and returns the first result; with (source_type, source_id, event) unique on existing columns (Ledger Posting Design rule 1b)"
+     "unique; the key of the action that created the transaction, so a retried request on a new transport call is refused and returns the first result (Ledger Posting Design rule 1b)"
     ]
    ],
    "v": "changed",
@@ -3215,7 +3221,8 @@
     "v5.7 (D46): sources + LossRecovery, Invoice, EarningsOffset",
     "v6.0 (section 5): + corrects_period — corrections never move a reported month",
     "v6.0 (D55): source + Opening",
-    "v6.1 (round 2, 28 October 2026): + idempotency_key (Ledger rule 1b, finding 11.2)"
+    "v6.1 (round 2, 28 October 2026): + idempotency_key (Ledger rule 1b, finding 11.2)",
+    "v6.1 (29 October 2026): + event; (source_type, source_id, event) unique"
    ]
   },
   "LEDGER_POSTING": {
@@ -3326,7 +3333,7 @@
      "kind",
      "string",
      "",
-     "asset / liability / income / expense; FX_RESULT is income or expense by sign, per currency"
+     "asset / liability / income / expense / equity (OPENING_BALANCE); FX_RESULT is income or expense by sign, per currency"
     ]
    ],
    "v": "changed",
@@ -3979,7 +3986,7 @@
   "WALLET_SCREENING": {
    "d": "config",
    "col": 2,
-   "desc": "A screening of one wallet address on one day — a sender’s declared sending wallet before a collection, or a receiver’s wallet before a settlement — with the result, the decision and who made it. Operations records it as part of transaction coordination; a reject may be overridden only by Finance. The decision picks the endpoint: accept_alternate lands only on an elevated-band endpoint. v5.3 (D31). NPL screens; the partners decide: a clear report under the provider's strict rulebook is Operations' decision, anything else is Management's second look, and no role has a right that lifts a partner's hold.",
+   "desc": "A screening of one wallet address on one day — a sender’s declared sending wallet before a collection, or a receiver’s wallet before a settlement — with the result, the decision and who made it. Operations records it as part of transaction coordination. The decision picks the endpoint: accept_alternate lands only on an elevated-band endpoint. v5.3 (D31). NPL screens; the partners decide: a clear report under the provider's strict rulebook is Operations' decision, anything else is Management's second look, and no role has a right that lifts a partner's hold.",
    "f": [
     [
      "id",
@@ -5145,7 +5152,8 @@
    "ch": [
     "new in v6.0 (D55, opening entries replace the backfill)",
     "v6.1 (round 2, 28 October 2026): sheet_ref write-once, content-addressed",
-    "v6.1 (round 2, 28 October 2026): evidence_ref write-once, content-addressed"
+    "v6.1 (round 2, 28 October 2026): evidence_ref write-once, content-addressed",
+    "v6.1 (29 October 2026): kind + suspense, held"
    ],
    "desc": "One row per opening balance entered on the opening date (Cutover Approach, Section 4; Ledger Posting Design, Pattern R): what it is, where it was verified, who approved it and the posting it produced. The opening date is the first day of the parallel run; every balance the sheets show is entered as a verified opening entry, posted once against CO.NONE.<CCY>.OPENING_BALANCE on the company side or between the client's jar and the project's promise on the client side, and never again.",
    "f": [
@@ -5173,7 +5181,7 @@
      "kind",
      "string",
      "",
-     "client_collected / client_due / sender_credit / shortfall / pool / rebate_receivable / share_receivable / share_payable / loss_receivable / earnings_receivable / vendor_payable / resale_receivable / month_volume"
+     "client_collected / client_due / sender_credit / shortfall / pool / rebate_receivable / share_receivable / share_payable / loss_receivable / earnings_receivable / vendor_payable / resale_receivable / month_volume / suspense (the part of a partner's balance the client sheets do not allocate, opened on the client side per partner and currency, Cutover Approach 4 step 3a) / held (client money resting in one of NPL's own wallets on the opening date)"
     ],
     [
      "receiver_group_id",
@@ -7958,7 +7966,7 @@
     "PARTNER_CONFIG",
     "SETTLEMENT_LINE"
    ],
-   "Custody in NPL’s own wallet is allowed in three cases only: a collection on a deal with an approved REROUTE; a leg whose PARTNER_CONFIG is an own desk (D23, the NPL-GR project); or a collection on a wallet with role collection_bridge, which is forwarded to the leg’s partner as a hop (a SETTLEMENT_LINE to the partner_transit receiver) within the wallet’s custody_max_hours (D40). CL.OWN.*.HELD is debited by nothing else; the custody aging view reports all three and is the standing control."
+   "Custody in NPL’s own wallet is allowed in four cases only: a collection on a deal with an approved REROUTE before conversion; the balance of a reroute after conversion while it waits to be forwarded; a leg whose PARTNER_CONFIG is an own desk (D23, the NPL-GR project); or a collection on a wallet with role collection_bridge, which is forwarded to the leg’s partner as a hop (a SETTLEMENT_LINE to the partner_transit receiver) within the wallet’s custody_max_hours (D40). CL.OWN.*.HELD is debited by nothing else; the custody aging view reports all three and is the standing control."
   ],
   [
    [
@@ -8697,11 +8705,11 @@
     ],
     [
      "REROUTE",
-     "The only way partner_pair / facilitating_entity change after quote. Pre- or post-collection; post-collection outcome is via the own wallet or a refund to the sender (Q3). Approved by Finance."
+     "The only way the partner pair or partner entity changes after quote. Before collection, after collection or after conversion: after collection the outcome is via the own wallet or a refund to the sender; after conversion the balance comes back through the own wallet to the alternate partner. Finance approves a reroute before conversion; Management approves one after conversion and ratifies every emergency action."
     ],
     [
      "OWN_WALLET",
-     "Contingency custody. CL.OWN.*.HELD may only be debited by a collection on a deal with an approved reroute; custody_max_hours bounds it."
+     "Contingency custody. CL.OWN.*.HELD may be debited in four cases only (a reroute before conversion, the balance of a reroute after conversion, an own-desk leg, a bridge collection); custody_max_hours bounds it."
     ],
     [
      "PARTNER_CONFIG",
@@ -8767,7 +8775,7 @@
     ],
     [
      "LEDGER_ACCOUNT",
-     "Accounts coded OWN.HOLDER.CCY.PURPOSE; client due balances are one account per project × partner × currency. ADVANCE no longer exists."
+     "Accounts coded OWNER.HOLDER.CCY.PURPOSE; client due balances are one account per project × partner × currency. ADVANCE no longer exists."
     ],
     [
      "PROJECT_BALANCE",
@@ -10648,7 +10656,7 @@
     "F2",
     "USDT collection with wallet screening",
     "Sender declares a wallet; NPL screens it; standard or alternate receiving wallet by risk; sender shares the hash; NPL verifies on chain; partner confirms. Where a sender cannot share a wallet up front (Evo and other projects) NPL arranges an alternative address: each partner has designated wallets for such cases, and where the partner does not support the network (Ali has no ERC-20) NPL collects on its own alternate wallet on that network and forwards to the partner on a network it supports (TRC-20), without the risk exposure",
-    "WALLET_SCREENING (Operations); COLLECTION.sending_address, wallet_screening_id, screening_skipped; COLLECTION_RECEIVING_ENDPOINT.risk_band for the partner's designated wallets; OWN_WALLET as a bridge endpoint forwarded to the partner as a hop — a model amendment is proposed for this (invariant 30, D31)"
+    "WALLET_SCREENING (Operations); COLLECTION.sending_address, wallet_screening_id, screening_skipped; COLLECTION_RECEIVING_ENDPOINT.risk_band for the partner's designated wallets; OWN_WALLET as a bridge endpoint forwarded to the partner as a hop — the bridge role of OWN_WALLET covers this (invariant 30)"
    ],
    [
     "F3",

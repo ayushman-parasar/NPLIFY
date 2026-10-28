@@ -1,14 +1,14 @@
 // Diagram definitions shared by the ERD document and the reading guide.
 // Full entities draw their attribute table; "~NAME" is defined in another diagram and appears name-only.
 export const DIAGRAMS = [
-  { id: "1a", title: "Configuration — project, parties, receiver groups and wallet screening", nodes: [
-      "CLIENT", "PROJECT", "SYSTEM_SETTING", "MARKUP_SHARE_PARTY", "RATE_SOURCE", "SENDER", "RECEIVER_GROUP", "OWN_WALLET", "THRESHOLD", "CURRENCY_PAIR",
-      "COLLECTION_SENDING_ENTITY", "SENDER_RECEIVER_ALLOW", "RECEIVER", "PAIR_RATE_SOURCE", "MARKUP_SHARE_RULE", "RECEIVING_ENTITY", "RECEIVING_ENTITY_ACCOUNT", "WALLET_SCREENING", "MESSAGE_TEMPLATE",
-      "~PARTNER_CONFIG", "~PARTNER_PAIR", "~DESTINATION_APPROVAL", "~FEE_STRUCTURE"] },
-  { id: "1b", title: "Configuration — partner configuration block, fees and tiers", nodes: [
+  { id: "1a", title: "Configuration — global master data and project settings", nodes: [
+      "CLIENT", "PROJECT", "SYSTEM_SETTING", "MARKUP_SHARE_PARTY", "RATE_SOURCE", "OWN_WALLET", "THRESHOLD", "CURRENCY_PAIR", "PAIR_RATE_SOURCE", "MESSAGE_TEMPLATE",
+      "~PARTNER", "~HOLIDAY", "~PARTNER_CUTOFF_OVERRIDE"] },
+  { id: "1b", title: "Configuration — parties, the partner configuration block, fees and tiers", nodes: [
       "PARTNER", "PARTNER_CUTOFF_OVERRIDE", "HOLIDAY", "PARTNER_CONFIG", "PARTNER_PAIR", "PARTNER_ENTITY", "COLLECTION_RECEIVING_ENDPOINT", "SETTLEMENT_SENDING_ENTITY", "SETTLEMENT_RAIL",
       "DESTINATION_APPROVAL", "PARTNER_REBATE_RULE", "FEE_STRUCTURE", "FEE_OVERRIDE", "FEE_TIER", "BANK_ACCOUNT_DETAILS", "BANK_DETAILS_TEMPLATE",
-      "~PROJECT", "~CURRENCY_PAIR", "~SENDER", "~RECEIVING_ENTITY_ACCOUNT", "~OWN_WALLET"] },
+      "SENDER", "SENDER_RECEIVER_ALLOW", "COLLECTION_SENDING_ENTITY", "RECEIVER_GROUP", "RECEIVER", "RECEIVING_ENTITY", "RECEIVING_ENTITY_ACCOUNT", "WALLET_SCREENING", "MARKUP_SHARE_RULE",
+      "~PROJECT", "~CURRENCY_PAIR", "~OWN_WALLET"] },
   { id: "2", title: "Rates", nodes: [
       "MARKET_RATE", "RATE_COMPARISON", "PARTNER_RATE_VERSION", "~RATE_SOURCE", "~CURRENCY_PAIR", "~PARTNER_PAIR", "~DEAL", "~CONVERSION", "~BALANCE_CONVERSION"] },
   { id: "3a", title: "Deal lifecycle — deal group, legs, pricing stamps, invoice, collection", nodes: [

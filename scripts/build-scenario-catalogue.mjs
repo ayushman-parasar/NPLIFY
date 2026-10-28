@@ -79,7 +79,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="rule"></div>
 ${REVIEW ? `<p class="rev-note"><b>Round-2 review draft, 28 October 2026 (Email OTP, the reviewer's change request CR-01, added to the draft of 27 October: finding 04.1 of the v6.0 design review).</b> Yellow = added text; nothing is struck.</p>` : ""}
 <h2>How to read this pack</h2>
-<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 93 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
+<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 96 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
 
 <h2>Contents</h2>
 <ol>${CAT.projects.map((p, i) => `<li>${esc(p.client)} — ${p.scenarios.length} scenario${p.scenarios.length === 1 ? "" : "s"}</li>`).join("")}</ol>
@@ -123,7 +123,7 @@ ${clients}
 <p>Pete asked for more intuitive names for several workflows without saying which. The renaming waits for NPL's list. When it arrives, the names change in the Workflow Tree, the common procedures (C1 to C10), the state tables of the Lifecycle &amp; Approvals document and this catalogue, and the old names are kept in the glossary (ERD Appendix A.1) with a pointer to the new ones, so that older references still resolve. Nothing else in the pack depends on a workflow's name: codes and identifiers are unchanged by a rename.</p>
 
 <h2 class="pb">Part 2 · Shared operational flows</h2>
-<p>Defined once and referenced by number from the scenarios above. The step-by-step version of each, with who does what and the evidence recorded, is in the Operating Procedures (common procedures C1–C10).</p>
+<p>Defined once and referenced by number from the scenarios above. The step-by-step version of each, with who does what and the evidence recorded, is in the Operating Procedures (common procedures C1–C11).</p>
 ${flows}
 
 <h2 class="pb">Part 3 · Guided walkthroughs</h2>
