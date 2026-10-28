@@ -1,0 +1,834 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Configuration Schema Specification</title><style>
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
+@page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
+body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
+h1{font:700 17pt Helvetica,Arial,sans-serif;color:#2f5d9e;text-align:center;margin:0 0 4pt}
+h2{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:18pt 0 6pt;break-after:avoid}
+h3{font:700 11pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:14pt 0 4pt;break-after:avoid}
+h4{font:700 10pt Helvetica,Arial,sans-serif;margin:14pt 0 2pt;break-after:avoid}
+h4 .scope{font-weight:400;color:#666;font-size:9pt}
+p{margin:0 0 7pt} .desc{font-size:9.6pt;color:#333} ul,ol{margin:0 0 8pt 16pt;padding:0} li{margin:0 0 3pt}
+ul.rules{font-size:9.3pt;color:#333}
+code,.mono{font:8.8pt Menlo,Consolas,monospace}
+table{border-collapse:collapse;width:100%;margin:4pt 0 6pt;font-size:9.2pt}
+th{text-align:left;font-weight:600;border-bottom:1px solid #333;padding:3pt 5pt;vertical-align:bottom}
+td{padding:3pt 5pt;border-bottom:1px solid #ddd;vertical-align:top}
+table.dd{font-size:8.8pt} table.dd td,table.dd th{padding:2pt 5pt}
+tr{break-inside:avoid}
+.title{text-align:center;margin-top:40mm}
+.title .sub{font:700 13pt Helvetica,Arial,sans-serif;color:#2f5d9e;margin:0 0 10pt}
+.title .org{margin:0 0 2pt} .title .date{margin:0 0 16pt}
+.rule{border-top:2px solid #222;border-bottom:1px solid #222;height:2px;margin:10pt 0 14pt}
+.pb{break-before:page}
+figure.chart{margin:8pt 0 12pt;break-inside:avoid} figcaption{font:italic 9.5pt Georgia,serif;margin-top:3pt}
+pre.yaml{font:8.3pt/1.35 Menlo,Consolas,monospace;background:#f7f7f7;border-left:3px solid #2f5d9e;padding:8pt 10pt;white-space:pre-wrap;margin:4pt 0 10pt}
+.box{border:1px solid #2f5d9e;background:#f3f6fb;padding:6pt 9pt;margin:8pt 0;font-size:9.8pt}
+.small{font-size:9pt;color:#444}
+</style></head><body>
+<div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Configuration Schema Specification</p><p class="org">New XP Technologies Limited</p><p class="date">28 October 2026 · Confidential</p></div>
+<div class="rule"></div>
+
+
+<h2>How to read this pack</h2>
+<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
+
+<h2>1 · How configuration is organised</h2>
+<p>Four ideas carry the whole model. <b>A client has projects.</b> The client is the commercial relationship; each project is one arrangement with it, with its own settings, currency pairs, senders, receiver groups and partner configurations. <b>Parties are partner-independent.</b> Senders, receiver groups and receiving entities belong to the project, so the same Sender A → Receiver Y flow can run through Ali today and Jeton tomorrow. <b>How a partner is used is a block.</b> Fees and tiers, vehicles and their collection endpoints, the narrative and the rail that pay out, the destination approvals and the rebate rule all hang off one PARTNER_CONFIG, and a deal leg stamps the block's rows it was priced and routed on. <b>The partner's clock is the partner's.</b> Cutoff, time zone, holidays and overrides belong to the global PARTNER and apply wherever a pair says it relies on the banking channel.</p>
+<figure class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 340" width="100%" style="display:block; background:#FFFFFF; border:0.5pt solid #bbbbbb"><defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,4 L0,8 z" fill="#555"/></marker></defs><text x="6" y="14" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#222" text-anchor="start" font-weight="bold">Figure 1 — the configuration model, with the project state</text><rect x="2" y="24" width="636" height="76" rx="6" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="5 3"/><text x="8" y="35" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#888" font-style="italic">global master data (dashed boxes are global)</text><rect x="8" y="42" width="118" height="19.5" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8" stroke-dasharray="4 2"/><text x="67.0" y="53.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">CLIENT</text><rect x="134" y="42" width="118" height="31.0" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8" stroke-dasharray="4 2"/><text x="193.0" y="53.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">PARTNER</text><line x1="134" y1="56.5" x2="252" y2="56.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="138" y="67.0" font-size="8" font-family="Menlo, Consolas, monospace">HOLIDAY, CUTOFF_OVERRIDE</text><rect x="260" y="42" width="118" height="19.5" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8" stroke-dasharray="4 2"/><text x="319.0" y="53.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">RATE_SOURCE</text><rect x="386" y="42" width="118" height="19.5" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8" stroke-dasharray="4 2"/><text x="445.0" y="53.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">MARKUP_SHARE_PARTY</text><rect x="512" y="42" width="118" height="31.0" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8" stroke-dasharray="4 2"/><text x="571.0" y="53.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">SYSTEM_SETTING</text><line x1="512" y1="56.5" x2="630" y2="56.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="516" y="67.0" font-size="8" font-family="Menlo, Consolas, monospace">platform pairs, templates</text><rect x="2" y="110" width="636" height="190" rx="6" fill="none" stroke="#888" stroke-width="0.7" stroke-dasharray="5 3"/><text x="8" y="121" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#888" font-style="italic">one project of one client</text><rect x="8" y="130" width="150" height="54.0" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8"/><text x="83.0" y="141.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">PROJECT</text><line x1="8" y1="144.5" x2="158" y2="144.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="12" y="155.0" font-size="8" font-family="Menlo, Consolas, monospace">state draft/validated/active</text><text x="12" y="166.5" font-size="8" font-family="Menlo, Consolas, monospace">is_test (dummy twin)</text><text x="12" y="178.0" font-size="8" font-family="Menlo, Consolas, monospace">policies, clocks, caps</text><rect x="8" y="206" width="150" height="65.5" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8"/><text x="83.0" y="217.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">THRESHOLD</text><line x1="8" y1="220.5" x2="158" y2="220.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="12" y="231.0" font-size="8" font-family="Menlo, Consolas, monospace">max_amount, settlement_limit</text><text x="12" y="242.5" font-size="8" font-family="Menlo, Consolas, monospace">approval_time_limit</text><text x="12" y="254.0" font-size="8" font-family="Menlo, Consolas, monospace">cutoff_warning_min, lock_idle</text><text x="12" y="265.5" font-size="8" font-family="Menlo, Consolas, monospace">breach-rule values (rate_*)</text><rect x="170" y="130" width="140" height="42.5" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8"/><text x="240.0" y="141.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">CURRENCY_PAIR</text><line x1="170" y1="144.5" x2="310" y2="144.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="174" y="155.0" font-size="8" font-family="Menlo, Consolas, monospace">→ PAIR_RATE_SOURCE chain</text><text x="174" y="166.5" font-size="8" font-family="Menlo, Consolas, monospace">rounding per side</text><rect x="170" y="190" width="140" height="31.0" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8"/><text x="240.0" y="201.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">OWN_WALLET (role)</text><line x1="170" y1="204.5" x2="310" y2="204.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="174" y="215.0" font-size="8" font-family="Menlo, Consolas, monospace">four custody cases</text><rect x="170" y="240" width="140" height="42.5" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8"/><text x="240.0" y="251.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">SENDER</text><line x1="170" y1="254.5" x2="310" y2="254.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="174" y="265.0" font-size="8" font-family="Menlo, Consolas, monospace">allow-list, provenance,</text><text x="174" y="276.5" font-size="8" font-family="Menlo, Consolas, monospace">fee overrides, return receiver</text><rect x="322" y="130" width="150" height="54.0" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8"/><text x="397.0" y="141.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">RECEIVER_GROUP</text><line x1="322" y1="144.5" x2="472" y2="144.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="326" y="155.0" font-size="8" font-family="Menlo, Consolas, monospace">→ RECEIVER → RECEIVING_ENTITY</text><text x="326" y="166.5" font-size="8" font-family="Menlo, Consolas, monospace"> → RECEIVING_ENTITY_ACCOUNT</text><text x="326" y="178.0" font-size="8" font-family="Menlo, Consolas, monospace">WALLET_SCREENING per address</text><rect x="484" y="130" width="150" height="88.5" rx="4" fill="#DCE9F8" stroke="#4A6FA5" stroke-width="0.8"/><text x="559.0" y="141.5" font-size="9" font-family="Helvetica, Arial, sans-serif" font-weight="bold" text-anchor="middle">PARTNER_CONFIG (block)</text><line x1="484" y1="144.5" x2="634" y2="144.5" stroke="#4A6FA5" stroke-width="0.6"/><text x="488" y="155.0" font-size="8" font-family="Menlo, Consolas, monospace">PARTNER_PAIR → FEE_STRUCTURE</text><text x="488" y="166.5" font-size="8" font-family="Menlo, Consolas, monospace"> → FEE_TIER</text><text x="488" y="178.0" font-size="8" font-family="Menlo, Consolas, monospace">PARTNER_ENTITY → endpoints</text><text x="488" y="189.5" font-size="8" font-family="Menlo, Consolas, monospace">sending entity, rail</text><text x="488" y="201.0" font-size="8" font-family="Menlo, Consolas, monospace">destination approvals</text><text x="488" y="212.5" font-size="8" font-family="Menlo, Consolas, monospace">share and rebate rules</text><path d="M 70.8 130.0 L 60.0 106.0 L 65.7 61.5" fill="none" stroke="#555" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#arr)"/><path d="M 559.6 130.0 L 560.0 106.0 L 252.0 65.3" fill="none" stroke="#555" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#arr)"/><path d="M 83.0 206.0 L 83.0 184.0" fill="none" stroke="#555" stroke-width="0.9" marker-end="url(#arr)"/><path d="M 170.0 153.8 L 158.0 154.3" fill="none" stroke="#555" stroke-width="0.9" marker-end="url(#arr)"/><path d="M 170.0 205.9 L 162.0 206.0 L 126.5 184.0" fill="none" stroke="#555" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#arr)"/><path d="M 170.0 251.2 L 162.0 250.0 L 105.9 184.0" fill="none" stroke="#555" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#arr)"/><path d="M 322.0 138.4 L 240.0 118.0 L 158.0 138.4" fill="none" stroke="#555" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#arr)"/><path d="M 484.0 147.7 L 400.0 118.0 L 158.0 147.8" fill="none" stroke="#555" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#arr)"/><text x="8" y="312" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#222" text-anchor="start" font-style="italic">Change control unchanged: Finance proposes, Management approves; every row is versioned by effective date. New (1a): a project is created from an archetype,</text><text x="8" y="324" font-size="8" font-family="Helvetica, Arial, sans-serif" fill="#222" text-anchor="start" font-style="italic">passes the Section 6 rules to become validated, and prices deals only when active; the four effective-date rules say which versions a deal keeps.</text></svg><figcaption>Figure 1 — The configuration model, with the project state (PROJECT.state, PROJECT.is_test) and the THRESHOLD kinds. Dashed boxes are global; everything inside the shaded area belongs to one project of one client.</figcaption></figure>
+
+<h2>1a · Creating a project, project states and effective-date rules</h2>
+<h3>Creating a project from an archetype</h3>
+<p>A new project is not set up field by field. It is created from one of the six project archetypes of the Client Operating Procedures (Part C): the archetype pre-fills the project's policies, its currency pairs with their rate-source chains, the fee structure and tiers of each partner pair, the message templates, the thresholds and the partner configuration block. Finance then changes only what differs for the client (names, parties, accounts, the fee percentages agreed) and proposes the project; Management approves it as one change. An existing project of the same archetype may be used as the source instead of the archetype itself (cloning), with the same rules. The guided setup screens that do this are built in milestone M0 of Phase 1.</p>
+<p><b>What a clone does not carry.</b> Cloning copies structure, not agreements. The new project records its source (archetype code, or the project it was cloned from), every copied row carries that source until a user confirms or changes it, and the fields of the <i>reconfirm list</i> are left empty on the new project and must be set explicitly before it can be validated: on the project, client, name, client label, exposure ceiling, settlement policy and every threshold with an amount or a currency; on each partner pair, the fee structure's percentage and its sender and receiver parts, the tiers, the minimum and maximum markup and the rate basis; on each partner configuration block, the partner entities, collection endpoints, settlement sending entities and rails, destination approvals, rebate rule and markup shares; on the parties, the senders, receiver groups, receivers, accounts, bank account details and allow-lists. A partner's cutoff, time zone and holidays are never copied: they belong to the partner, not the project, and the new project reads them from the partner it names. The reviewer's case, an Evo-like project cloned for a partner on a different rail and cost, therefore fails validation on the rail, the partner fee and the fee percentage until each is set for the new agreement; the activation checks are rule 15 of Section 6, and the validation report names every failing row and field.</p>
+<h3>Project states: draft, validated, active</h3>
+<p>A project carries a state in addition to its status. <b>draft</b>: the project is being set up; rows may be added and changed freely under the normal proposal and approval rules; no deal can be priced on it. <b>validated</b>: every cross-entity rule of Section 6 passes for the project and for each of its partner configuration blocks; the validation report lists each rule with its result and the rows concerned, and is kept with the project. <b>active</b>: Management has activated the validated project; deals may be priced and partner configurations used. A project returns to draft when a change proposal is approved that makes a rule fail, and must be validated again before it is used. A partner configuration block added later follows the same path on its own: it cannot be used on a deal until it passes the rules of Section 6. The validation report screen is built in M0; the rules themselves already exist (Section 6) and are evaluated on save.</p>
+<h3>Effective-date rules</h3>
+<p>Configuration is versioned by effective date (Change control, below). The four rules below say what a new version does to deals that already exist. They are stated in the same words in section 2 of the Lifecycle &amp; Approvals document.</p>
+<table><thead><tr><th style="width:36%">Rule</th><th>What happens</th></tr></thead><tbody>
+<tr><td>1. New versions apply to new pricing only</td><td>An approved configuration change takes effect for deals priced on or after its effective date. A deal priced before that date is not re-priced.</td></tr>
+<tr><td>2. A priced deal keeps its versions</td><td>The fee structure version, the tier, the rate basis, the rounding options, the partner configuration and the policy versions stamped at pricing stay with the deal to the end of its life, including through settlement, return and loss handling.</td></tr>
+<tr><td>3. A re-quote uses the configuration of the new pricing time</td><td>An expired or requoted leg is priced afresh on the versions in force when the new quote is made (a new deal group); the original leg keeps its stamp.</td></tr>
+<tr><td>4. A collect-first deal uses the configuration in force when it is priced</td><td>A collect-first leg is priced at conversion, so it uses the versions effective at that time, not at the time the money arrived, unless a documented client agreement names a different rule for that project.</td></tr>
+</tbody></table>
+<p>Worked scenarios (the fee rises from 2.0 % to 2.2 % effective 1 November; proposed 28 October, approved 29 October). A: quoted 30 October, collected 31 October, converted 2 November, pays 2.0 % (rule 2). B: quoted 2 November, pays 2.2 % (rule 1). C: quoted 30 October, expired, re-quoted 2 November, pays 2.2 % (rule 3). D: collected 31 October with no prior quote, priced at conversion on 2 November, pays 2.2 % (rule 4). These four scenarios are demonstrated in Phase 1 (M4) for fees, tiers, rounding options and partner settings, not only the headline percentage.</p>
+
+<div class="box"><b>Change control.</b> Configuration is versioned: thresholds, fee structures, tiers, templates, system settings and policies are new rows with an effective date, never edits. Finance proposes, Management approves (approver ≠ proposer, from the ROLE_RIGHT rows), and every change is audited. Deals keep the versions they were priced on. Three rows are not approvals but audited records: a partner cutoff override (Finance, with the partner's agreement), a wallet screening (Operations on a clear report; Management's decision on a second look) and a destination approval's status as reported by the partner.</div>
+
+<h2>2 · Global master data and system settings</h2>
+<h4 id="CLIENT">CLIENT <span class="scope">· Global</span></h4>
+<p class="desc">The commercial relationship: the counterparty NPL contracts with and reports on (Betfair, Evo, 66 Group, GDC …). A client has one or more PROJECTs — BF, BF Sub and BF Withdrawal are three arrangements with one client — each with its own fee structures, partners and policies. Client-level figures (balances at partners, entitlement, custody, earnings, rebates) are roll-ups over the client’s projects (CLIENT_POSITION), never stored; an optional exposure_ceiling caps the sum of what rests at partners across the client’s projects.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>string</td><td>yes</td><td>Betfair, Evo, 66 Group, GDC, NPL-GR</td></tr><tr><td class="mono">category</td><td>string</td><td>no</td><td>NPL’s own grouping (Project Context tab: BF, Evo, Game Reseller …)</td></tr><tr><td class="mono">legal_entity_ref</td><td>string</td><td>no</td><td>contracting entity, external store</td></tr><tr><td class="mono">kyc_ref</td><td>string</td><td>no</td><td>external store</td></tr><tr><td class="mono">relationship_owner</td><td>int</td><td>no</td><td>USER</td></tr><tr><td class="mono">exposure_ceiling</td><td>decimal</td><td>no</td><td>optional cap on Σ balance resting at partners across the client’s projects, stated in the reporting currency and compared through REPORTING_VALUE at the latest market rate</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>The commercial relationship NPL contracts with and reports on. A client has one or more projects: BF, BF Sub and BF Withdrawal are three arrangements with one client.</li><li>exposure_ceiling, when set, caps the sum of what rests at partners across the client's projects; it is stated in the reporting currency and compared through REPORTING_VALUE.</li><li>Client-level figures (CLIENT_POSITION) are roll-ups over the client's projects, never stored.</li></ul><h4 id="PARTNER">PARTNER <span class="scope">· Global</span></h4>
+<p class="desc">A global counterparty (Ali, Jeton, PT): remittance companies, fintechs, EMIs, neobanks or crypto exchanges. How a partner is used in a project lives in PARTNER_CONFIG. disclosure_style records whether the partner’s markup is visible. carries the partner’s daily bank cutoff, like its rate expiry and holiday calendar — a property of the partner, whichever project uses it. supported_methods says which collection and settlement methods the partner offers; cash and local deposits have no standing endpoint, so they are declared here, while networks are read from the vehicle’s wallet endpoints.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>string</td><td>yes</td><td>Ali, Jeton, PT</td></tr><tr><td class="mono">disclosure_style</td><td>string</td><td>yes</td><td>fee_in_rate / fee_on_market — whether the partner’s fee sits inside its rate or is stated on top of market</td></tr><tr><td class="mono">rate_expiry_time</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">holiday_calendar</td><td>string</td><td>no</td><td>name of the source calendar (e.g. ID banking holidays); the dates are HOLIDAY rows</td></tr><tr><td class="mono">supported_methods</td><td>string</td><td>yes</td><td>crypto / bank / cash / local_deposit — the methods this partner offers (Ali: all four; Jeton and Aquanow: crypto, bank). Networks are implied by its wallet endpoints</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">bank_cutoff_time</td><td>time</td><td>no</td><td>nullable: the partner’s standing daily bank cutoff for pairs that rely on the banking channel (Ali and other Asian partners, 14:30); empty for Jeton and Aquanow, which bind nothing. Governs locking the rate for same-day conversion and initiating an outgoing bank settlement; per-day changes in PARTNER_CUTOFF_OVERRIDE</td></tr><tr><td class="mono">cutoff_timezone</td><td>string</td><td>no</td><td>IANA zone, e.g. Asia/Hong_Kong</td></tr>
+</tbody></table>
+<ul class="rules"><li>A partner is set up once and reused by any project through a PARTNER_CONFIG.</li><li>disclosure_style says where the partner's fee sits: fee_in_rate (inside its rate — Ali) or fee_on_market (stated on top of market — Jeton).</li><li>supported_methods lists the collection and settlement methods the partner offers (crypto / bank / cash / local_deposit); networks are implied by its vehicles' wallet endpoints.</li><li>bank_cutoff_time with cutoff_timezone is the partner's standing daily bank cutoff; empty for a partner whose channel binds nothing (Jeton, Aquanow). It is required if any of the partner's pairs has needs_bank_lock.</li><li>holiday_calendar names the source calendar; the dates are HOLIDAY rows.</li></ul><h4 id="HOLIDAY">HOLIDAY <span class="scope">· Per partner</span></h4>
+<p class="desc">A non-business day of a partner’s banking channel: one row per date (Indonesian bank holidays for Ali’s PT vehicles, UK holidays for Jeton). The dates behind every ‘next business day’ in the model — a leg’s conversion_due_date and a settlement’s execution_due_date skip weekends in the partner’s cutoff_timezone and the partner’s HOLIDAY rows. scope says what is closed: the bank channel only (crypto pairs unaffected) or the partner altogether. PARTNER.holiday_calendar stays as the name of the source calendar; this table holds its dates.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">date</td><td>date</td><td>yes</td><td></td></tr><tr><td class="mono">name</td><td>string</td><td>no</td><td>Idul Fitri, Boxing Day</td></tr><tr><td class="mono">scope</td><td>string</td><td>yes</td><td>bank_channel / partner · default <b>bank_channel</b></td></tr><tr><td class="mono">source</td><td>string</td><td>no</td><td>partner notice / public calendar</td></tr>
+</tbody></table>
+<ul class="rules"><li>One row per non-business day of the partner's banking channel; conversion_due_date and execution_due_date skip these dates and weekends in the partner's cutoff_timezone.</li><li>scope bank_channel leaves crypto pairs unaffected; scope partner closes the partner altogether.</li></ul><h4 id="PARTNER_CUTOFF_OVERRIDE">PARTNER_CUTOFF_OVERRIDE <span class="scope">· Per partner</span></h4>
+<p class="desc">A change to a partner’s bank cutoff for one day or for a recurring weekday: an extension of 30–60 minutes that the partner agreed for an urgent request, or an early close on a Friday or the day before a holiday. The effective cutoff for a day is the one-day override if any, else the weekday rule, else PARTNER.bank_cutoff_time. Finance records it with the partner’s agreement.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">applies_on</td><td>date</td><td>no</td><td>one day; null for a weekday rule</td></tr><tr><td class="mono">weekday</td><td>string</td><td>no</td><td>recurring rule (Friday); null for a one-day override</td></tr><tr><td class="mono">cutoff_time</td><td>time</td><td>yes</td><td>the cutoff that applies instead</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>extension / early_close</td></tr><tr><td class="mono">reason</td><td>string</td><td>yes</td><td>urgent request / pre-holiday / partner notice</td></tr><tr><td class="mono">partner_agreement_ref</td><td>string</td><td>no</td><td>the partner agreed (extensions)</td></tr><tr><td class="mono">recorded_by</td><td>int</td><td>yes</td><td>Finance</td></tr>
+</tbody></table>
+<ul class="rules"><li>Exactly one of applies_on (a one-day override) and weekday (a recurring rule, e.g. Friday) is set.</li><li>The effective cutoff for a day is the one-day override if any, else the weekday rule, else PARTNER.bank_cutoff_time.</li><li>kind extension needs partner_agreement_ref; Finance records it, no approval (an audited step).</li></ul><h4 id="RATE_SOURCE">RATE_SOURCE <span class="scope">· Global</span></h4>
+<p class="desc">A market data source. Cross-source slippage is a query over MARKET_RATE across sources for the same pair and window.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">code</td><td>string</td><td>yes</td><td>KRAKEN / CMC / OANDA / XE</td></tr><tr><td class="mono">staleness_threshold_s</td><td>int</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>A snapshot older than staleness_threshold_s is not used for pricing; the next source in the pair's chain is tried; with every source down a manual rate needs Finance approval with evidence.</li></ul><h4 id="MARKUP_SHARE_PARTY">MARKUP_SHARE_PARTY <span class="scope">· Global</span></h4>
+<p class="desc">A party who shares NPL’s markup: an external markup-share party who brought in a client, or a customer such as Raeen who provides sub-accounts. Paid either a share of NPL’s earnings or a fixed % per transaction; several markup-share parties may share one deal. may also be a client party (Raeen) who provides sub-accounts and shares NPL’s net markup — MARKUP_SHARE_RULE.party_kind says which.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>A party who shares NPL's markup: an external party who brought in a client, or a customer who provides sub-accounts. How it is paid on a project is MARKUP_SHARE_RULE.</li></ul><h4 id="SYSTEM_SETTING">SYSTEM_SETTING <span class="scope">· Global, versioned</span></h4>
+<p class="desc">The system-settings area, kept simple: this key/value table (reporting_currency, reporting_rate_max_age_min, operating_timezone, and later keys), the ROLE table for user roles, and the platform-scope CURRENCY_PAIRs that carry the conversion rates for reporting through the ordinary PAIR_RATE_SOURCE chain. Every row is versioned by effective_from and approved by Management. Nothing here changes a price, a posting or a settlement.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">key</td><td>string</td><td>yes</td><td>reporting_currency / reporting_rate_max_age_min / operating_timezone / staging_snapshot_retention_days (how long the read-only staging snapshot with the test projects' audit rows is kept after the switch) / … (the reporting rate source is the platform pair’s PAIR_RATE_SOURCE, not a key)</td></tr><tr><td class="mono">value</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">approved_by</td><td>int</td><td>yes</td><td>Management</td></tr>
+</tbody></table>
+<ul class="rules"><li>Keys today: reporting_currency, reporting_rate_max_age_min, operating_timezone. A new value is a new row with a later effective_from, approved by Management.</li><li>The reporting rate source is not a key: it is the PAIR_RATE_SOURCE chain of the platform-scope CURRENCY_PAIR (currency → reporting currency).</li><li>Nothing here changes a price, a posting or a settlement.</li></ul><h4 id="MESSAGE_TEMPLATE">MESSAGE_TEMPLATE <span class="scope">· Global default, or per project</span></h4>
+<p class="desc">A versioned template for a message the system sends or renders: the quote package to a sender, the payment instructions, a confirmation request to a receiver, a settlement advice. Global, or owned by a project that needs its own wording. A template names the fields it prints; a template of purpose quote may print only sender-facing figures (sender rate, customer-facing fee and rate, amount out, validity) — never partner rates, margins or costs — which is how ’s ‘Operations never receives derived economics’ is enforced on outgoing messages. Changing a template is a configuration change approved by Management.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>no</td><td>null = global default; a project row overrides it</td></tr><tr><td class="mono">code</td><td>string</td><td>yes</td><td>quote / payment_instructions / confirmation_request / settlement_advice / cash_token / email_otp_quote (the Email OTP approval email: the quote's sender-facing figures, the code, its expiry and the partial destination)</td></tr><tr><td class="mono">version</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">channel</td><td>string</td><td>yes</td><td>email / chat / portal / pdf</td></tr><tr><td class="mono">language</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">body_ref</td><td>string</td><td>yes</td><td>external content store Write-once: the key carries the file's hash, a corrected document is a new row naming the old one (ERD Appendix C).</td></tr><tr><td class="mono">printed_fields</td><td>string</td><td>yes</td><td>the model fields the template may print; sender-facing only for quote</td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">approved_by</td><td>int</td><td>yes</td><td>Management</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>project_id null is the global default; a project row with the same code overrides it.</li><li>printed_fields lists the model fields the template may print. A template of code quote may print only sender-facing figures (sender rate, customer-facing fee and rate, amount out, validity) — never a partner rate, a margin or a cost; the save is refused otherwise.</li><li>A new version is a new row approved by Management; the version a package was rendered with is recorded on QUOTE_PACKAGE.</li></ul><h4 id="BANK_DETAILS_TEMPLATE">BANK_DETAILS_TEMPLATE <span class="scope">· Platform, per rail</span></h4>
+<p class="desc">Configuration: what a bank account on a given rail must carry. One row per rail × field, in display order: SWIFT (account number or IBAN, BIC, bank address, intermediary bank), SEPA (IBAN, BIC), UK Faster Payments (sort code, account number), a local rail (bank code, account number). The template drives the entry form, the validation on save (IBAN check digits, BIC length, sort-code pattern) and the card that shows the details in full; wallets are not templated (network and address stay on the account row). Versioned by effective date like every configuration table; Finance proposes, Management approves.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">rail</td><td>string</td><td>yes</td><td>SWIFT / SEPA / UK_FPS / local:&lt;country&gt; …; one template per rail</td></tr><tr><td class="mono">position</td><td>int</td><td>yes</td><td>display order within the rail</td></tr><tr><td class="mono">field_key</td><td>string</td><td>yes</td><td>iban, bic, account_number, sort_code, bank_code, bank_address, intermediary_bic …</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>as shown on the form and the card</td></tr><tr><td class="mono">required</td><td>bool</td><td>yes</td><td> · default <b>true</b></td></tr><tr><td class="mono">format_rule</td><td>string</td><td>no</td><td>named check or pattern: iban_check_digits, bic_length, uk_sort_code, digits(n) …</td></tr><tr><td class="mono">example</td><td>string</td><td>no</td><td>shown on the form</td></tr><tr><td class="mono">effective_from</td><td>date</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td> · default <b>active</b></td></tr>
+</tbody></table>
+<ul class="rules"><li>One row per rail × field, in display order. The starting templates: SWIFT — account number or IBAN, BIC, bank name and address, intermediary bank (optional); SEPA — IBAN, BIC; UK Faster Payments — sort code, account number; a local rail — bank code, account number.</li><li>format_rule names the check applied on save: iban_check_digits, bic_length (8 or 11), uk_sort_code (6 digits), digits(n), or a pattern. A value that fails the rule cannot be saved.</li><li>Wallets are not templated: a wallet's network and address stay on the account or endpoint row and are checksum-validated per network as before.</li><li>Changed like any configuration: Finance proposes a row, Management approves; a retired field stops being required for new versions and stays readable on old ones.</li></ul>
+
+<h2 class="pb">3 · Project settings</h2>
+<h4 id="PROJECT">PROJECT <span class="scope">· Per client</span></h4>
+<p class="desc">One arrangement with a client: a product line with its own configuration — parties, groups, pairs, thresholds, partner configurations — and its own policies. Several projects may belong to one CLIENT (BF, BF Sub and BF Withdrawal). In it also carries the settlement policy with an exposure cap, the network-fee policy and the receiver-fee default at conversion.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">client_id</td><td>int</td><td>yes</td><td>the client this arrangement belongs to</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">client_label</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">quote_freshness_min</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">quote_validity_min</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">grace_min</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">grace_drift_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">late_collection_policy</td><td>string</td><td>yes</td><td>requote / honor_with_approval</td></tr><tr><td class="mono">bank_fee_treatment_default</td><td>string</td><td>yes</td><td>waived / carry_forward / absorbed</td></tr><tr><td class="mono">receiver_fee_timing</td><td>string</td><td>yes</td><td>at_conversion (default) / post_confirmation · default <b>at_conversion</b></td></tr><tr><td class="mono">network_fee_policy</td><td>string</td><td>yes</td><td>absorbed / charged_back (project default; per-transaction override via FEE_DECISION). A network fee may or may not apply; when it does it is stated in USDT, when it does not it is zero and nothing posts</td></tr><tr><td class="mono">settlement_policy</td><td>string</td><td>yes</td><td>to_zero / hold_allowed · default <b>to_zero</b></td></tr><tr><td class="mono">shortfall_tolerance</td><td>decimal</td><td>yes</td><td> · default <b>0</b></td></tr><tr><td class="mono">exposure_ceiling</td><td>decimal</td><td>no</td><td>cap on balance resting at a partner</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">archetype_code</td><td>string</td><td>no</td><td>nullable; the archetype the project from (Client Operating Procedures Part C)</td></tr><tr><td class="mono">cloned_from_project_id</td><td>int</td><td>no</td><td>nullable; the project it from; every copied row carries clone_confirmed_at empty until a user confirms or changes it, and activation needs them all confirmed (Configuration Schema 1a and rule 15)</td></tr><tr><td class="mono">email_otp_enabled</td><td>bool</td><td>no</td><td>default false; Email OTP, the customer's approval of each quote by a one-time code (Lifecycle 2e); on only with the three Email OTP thresholds set; each sender then needs its own approved approver address and chat group</td></tr><tr><td class="mono">state</td><td>string</td><td>yes</td><td>draft / validated / active · default draft. Only an active project can price a deal; validated means every rule of Section 6 passes for the project and each of its partner configuration blocks; Management activates (see “Project states” in section 1)</td></tr><tr><td class="mono">is_test</td><td>bool</td><td>yes</td><td>default false. A dummy twin project set up from the same archetype as a real project, used only for scripted test deals on staging (Cutover Approach, Section 3); every row that belongs to it is removed by the pre-copy filter before production is loaded, and its figures are excluded from every count and balance shown to NPL</td></tr>
+</tbody></table>
+<ul class="rules"><li>One arrangement with a client; several projects may belong to one CLIENT. Everything the arrangement needs sits under it.</li><li>quote_freshness_min &lt; quote_validity_min; grace_min and grace_drift_pct govern the grace decision after validity (adds extensions before validity ends).</li><li>network_fee_policy is the project default; a one-off override is a FEE_DECISION. When a network fee applies it is stated in USDT; when it does not, nothing posts.</li><li>exposure_ceiling caps the balance resting at a partner (settlement_policy hold_allowed); the client-level cap is on CLIENT.</li><li>&lt;b&gt;Email OTP&lt;/b&gt; (optional, default off): the customer approves each quote by a one-time code sent to the sender's registered approver address and pasted in that sender's registered chat group (Lifecycle &amp;amp; Approvals 2e). The project carries the switch; the three windows are THRESHOLD kinds (below); each SENDER carries its own approver email and registered chat group (platform, group name, group id), because every sender has its own chat group (NPL, 28 October 2026). While the switch is on, a quote for a sender without an approved approver address and chat group cannot be sent, and the screen says why; there is no fallback. The sender's four columns are protected master data: Operations enters, Finance approves, never the same person; a new approver address is active only after a verification code sent to it comes back through that sender's chat group; while a change is pending no approval email can be sent for that sender; a change of address voids that sender's open codes only (rule 16; Roles &amp;amp; Visibility rule 13).</li></ul><h4 id="THRESHOLD">THRESHOLD <span class="scope">· Per project</span></h4>
+<p class="desc">Project-level system settings: limits and escalation rules evaluated at write time. settlement_limit now also bounds balance held at a partner under settlement_policy = hold_allowed.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>no</td><td>reference</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>max_amount / settlement_limit / daily_slots / rate_variation_rel / custom; rate_min_observations, rate_fallback_spread_abs, rate_abs_tolerance (Calculation Specification 2a); approval_time_limit (one row per approval stage, Lifecycle 8a); cutoff_warning_min; lock_idle_minutes (default 15; Lifecycle 6a); email_otp_code_window_min (default 1440), email_otp_stepup_amount (in the reporting currency), email_otp_tripwire_min (default 240) — the Email OTP windows (Lifecycle 2e); route_unused_days (dormant routes) / rate_min_observations / rate_fallback_spread_abs / rate_abs_tolerance / approval_time_limit / cutoff_warning_min / lock_idle_minutes (the six added kinds are described below)</td></tr><tr><td class="mono">currency</td><td>string</td><td>no</td><td></td></tr><tr><td class="mono">value</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">condition_expr</td><td>string</td><td>no</td><td>custom conditions</td></tr><tr><td class="mono">escalation</td><td>string</td><td>yes</td><td>finance / management</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>One row per kind and currency; currency may be blank for kinds that are not amounts (daily_slots, rate_variation_rel).</li><li>escalation names who decides when the threshold is crossed: finance or management; the escalation adds the approval, it never replaces the first.</li><li>settlement_limit also bounds the balance held at a partner under settlement_policy hold_allowed.</li><li>Email OTP kinds (used only when the project's switch is on): email_otp_code_window_min, how long the customer has to approve, default 1440 (24 hours); email_otp_stepup_amount, in the reporting currency, at or above which the paste must carry the amount as well as the code, default USD 50,000 equivalent; email_otp_tripwire_min, after which a code with nothing from the registered chat group raises an alert, default 240 (4 hours). Changed like every threshold: Finance proposes, Management approves.</li></ul><p>Six further THRESHOLD kinds (added in the design review), used by the breach rules of the Calculation Specification (section 2a); NPL Finance sets the values, Management approves them like any threshold.</p>
+<table class="dd"><thead><tr><th style="width:20%">kind</th><th style="width:8%">currency</th><th style="width:16%">value</th><th style="width:13%">escalation</th><th>meaning</th></tr></thead><tbody>
+<tr><td class="mono">rate_min_observations</td><td>—</td><td>count (e.g. 10)</td><td>finance</td><td>fewer confirmed rate versions than this in the two-week window → the two-week average is not used; the fallback threshold applies</td></tr><tr><td class="mono">rate_fallback_spread_abs</td><td>—</td><td>fraction (e.g. 0.015)</td><td>finance</td><td>the absolute spread above which a rate version breaches when the two-week average is unavailable or unusable (zero or negative)</td></tr><tr><td class="mono">rate_abs_tolerance</td><td>—</td><td>fraction (e.g. 0.005)</td><td>finance</td><td>a spread further than this from the two-week average, in either direction, is flagged for Finance to verify before use; nothing freezes</td></tr><tr><td class="mono">approval_time_limit</td><td>—</td><td>minutes</td><td>finance / management</td><td>one row per stage, the stage named in condition_expr (collection_verification, rate_confirmation, conversion_approval, settlement_approval, execution_confirmation, eod_reconciliation): after this many minutes a pending item of that stage is overdue and appears on the escalation role's list (Lifecycle &amp; Approvals, 8a)</td></tr><tr><td class="mono">cutoff_warning_min</td><td>—</td><td>minutes (e.g. 60; a second row 30)</td><td>finance / management</td><td>a warning is raised this many minutes before a partner's cutoff for any item still pending against it</td></tr><tr><td class="mono">lock_idle_minutes</td><td>—</td><td>minutes (default 15)</td><td>management</td><td>a RECORD_LOCK not touched for this long expires on its own; Management may clear one earlier (Lifecycle &amp; Approvals, 6a)</td></tr>
+</tbody></table><h4 id="CURRENCY_PAIR">CURRENCY_PAIR <span class="scope">· Per project, or platform</span></h4>
+<p class="desc">A pair the project trades, with quote direction and rate precision. Rounding is a per-pair choice on each side: amount_rounding with rounding_unit on payouts, cash_rounding with cash_rounding_unit on the collected cash amount; what is dropped stays client money, what is added by rounding up is NPL’s cost (EXP_ROUNDING). from_currency may equal to_currency: the leg still converts, at rate 1, so the fee is captured at conversion as on any other pair. Cash pairs are priced per city on the rate version and the deal, not on the pair. a pair with no project is a system reporting pair, used only to convert figures into the reporting currency.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>no</td><td>null when scope = platform</td></tr><tr><td class="mono">scope</td><td>string</td><td>yes</td><td>project / platform — a platform pair (currency → reporting currency) belongs to no project, is managed under system settings, is priced through PAIR_RATE_SOURCE like any pair and is never quoted · default <b>project</b></td></tr><tr><td class="mono">from_currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">to_currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">quote_direction</td><td>string</td><td>yes</td><td>out_per_in / in_per_out · default <b>out_per_in</b></td></tr><tr><td class="mono">rate_precision</td><td>int</td><td>yes</td><td> · default <b>5</b></td></tr><tr><td class="mono">amount_rounding</td><td>string</td><td>yes</td><td>exact / truncate_unit / nearest_unit / round_up_unit / nearest_n / round_up_n (exact is the default for bank transfers — cents go out; the unit options apply where the pair says so, in practice to cash hand-overs) · default <b>exact</b></td></tr><tr><td class="mono">cash_rounding</td><td>string</td><td>no</td><td>truncate_n / nearest_n / round_up_n — how the collected cash amount is rounded to cash_rounding_unit only)</td></tr><tr><td class="mono">cash_rounding_unit</td><td>int</td><td>no</td><td>100 / 500 / 1000 by currency — the unit the collected cash amount is rounded to; AED cash 100, USD cash in Dubai 10 (NPL, 9 Oct)</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rounding_unit</td><td>decimal</td><td>no</td><td>required for nearest_n / round_up_n (1,000 for THB, INR, JPY payouts)</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>scope project needs project_id; scope platform (currency → reporting currency) has none, is managed under system settings and is never quoted.</li><li>amount_rounding is the payout-side menu (exact / truncate_unit / nearest_unit / round_up_unit / nearest_n / round_up_n); exact is the default for bank transfers; nearest_n and round_up_n need rounding_unit.</li><li>cash_rounding with cash_rounding_unit applies to the collected cash amount (AED 100, USD cash in Dubai 10, 1,000 for Asian currencies); both blank for a pair that is never collected in cash.</li><li>from_currency may equal to_currency: the leg converts at rate 1 and the fee is captured at conversion.</li><li>A pair needs at least one PAIR_RATE_SOURCE with a unique priority before it can be used.</li></ul><h4 id="PAIR_RATE_SOURCE">PAIR_RATE_SOURCE <span class="scope">· Per pair</span></h4>
+<p class="desc">The prioritised source chain for a currency pair.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">currency_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">rate_source_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">priority</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>Priority 1 is tried first; the chain continues on staleness or outage.</li><li>Platform pairs use the same chain: it is what REPORTING_VALUE converts with.</li></ul><h4 id="OWN_WALLET">OWN_WALLET <span class="scope">· Per project</span></h4>
+<p class="desc">NPL’s own wallets, by role: reroute contingency (AQN-LT-Sub at Aquanow), the own desk of the NPL-GR project, and a collection bridge — a wallet on a network a partner does not support (ERC-20 for Ali) or one that isolates risk, on which NPL collects and from which it forwards to the leg’s partner as a hop within custody_max_hours. Custody is allowed only in those three cases; the custody view is the standing control. Also receives recovered dues.: client money may rest in NPL's own wallet in four cases, not three — an approved reroute before conversion, a reroute after conversion (REROUTE.phase post_conversion), a collection bridge within custody_max_hours, and an own-desk leg; role reroute_contingency serves both reroute phases and the CUSTODY view names the reroute and its phase for every resting balance.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>no</td><td>reference</td></tr><tr><td class="mono">provider</td><td>string</td><td>yes</td><td>e.g. Aquanow</td></tr><tr><td class="mono">account_label</td><td>string</td><td>no</td><td>e.g. LT Sub</td></tr><tr><td class="mono">role</td><td>string</td><td>yes</td><td>reroute_contingency / own_desk / collection_bridge — LT Sub at Aquanow is the NPL-GR own desk; NPL’s ERC-20 wallet is a bridge for partners without that network</td></tr><tr><td class="mono">networks</td><td>string</td><td>no</td><td>networks the wallet receives on (ERC-20 where Ali cannot)</td></tr><tr><td class="mono">network</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">address</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">signer_arrangement</td><td>string</td><td>yes</td><td>hardware / multisig</td></tr><tr><td class="mono">custody_max_hours</td><td>int</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>Optional. role says which of the three allowed custody cases the wallet serves: reroute_contingency, own_desk or collection_bridge; custody is allowed in no other case.</li><li>networks lists the networks a bridge receives on (ERC-20 where a partner cannot).</li><li>custody_max_hours is the limit the custody view ages against; an outbound transfer needs dual Management approval and is executed by NPL's signers outside the platform.</li></ul>
+<p><b>The Email OTP card.</b> On the project's settings screen the switch and the three THRESHOLD kinds above appear together as one card: the switch, the code window, the step-up amount and the tripwire window. Each sender's screen carries a second card with that sender's approver email and registered chat group, because every sender has its own chat group with NPL. Both cards are edited through the controlled action <i>set_email_otp_settings</i> (Operations enters, Finance approves) and show a pending change as pending, with the values in force beside it; the projects list gains an 'Email OTP' column (on / off) and the senders list shows which senders have an approved address, since a sender without one cannot be quoted while the switch is on. The email the customer receives is the MESSAGE_TEMPLATE <i>email_otp_quote</i>, global and versioned like the quote template, whose printed fields are the quote's sender-facing figures (the sender-facing rate at five decimals, the fee percentage, the amounts, the validity), the code, its expiry and the partial destination, and never a full account or wallet. Three alerts belong to the feature: a code nearing expiry (with the countdown on the work list), a rejection received, and a change to a sender's approver address or chat group pending Finance's approval.</p>
+
+<h2 class="pb">4 · Parties: senders, receiver groups, receivers, entities, accounts, screenings</h2>
+<p>Bank account details are rows of the database from this edition (decision of 26 October 2026): BANK_ACCOUNT_DETAILS below, one versioned row per bank account, with the fields of its rail taken from BANK_DETAILS_TEMPLATE (Section 2). The same row type serves a receiving entity's account, a partner's collection endpoint, a settlement rail, the details a partner holds under a destination approval, and a sender's source account. The restricted prefix of the file store keeps only the evidence.</p>
+<h4 id="SENDER">SENDER <span class="scope">· Per project</span></h4>
+<p class="desc">A sending party of the project (Sender A, Sender B). Which receiver groups a sender may pay is SENDER_RECEIVER_ALLOW. A sender’s refunds go to a RECEIVER of kind sender_return linked to it.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>no</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>Sender A, Sender B</td></tr><tr><td class="mono">risk_tier</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr><tr><td class="mono">email_otp_approver_email</td><td>string</td><td>no</td><td>nullable; the sender's one registered approver address (each sender has its own chat group with NPL, so the approver is per sender); protected master data: Operations enters, Finance approves, verified by a code before it is active (Roles rule 13); required to quote the sender while the project's switch is on</td></tr><tr><td class="mono">email_otp_chat_platform</td><td>string</td><td>no</td><td>nullable; the sender's registered chat group: platform</td></tr><tr><td class="mono">email_otp_chat_group_name</td><td>string</td><td>no</td><td>nullable; the sender's registered chat group: name</td></tr><tr><td class="mono">email_otp_chat_group_id</td><td>string</td><td>no</td><td>nullable; the group id where the platform gives one; the three chat columns change together, under the same approval; the row shows the current values, the audit log the history</td></tr><tr><td class="mono">email_otp_approver_email</td><td>string</td><td>no</td><td>the sender's one registered approver address; verified before active; required to quote the sender while the project's switch is on</td></tr><tr><td class="mono">email_otp_chat_platform</td><td>string</td><td>no</td><td>the sender's registered chat group: platform (Telegram, WhatsApp, …)</td></tr><tr><td class="mono">email_otp_chat_group_name</td><td>string</td><td>no</td><td>the sender's registered chat group: name</td></tr><tr><td class="mono">email_otp_chat_group_id</td><td>string</td><td>no</td><td>the group id where the platform gives one; the three chat columns change together</td></tr>
+</tbody></table>
+<ul class="rules"><li>A single paying party. Not tied to a partner.</li><li>Must have at least one SENDER_RECEIVER_ALLOW row before it can be chosen on a deal; refunds go to its RECEIVER of kind sender_return.</li><li>&lt;b&gt;Email OTP&lt;/b&gt;: each sender has its own chat group with NPL, so the sender carries exactly one registered approver email and one registered chat group (platform, group name, group id). With the project's switch on, a quote for this sender cannot be sent until the address and group are entered and approved, and the screen says why. The four columns are protected master data (Operations enters, Finance approves, never the same person; a new address is active only after its verification code comes back through this sender's group; a change of address voids this sender's open codes only). The row holds the current values; the audit log holds who changed them, who approved and when (rule 16; Roles &amp;amp; Visibility rule 13).</li></ul><h4 id="SENDER_RECEIVER_ALLOW">SENDER_RECEIVER_ALLOW <span class="scope">· Per sender</span></h4>
+<p class="desc">sendable_to: which receiver groups a sender may pay. Must pre-exist for collect-first attribution. targets the group, the unit a sender’s flow is attributed to.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">receiver_group_id</td><td>int</td><td>yes</td><td>sendable_to</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>The allow-list (sendable_to). A sender may pay only the groups listed here; the group belongs to the same project.</li></ul><h4 id="COLLECTION_SENDING_ENTITY">COLLECTION_SENDING_ENTITY <span class="scope">· Per sender</span></h4>
+<p class="desc">Provenance: where the sender’s funds originated. Reference only; never a payout destination (a refund goes to the sender_return receiver’s chosen account, not back to the source wallet). the source account, when known, is a BANK_ACCOUNT_DETAILS row.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">label</td><td>string</td><td>yes</td><td>sender’s own account or a client’s account</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>nullable; the source account when it is known</td></tr><tr><td class="mono">wallet_network</td><td>string</td><td>no</td><td>nullable; the network of a source wallet (TRC-20, ERC-20, …); set together with wallet_address</td></tr><tr><td class="mono">wallet_address</td><td>string</td><td>no</td><td>nullable; the address the funds come from; a row carries a bank-details row or a wallet network and address, exactly one of the two; never a payout destination</td></tr><tr><td class="mono">wallet_network</td><td>string</td><td>no</td><td>TRC-20, ERC-20, … · the network of a source wallet; required with wallet_address</td></tr><tr><td class="mono">wallet_address</td><td>string</td><td>no</td><td>the address the funds come from; required with wallet_network; never a payout destination</td></tr>
+</tbody></table>
+<ul class="rules"><li>Provenance only: where the sender's funds come from. Never a payout destination.</li><li>A source is one of two kinds. A bank source is a BANK_ACCOUNT_DETAILS row (bank_account_details_id). A wallet source is recorded on this row as its network and its address (wallet_network, wallet_address, both or neither), beside the label, so that the screening report and the collection can be tied to the address the funds left. A row carries exactly one of the two kinds; the server refuses a row with both or with neither (NPL, 28 October 2026).</li></ul><h4 id="FEE_OVERRIDE">FEE_OVERRIDE <span class="scope">· Per sender × partner pair</span></h4>
+<p class="desc">A standing sender-specific override of the fee on a partner × pair. One-off decisions on a single transaction are FEE_DECISION. may carry its own sender / receiver split instead of inheriting the structure’s proportion (Evo’s selected senders pay 1.0 % while Evo still pays 0.6 %).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">sender_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">approved_by</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">sender_pays_pct</td><td>decimal</td><td>no</td><td>optional; with receiver_pays_pct replaces the structure’s proportion</td></tr><tr><td class="mono">receiver_pays_pct</td><td>decimal</td><td>no</td><td>optional; both blank → structure’s proportion; both set → sum = pct</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>Replaces the fee structure's pct for that sender from effective_from; the structure's other terms still apply.</li><li>sender_pays_pct and receiver_pays_pct are both blank (the structure's proportion applies) or both set and summing to pct.</li></ul><h4 id="RECEIVER_GROUP">RECEIVER_GROUP <span class="scope">· Per project</span></h4>
+<p class="desc">The unit entitlement is tracked on (design F). Every project has one default group created with it; counterparty receivers sit in exactly one group. Payouts within a group are ordinary settlement; across groups they are offsets; with a single group no offset can arise. Groups hold counterparty receivers only: sender_return and partner_transit receivers are group-less.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>no</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">is_default</td><td>bool</td><td>yes</td><td>exactly one per project</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>Exactly one group per project has is_default = true; it is created with the project.</li><li>The unit entitlement is tracked on: payouts within a group are ordinary settlement, across groups an offset needing Management approval. Refunds use group-less sender_return receivers, so no return group is needed.</li></ul><h4 id="RECEIVER">RECEIVER <span class="scope">· Per project</span></h4>
+<p class="desc">A party within a receiver group (Receiver X, Receiver Y) owning one or more RECEIVING_ENTITY rows — when kind = counterparty. kind sender_return stands for a SENDER so refunds use the ordinary payout path and the partner's destination approval; kind partner_transit stands for a partner's collection endpoint so the hop of a two-leg route is an ordinary payout. Both are group-less (group_id null), never appear on forward deals or allow lists, and a payout to them is attributed to the group of the leg that pays them.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>no</td><td>reference</td></tr><tr><td class="mono">group_id</td><td>int</td><td>no</td><td>receiver group; null unless kind = counterparty</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>counterparty / sender_return / partner_transit · default <b>counterparty</b></td></tr><tr><td class="mono">sender_id</td><td>int</td><td>no</td><td>when kind = sender_return</td></tr><tr><td class="mono">partner_config_id</td><td>int</td><td>no</td><td>when kind = partner_transit</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>the group: Receiver X, Receiver Y</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>kind counterparty needs group_id (exactly one group); kind sender_return needs sender_id and no group; kind partner_transit needs partner_config_id and no group.</li><li>sender_return and partner_transit receivers never appear on forward deals or allow-lists; a payout to them is attributed to the group of the leg that pays them.</li></ul><h4 id="RECEIVING_ENTITY">RECEIVING_ENTITY <span class="scope">· Per receiver</span></h4>
+<p class="desc">A member of a receiver (Entity X1, Entity X2). Bank or wallet details and currency move down to RECEIVING_ENTITY_ACCOUNT.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">receiver_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>Entity X1, Entity X2</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>A legal entity of the receiver. Bank and wallet details live on its accounts, not here.</li></ul><h4 id="RECEIVING_ENTITY_ACCOUNT">RECEIVING_ENTITY_ACCOUNT <span class="scope">· Per entity</span></h4>
+<p class="desc">One account of a receiving entity, with its own currency and rail (EUR via SWIFT and EUR via SEPA are two accounts). An account is a bank account or a wallet (account_kind): a bank account carries bank_account_details_id and a bank rail; a wallet carries network and address explicitly, mirroring the partner-side COLLECTION_RECEIVING_ENDPOINT, so addresses are checksum-validated, checked against the rail, and found when one address is registered with two partners. Destination approvals and settlement lines point at the account; the bank details themselves are in BANK_ACCOUNT_DETAILS, versioned.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">receiving_entity_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>yes</td><td>SWIFT / SEPA / TRC-20 / ERC-20 / …</td></tr><tr><td class="mono">account_kind</td><td>string</td><td>yes</td><td>bank / wallet</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>when account_kind = bank; the current BANK_ACCOUNT_DETAILS version</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>when account_kind = wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>when account_kind = wallet; checksum-validated per network</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">usage</td><td>string</td><td>yes</td><td>standing / single_use — a local account the receiver gives for one payout · default <b>standing</b></td></tr><tr><td class="mono">reserved_for_deal_id</td><td>int</td><td>no</td><td>nullable; the one deal a single_use account serves</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>One row per currency × rail (EUR via SWIFT and EUR via SEPA are two accounts).</li><li>account_kind bank carries bank_account_details_id — the current BANK_ACCOUNT_DETAILS version; formerly bank_details_ref, a reference into an external store — and a bank rail; the account is active only when that details row is active (rule 14); account_kind wallet carries network and address, checksum-validated per network, and rail equal to the network.</li><li>usage single_use is a local account the receiver gives for one payout; it names reserved_for_deal_id and serves that deal only.</li><li>An account is payable through a partner only once a DESTINATION_APPROVAL with that partner is approved.</li></ul><h4 id="BANK_ACCOUNT_DETAILS">BANK_ACCOUNT_DETAILS <span class="scope">· Per bank account, versioned</span></h4>
+<p class="desc">The bank details of one account, in the database: a receiving-entity account, a partner's collection endpoint, a settlement rail, the details a partner holds under a destination approval, or a sender's source account. Versioned: a change is a new row that names the row it supersedes (supersedes_id); the old row is kept and is what any settlement line released before the change points at through its account. Common fields here; the rail-specific values (IBAN, BIC, sort code, bank code …) are stored under rail_fields, keyed by the field_key of the rail's BANK_DETAILS_TEMPLATE rows and validated against them on save. Entered by Operations, approved by Finance or Management (controlled action bank_details_approve); read in full by Operations, Finance and Management, with every full read written to AUDIT_LOG. The evidence (bank letter, KYC, legal document) stays a file under the restricted prefix (evidence_ref).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">supersedes_id</td><td>int</td><td>no</td><td>nullable; the BANK_ACCOUNT_DETAILS row this version replaces</td></tr><tr><td class="mono">holder_name</td><td>string</td><td>yes</td><td>the account holder as the bank knows it</td></tr><tr><td class="mono">bank_name</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">country</td><td>string</td><td>yes</td><td>ISO 3166 alpha-2</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>yes</td><td>names the BANK_DETAILS_TEMPLATE rows that apply</td></tr><tr><td class="mono">rail_fields</td><td>json</td><td>yes</td><td>the rail-specific values, keyed by the template's field_key; validated by format_rule on save</td></tr><tr><td class="mono">evidence_ref</td><td>string</td><td>yes</td><td>bank letter or confirmation, restricted prefix of the file store Write-once: the key carries the file's hash, a corrected document is a new row naming the old one (ERD Appendix C).</td></tr><tr><td class="mono">entered_by</td><td>int</td><td>yes</td><td>Operations user</td></tr><tr><td class="mono">entered_at</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td> · default <b>draft</b></td></tr>
+</tbody></table>
+<ul class="rules"><li>Entered by Operations from the rail's template: choose the rail, fill the template's fields, attach the bank letter or confirmation as evidence (a file under the restricted prefix). Saved only when every required field is present and every format rule passes.</li><li>Approved by Finance or Management (controlled action bank_details_approve, approver never the person who entered it); the row becomes active and the account, endpoint, rail or destination approval that points at it may become active.</li><li>Never edited: a change is a new row with supersedes_id naming the old one; the old row becomes superseded and stays. The account keeps pointing at the current version; a settlement line released earlier still resolves to the version current at its release.</li><li>Read in full by Operations, Finance and Management — no masking anywhere, one card component shows the common fields then the rail's fields in template order. Every full read is written to AUDIT_LOG (Roles &amp; Visibility rule 10).</li></ul><h4 id="WALLET_SCREENING">WALLET_SCREENING <span class="scope">· Per project, per address and day</span></h4>
+<p class="desc">A screening of one wallet address on one day — a sender’s declared sending wallet before a collection, or a receiver’s wallet before a settlement — with the result, the decision and who made it. Operations records it as part of transaction coordination; a reject may be overridden only by Finance. The decision picks the endpoint: accept_alternate lands only on an elevated-band endpoint. NPL screens; the partners decide: a clear report under the provider's strict rulebook is Operations' decision, anything else is Management's second look, and no role has a right that lifts a partner's hold.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">subject_kind</td><td>string</td><td>yes</td><td>sender_wallet / receiver_wallet</td></tr><tr><td class="mono">sender_id</td><td>int</td><td>no</td><td>when subject_kind = sender_wallet</td></tr><tr><td class="mono">receiving_entity_account_id</td><td>int</td><td>no</td><td>when subject_kind = receiver_wallet</td></tr><tr><td class="mono">network</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">address</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">provider_ref</td><td>string</td><td>no</td><td>screening tool reference</td></tr><tr><td class="mono">result</td><td>string</td><td>yes</td><td>standard / elevated / unacceptable</td></tr><tr><td class="mono">decision</td><td>string</td><td>yes</td><td>accept / accept_alternate / reject; write-once for every role and channel — a reject is lifted only by a new screening row decided by Management on a second look; a partner's own hold or freeze is recorded as the event it is and never overridden at NPL (Roles rule 11)</td></tr><tr><td class="mono">screened_by</td><td>int</td><td>yes</td><td>Operations</td></tr><tr><td class="mono">screened_at</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">evidence_ref</td><td>string</td><td>no</td><td>Write-once: the key carries the file's hash, a corrected document is a new row naming the old one (ERD Appendix C).</td></tr><tr><td class="mono">api_response</td><td>json</td><td>no</td><td>the provider's report as returned, in one field: the rulebook outcome, the risk score and band, the categories against their thresholds, the exposure by channel; no separate columns</td></tr><tr><td class="mono">decided_by</td><td>int</td><td>yes</td><td>USER: Operations on a report that is clear under the provider's strict rulebook; Management on a second look, never the person who screened</td></tr><tr><td class="mono">decided_at</td><td>datetime</td><td>no</td><td></td></tr><tr><td class="mono">reason</td><td>string</td><td>no</td><td>the decision's reason; mandatory on a second look</td></tr>
+</tbody></table>
+<ul class="rules"><li>subject_kind sender_wallet names sender_id; receiver_wallet names receiving_entity_account_id.</li><li>decision accept lands on a standard endpoint; accept_alternate only on an endpoint with risk_band elevated; reject stops the collection. There is no Finance override: a reject is lifted only by a new screening row of the same address decided by Management on a second look (below).</li><li>Operations records it; it is configuration-domain data because the decision binds later deals on the same address.</li><li>NPL screens; the partners decide. A sanctions or AML hold, freeze or decline is the decision of the partner (or of its bank), not of NPL: NPL records it as the event it is (REROUTE with trigger compliance_hold, LOSS_EVENT with reason account_frozen, EMERGENCY_ACTION of kind destination_freeze) and routes around it; nobody at NPL overrides a partner's block, and when the partner later clears the case its clearance reference is recorded on the event that lifted the block. NPL has no compliance function and takes no compliance action of its own.</li><li>What the report decides. The screening provider's report is stored as returned (api_response, the payload) and the rule reads from it: the outcome under the Strict rulebook, the risk score and its band (clear below 2, alert from 2 to 6, always flag above 6), the five categories against their thresholds (sanctions direct, sanctions indirect, terrorism / TF, high-risk indirect, elevated indirect) and the sanctioned, high-risk and elevated exposure by channel. Outcome CLEAR under Strict, score in the clear band, no category at or above its alert or flag threshold and no terrorism / TF trace: result standard, and Operations decides accept and proceeds. Anything else: result elevated or unacceptable as the report says, and the decision is Management's second look (ROLE_RIGHT screening_second_look): Management decides accept, accept_alternate (an elevated-band endpoint) or reject, with the reason; the report and the decision are kept together (decided_by, decided_at, reason).</li><li>Three kinds of block, three owners. (1) A partner's hold, freeze or decline: the partner's authority, recorded, never overridden. (2) NPL's own screening alert: Management's second look, as above. (3) A technical false positive (wrong address pasted, a listing since withdrawn, a re-screen that comes back clear): a new screening row of the same address with its evidence (evidence_ref), decided on its own report; the earlier row is never edited or reversed. The partner's own screening at collection still applies in every case.</li></ul>
+
+<h2 class="pb">5 · The partner configuration block</h2>
+<h4 id="PARTNER_CONFIG">PARTNER_CONFIG <span class="scope">· Per project × partner</span></h4>
+<p class="desc">How a partner is used in this project. Fees, vehicles, endpoints, destination approvals and rebate rules hang off it. applicable_for_reroute defines the alternate-partner set. an own-desk configuration is NPL itself as the converting party; its PARTNER_PAIR rows are priced fee_on_market with NPL’s markup and its endpoints are NPL’s own wallets. in NPL-GR the own desk holds NPL-GR’s remittance balances as ordinary partner-coded client accounts (stands); the reseller books are separate EUR postings.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">applicable_for_reroute</td><td>bool</td><td>yes</td><td> · default <b>false</b></td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">is_own_desk</td><td>bool</td><td>no</td><td>default false; NPL converts in its own wallet for this project (NPL-GR); enabling needs Management approval · default <b>false</b></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>How this partner is used in this project. Pairs, fee structures, vehicles, endpoints, destination approvals, markup-share and rebate rules hang off it.</li><li>applicable_for_reroute puts the partner in the project's alternate set (Management-approved).</li><li>is_own_desk true means NPL itself converts in its own wallet for this project: its pairs are priced fee_on_market with NPL's markup and its endpoints point at an OWN_WALLET of role own_desk; enabling needs Management approval (enable_own_desk).</li></ul><h4 id="PARTNER_PAIR">PARTNER_PAIR <span class="scope">· Per partner config × pair</span></h4>
+<p class="desc">A pair handled by a partner in this project. Fees are per partner × pair, so choosing the partner is part of pricing.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">currency_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pricing</td><td>string</td><td>yes</td><td>fee_on_market / fee_in_rate</td></tr><tr><td class="mono">partner_fee_pct</td><td>decimal</td><td>no</td><td>known only for fee_on_market</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td>active / inactive / dormant; a dormant pair prices nothing and accepts no collection or settlement line; a route unused for the project's route_unused_days threshold is put on the quarterly review to be set dormant or kept (Scenario Catalogue, dormant products)</td></tr><tr><td class="mono">needs_bank_lock</td><td>bool</td><td>no</td><td>the pair relies on the banking channel, so the partner’s cutoff governs its rate lock and its settlement (Evo pairs into EUR; USDT → USD / SGD at Ali); crypto-only pairs do not · default <b>false</b></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>currency_pair_id is one of the project's pairs (scope project).</li><li>partner_pricing agrees with the partner's disclosure_style; partner_fee_pct is set exactly when partner_pricing is fee_on_market.</li><li>needs_bank_lock true means the partner's cutoff governs the rate lock and the settlement on this pair; it needs PARTNER.bank_cutoff_time.</li><li>status is active, inactive or dormant: a dormant pair prices nothing and accepts no collection or settlement line (ERD Appendix C); a route unused for the project's route_unused_days threshold is put on the quarterly review to be set dormant or kept.</li></ul><h4 id="FEE_STRUCTURE">FEE_STRUCTURE <span class="scope">· Per partner pair, versioned</span></h4>
+<p class="desc">The versioned NPL client-side fee for a partner × pair. Stamped on the deal group at pricing. the sender and receiver parts are each a percentage of the principal at the basis rate, never compounded — fee_sender_part = amount_in × rate × sender_pays_pct, fee_receiver_part = amount_in × rate × receiver_pays_pct, client_net = amount_in × rate × (1 − sender_pays_pct − receiver_pays_pct); the partner’s cost then comes out of NPL’s parts (fee_in_rate) or is booked separately (fee_on_market). Evo USDT → EUR: sender pays 1 % or 1.4 % by sender type, receiver always 0.6 %; EUR → EUR 2.8 % split 1.4 / 1.4. Target-out quotes apply the fee as a markup on the target: amount_in = target × (1 + sender_pays_pct) ÷ rate.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_pair_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">rate_basis</td><td>string</td><td>yes</td><td>market / agent_rate / partner)</td></tr><tr><td class="mono">mode</td><td>string</td><td>yes</td><td>fixed / variable · default <b>fixed</b></td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">sender_pays_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">receiver_pays_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">min_markup_pct</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">max_markup_pct</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">min_margin_pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">variance_threshold_rel</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">quoting_rate_policy</td><td>string</td><td>yes</td><td>worst_applicable / designated / best_applicable · default <b>worst_applicable</b></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">customer_facing_fee_basis</td><td>string</td><td>yes</td><td>actual / sender_pays_on_agent_rate / fixed · default <b>actual</b></td></tr><tr><td class="mono">customer_facing_fee_pct</td><td>decimal</td><td>no</td><td>when customer_facing_fee_basis = fixed (BF via Ali shows 1 %)</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>sender_pays_pct + receiver_pays_pct = pct. Each part is a percentage of the principal at the basis rate, never compounded.</li><li>rate_basis market prices on the reference feed; agent_rate prices on the partner's rate version.</li><li>mode variable needs min_markup_pct ≤ max_markup_pct; a markup above max_markup_pct is a Management decision (raise_fee_cap).</li><li>customer_facing_fee_basis fixed needs customer_facing_fee_pct (what the quote prints); the figures are derived, never typed.</li><li>A new version is a new row with a later effective_from; a deal keeps the version it was priced on.</li></ul><h4 id="FEE_TIER">FEE_TIER <span class="scope">· Per fee structure</span></h4>
+<p class="desc">A volume tier of a fee structure (GDC: 2.5 % from USD 0, 2.25 % from USD 500,000 in the calendar month). A structure with tiers has one tier at volume 0. The tier applied is chosen at quote from the project’s month-to-date Σ amount_in; a deal that crosses a threshold is split across two tiers (DEAL_FEE_TIER).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">fee_structure_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">min_monthly_volume</td><td>decimal</td><td>yes</td><td>threshold in volume_currency, per calendar month</td></tr><tr><td class="mono">volume_currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">sender_pays_pct</td><td>decimal</td><td>no</td><td>optional</td></tr><tr><td class="mono">receiver_pays_pct</td><td>decimal</td><td>no</td><td>optional</td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>A structure with tiers has exactly one tier at min_monthly_volume 0; thresholds are unique within a structure.</li><li>The tier is chosen at quote from the project's month-to-date Σ amount_in (PROJECT_MONTH_VOLUME); a deal that crosses a threshold is split across two tiers (DEAL_FEE_TIER).</li><li>sender_pays_pct / receiver_pays_pct are optional; both blank means the structure's proportion.</li></ul><h4 id="PARTNER_ENTITY">PARTNER_ENTITY <span class="scope">· Per partner config</span></h4>
+<p class="desc">The partner’s legal vehicle (PT-tour, PT Global Inc): the name that appears on paperwork, the partner-side mirror of RECEIVING_ENTITY. Fixed on a deal leg at quote; only a REROUTE changes it. Owns the partner’s collection endpoints.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>the partner’s legal vehicle: PT-tour, PT Global Inc</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr>
+</tbody></table>
+<ul class="rules"><li>The partner's legal vehicle (PT-tour, PT Global Inc), the name that appears on paperwork. Fixed on a deal leg at quote; only a REROUTE changes it.</li><li>Owns the partner's collection endpoints.</li></ul><h4 id="COLLECTION_RECEIVING_ENDPOINT">COLLECTION_RECEIVING_ENDPOINT <span class="scope">· Per partner entity</span></h4>
+<p class="desc">One collection endpoint at the partner, owned by a partner entity: bank-in or crypto-in by kind, with the same field shape as RECEIVING_ENTITY_ACCOUNT (rail required only on active bank endpoints). rail is nullable — null means not yet known, never doesn’t matter. A bank endpoint cannot become active, and no COLLECTION may reference it, until rail is set; a wallet endpoint may leave rail null, and when set it must match network. the endpoint’s kind must match the leg’s collection_method — wallet for crypto-in, bank for bank-in, none for cash.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_entity_id</td><td>int</td><td>yes</td><td>the vehicle whose name is on the account or wallet</td></tr><tr><td class="mono">kind</td><td>string</td><td>yes</td><td>bank / wallet</td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">rail</td><td>string</td><td>no</td><td>nullable: a bank endpoint needs it to go active; optional for wallets, must match network when set</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>when kind = bank; the current BANK_ACCOUNT_DETAILS version</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>TRC-20 / ERC-20 / …; when kind = wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>when kind = wallet; checksum-validated per network</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">own_wallet_id</td><td>int</td><td>no</td><td>nullable; set when the endpoint is NPL’s own wallet — under an own-desk configuration or as a collection bridge for a partner that lacks the network or for risk isolation; the endpoint still belongs to the leg’s partner configuration</td></tr><tr><td class="mono">risk_band</td><td>string</td><td>yes</td><td>standard / elevated — which screening decisions may land here · default <b>standard</b></td></tr><tr><td class="mono">usage</td><td>string</td><td>yes</td><td>standing / single_use (ad hoc local deposit accounts) · default <b>standing</b></td></tr><tr><td class="mono">reserved_for_deal_id</td><td>int</td><td>no</td><td>nullable; the one deal a single_use endpoint serves</td></tr><tr><td class="mono">expected_amount</td><td>decimal</td><td>no</td><td>nullable; the amount a single_use endpoint for</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>kind bank carries bank_account_details_id (the current BANK_ACCOUNT_DETAILS version; formerly bank_details_ref) and needs rail before it can become active (null means not yet known), and the details row must be active (rule 14); kind wallet carries network and address, and rail, when set, equals network.</li><li>A wallet endpoint's network must be one the partner offers; cash and local_deposit collections have no standing endpoint.</li><li>own_wallet_id names an OWN_WALLET when the endpoint is NPL's own wallet: under an own-desk configuration or as a collection bridge; the endpoint still belongs to the leg's partner configuration.</li><li>usage single_use names reserved_for_deal_id and expected_amount (ad hoc local deposit accounts).</li><li>The endpoint's kind must match the leg's collection method; the system refuses a collection on an endpoint of another partner entity.</li></ul><h4 id="SETTLEMENT_SENDING_ENTITY">SETTLEMENT_SENDING_ENTITY <span class="scope">· Per partner config</span></h4>
+<p class="desc">The narrative on an outgoing transfer: what the receiver sees. Holds no money.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">narrative_name</td><td>string</td><td>yes</td><td>what the receiver sees</td></tr><tr><td class="mono">status</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>The name the receiver sees on an outgoing transfer. Holds no money.</li></ul><h4 id="SETTLEMENT_RAIL">SETTLEMENT_RAIL <span class="scope">· Per partner config</span></h4>
+<p class="desc">The bank or EMI that executes an outgoing transfer. Holds no money. Carries the expected bank fee. its account's details are a BANK_ACCOUNT_DETAILS row.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">name</td><td>string</td><td>yes</td><td>bank or EMI executing the transfer</td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>yes</td><td>the rail's own account</td></tr><tr><td class="mono">expected_bank_fee</td><td>decimal</td><td>no</td><td></td></tr><tr><td class="mono">currency</td><td>string</td><td>yes</td><td></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>The bank or EMI that executes the transfer. expected_bank_fee is the figure the bank-fee true-up compares against (BANK_FEE_EVENT).</li><li>bank_account_details_id names the rail's own account as a BANK_ACCOUNT_DETAILS row (formerly bank_details_ref); the rail is usable only while that row is active (rule 14).</li></ul><h4 id="DESTINATION_APPROVAL">DESTINATION_APPROVAL <span class="scope">· Per partner config × account</span></h4>
+<p class="desc">Destination approval per partner: a receiving-entity account as registered with this partner, with the partner’s approval status and the payout details the partner holds. The details follow the account’s kind: bank_account_details_id when the account is a bank account; network and address as registered with the partner when it is a wallet.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">receiving_entity_account_id</td><td>int</td><td>yes</td><td></td></tr><tr><td class="mono">approval_status</td><td>string</td><td>yes</td><td>pending_partner / approved / suspended · default <b>pending_partner</b></td></tr><tr><td class="mono">bank_account_details_id</td><td>int</td><td>no</td><td>the bank details as registered with this partner, when the account is a bank account</td></tr><tr><td class="mono">network</td><td>string</td><td>no</td><td>as registered with this partner; only when the account’s kind is wallet</td></tr><tr><td class="mono">address</td><td>string</td><td>no</td><td>as registered with this partner; only when the account’s kind is wallet</td></tr><tr><td class="mono">approved_at</td><td>datetime</td><td>no</td><td></td></tr><tr><td class="mono">wallet_screening_id</td><td>int</td><td>no</td><td>nullable; the receiver-side screening of a wallet account</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>Destination approval per partner: an account as registered with this partner.</li><li>The payout details follow the account's kind: bank_account_details_id — the details as registered with this partner, a BANK_ACCOUNT_DETAILS row (formerly bank_details_ref) — for a bank account; network and address as registered with the partner for a wallet; a wallet account carries its WALLET_SCREENING.</li><li>A quote-first deal leaves Inquiry only if at least one account in the entitled group is approved with the chosen partner.</li></ul><h4 id="MARKUP_SHARE_RULE">MARKUP_SHARE_RULE <span class="scope">· Per party × project (optionally one partner pair or fee structure)</span></h4>
+<p class="desc">How an markup-share party is paid on a project (and optionally only on one partner × pair): a share of NPL’s earnings in a ratio, or a fixed % applied inside the sender-facing markup (§4.2a). also the customer who provides a sub-account and shares NPL’s markup (Raeen): basis share_of_net_markup, several rules with different shares on one project, and settlement by the party itself when it holds the converted money.</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">markup_share_party_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">project_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">partner_pair_id</td><td>int</td><td>no</td><td>optional</td></tr><tr><td class="mono">basis</td><td>string</td><td>yes</td><td>share_of_earnings / fixed_pct / share_of_net_markup (base = fee parts − partner cost on the leg, on amount × market; rebates never in the base)</td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td></td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">fee_structure_id</td><td>int</td><td>no</td><td>optional scope: only deals priced on this structure (Raeen sub-account 50 %, Raeen direct downlines 75 %)</td></tr><tr><td class="mono">party_kind</td><td>string</td><td>yes</td><td>markup-share party / client_party</td></tr><tr><td class="mono">settlement_mode</td><td>string</td><td>yes</td><td>npl_pays / party_retains — the party holds the converted funds and pays NPL the remainder monthly · default <b>npl_pays</b></td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>basis share_of_earnings or share_of_net_markup is a ratio of NPL's earnings on the leg (base = fee parts − partner cost; rebates never in the base); fixed_pct is applied inside the sender-facing markup.</li><li>Several rules on one project are allowed; Σ shares of the same base ≤ 100 %.</li><li>settlement_mode party_retains: the party holds the converted funds and pays NPL the remainder monthly.</li></ul><h4 id="PARTNER_REBATE_RULE">PARTNER_REBATE_RULE <span class="scope">· Per partner config</span></h4>
+<p class="desc">A partner rebating part of its fee to NPL (§4.2b: Jeton takes 1 % or 1.25 % and pays 0.4 % of the amount back; 0.3 % on Novi’s 0.9 %; Aquanow 0.3 % on 0.8 %). The rule is a percentage of the amount (basis pct_of_amount; Reconciled monthly through PARTNER_REBATE_ACCRUAL against the partner statement, which covers NPLify deals only. The rebate is NPL’s alone — never shared with an markup-share party or client party, never inside the share base — and is reported as its own stream (EARN_REBATE).</p>
+<table class="dd"><thead><tr><th style="width:26%">Field</th><th style="width:9%">Type</th><th style="width:9%">Required</th><th>Allowed values · default · meaning</th></tr></thead><tbody>
+<tr><td class="mono">partner_config_id</td><td>int</td><td>yes</td><td>reference</td></tr><tr><td class="mono">effective_from</td><td>datetime</td><td>yes</td><td></td></tr><tr><td class="mono">basis</td><td>string</td><td>yes</td><td>pct_of_amount — the rebate is a percentage of the amount converted (Jeton 0.4 % of amount on a 1 % or 1.25 % fee, Novi 0.3 %, Aquanow 0.3 %) · default <b>pct_of_amount</b></td></tr><tr><td class="mono">pct</td><td>decimal</td><td>yes</td><td>the rebate in the chosen basis</td></tr><tr><td class="mono">fee_structure_id</td><td>int</td><td>no</td><td>optional scope</td></tr><tr><td class="mono">sender_id</td><td>int</td><td>no</td><td>optional scope (Novi)</td></tr><tr><td class="mono">payout_currency</td><td>string</td><td>yes</td><td>the currency the partner pays the rebate in and the accrual is expressed in — the amount currency</td></tr><tr><td class="mono">clone_confirmed_at</td><td>datetime</td><td>no</td><td>nullable; set when a user confirms or changes a row copied by a clone; a cloned project activates only when no copied row is left unconfirmed (Configuration Schema rule 15)</td></tr>
+</tbody></table>
+<ul class="rules"><li>Only for partners that return part of their fee. basis is pct_of_amount: the rebate is a percentage of the amount converted.</li><li>payout_currency is the currency the partner pays the rebate in and the accrual is expressed in — the amount currency.</li><li>Optional scope by fee_structure_id or sender_id. The rebate is NPL's alone (EARN_REBATE): never shared, never in a markup-share base; reconciled monthly through PARTNER_REBATE_ACCRUAL.</li></ul>
+<p><b>Rebates and the percentages in this document.</b> The Jeton rebate of 0.4 % quoted in the worked example and in the Scenario Catalogue is not a fixed value: it is a PARTNER_REBATE_RULE row of the project's partner configuration, changed by a new version with a later effective_from like any fee, and NPL confirmed on 20 October that it is set per project, not per deal. Every percentage, rate and amount in Sections 2 to 7 is illustrative, taken from NPL's fee table of 8 October 2026, and is replaced by the project's configured values; none is written into code.</p>
+
+<h2>6 · Cross-entity rules the system enforces on save</h2>
+<ol>
+<li>Every project belongs to one client; a project's exposure_ceiling never exceeds its client's; both are compared through REPORTING_VALUE, so a platform pair must exist for every currency that rests at a partner.</li>
+<li>Every project has exactly one default receiver group, created by the system. A counterparty receiver is in exactly one group; sender_return and partner_transit receivers are group-less and never on a forward deal or an allow-list.</li>
+<li>Every sender has an allow-list naming groups of the same project and a sender_return receiver for refunds; a sender with no allow-list cannot be chosen on a deal.</li>
+<li>Every receiving entity has at least one account; accounts are unique per entity, currency and rail; a bank account names its BANK_ACCOUNT_DETAILS row, a wallet account a network and a checksum-valid address with rail = network. A single-use account or endpoint names the one deal it serves.</li>
+<li>A partner pair's currency pair is a project pair; partner_pricing agrees with the partner's disclosure_style; partner_fee_pct is present exactly for fee_on_market; needs_bank_lock requires the partner's bank_cutoff_time and cutoff_timezone.</li>
+<li>A fee structure's sender and receiver parts add up to its pct; min_markup ≤ max_markup; a fixed customer-facing fee names its pct; tiers have exactly one row at volume 0; a new version is a new row with a later effective_from.</li>
+<li>A partner configuration that will pay out needs at least one partner entity, one settlement sending entity (narrative) and one settlement rail. A bank endpoint cannot go active without a rail; a wallet endpoint's network is one the partner offers; an own-desk configuration needs an own wallet of role own_desk.</li>
+<li>A currency pair needs at least one rate source with a unique priority before it is usable; nearest_n and round_up_n need a rounding unit; cash rounding needs its unit. A platform pair has no project and ends in the reporting currency.</li>
+<li>A destination approval points at an account of a receiving entity in the same project; a quote-first deal for a group needs at least one approved destination with the chosen partner. A wallet account's approval carries its screening.</li>
+<li>A quote template prints sender-facing fields only; a screening decision of accept_alternate lands only on an elevated-band endpoint; on a report that is not clear under the Strict rulebook the decision is Management's second look, never a Finance override; a partner's hold, freeze or decline is recorded, never overridden; a cutoff override is a one-day or a weekday rule, never both; an extension names the partner's agreement.</li>
+<li>quote_freshness_min is shorter than quote_validity_min; all percentages are stored as decimals; Σ markup shares of one base ≤ 100 %; a rebate rule is pct_of_amount with a payout currency.</li>
+<li>applicable_for_reroute, is_own_desk, exposure ceilings, thresholds, fee structures and tiers, templates, system settings and platform pairs are Management-approved changes; users and roles need a second Management user.</li>
+<li>A project is validated only when rules 1 to 12, 14, 15 and 16 pass for it and for each of its partner configuration blocks; only a validated project can be activated, and only Management activates it. A partner configuration block added to an active project cannot be used on a deal until the rules pass for it.</li>
+<li>A bank account, a bank endpoint and a settlement rail name a BANK_ACCOUNT_DETAILS row of the same currency and rail and can be active only while that row is active; a row is saved only when the rail's template is satisfied (required fields present, format rules passed: IBAN check digits, BIC length, sort-code pattern) and its evidence is attached; a change to any detail is a new row that supersedes the old one, never an edit; a details row is approved by Finance or Management, never by the Operations user who entered it.</li>
+<li>A project created from an archetype or cloned from another project activates only when: every field of the reconfirm list of 1a is set on the new project itself, not inherited (a copied value counts only once a user has confirmed it on the row); every version the project references (fee structure, tiers, policies, thresholds, templates, platform pairs) is the version in force on the activation date, not one superseded since the source was set up; every partner configuration block's route is complete for the methods it will use (an active endpoint per collection method, a rail and a sending entity per bank payout, an approved destination for each group that will be paid, the partner's current partner_pricing, partner_fee_pct and cutoff); and ROLE_RIGHT rows exist for every controlled action with at least one approving role that is not the initiating role. The validation report lists each failure by entity, row and field with what fixes it; activation with any failure is refused.</li>
+<li><b>Email OTP.</b> A project's Email OTP switch can be on only with the three Email OTP thresholds set. Each sender carries its own approver email and registered chat group (every sender has its own chat group); while the switch is on, a quote for a sender whose address and group are not present and approved cannot be sent, and the screen says why. The switch and the sender's four columns change only through set_email_otp_settings (Operations enters, Finance approves, never the same person); a new approver address is active only after its verification code comes back through that sender's chat group; while such a change is pending no approval email is sent for that sender; a change of address voids that sender's open codes only; switching the feature off is the same controlled change, and a group already pending completes or expires under the rules in force when it was sent; the partial destination printed in an email is derived from the approved endpoint bound to the quote issue, never typed (Lifecycle &amp; Approvals 2e; Roles &amp; Visibility rule 13).</li>
+</ol>
+
+<h2 class="pb">7 · Worked example: the FRS project, end to end</h2>
+<p>The FRS describes one client flow: Sender A and Sender B pay USDT, partners Ali (through its PT vehicles) or Jeton convert to EUR, and Receiver X (Entity X1, Entity X2) and Receiver Y are paid in euros. Below is that project expressed in the schema. Names, policies and the fee split come from NPL's documents; rates of fee, thresholds, holidays, addresses and reference numbers are <b>illustrative placeholders</b> to be replaced with NPL's values.</p>
+<p>How to read it: one block per entity type, in the order of Sections 2 to 5. A code such as <code>DEFAULT</code> or <code>X1-EUR-SEPA</code> is how one row refers to another; the system assigns the numeric ids. Jeton's pending destination for Receiver Y and Sender B's fee override are there on purpose, to show a rule at work.</p>
+<pre class="yaml">system_settings:
+ - key: reporting_currency
+ value: USD
+ effective_from: &quot;2026-10-01&quot;
+ - key: reporting_rate_max_age_min
+ value: &quot;60&quot;
+ effective_from: &quot;2026-10-01&quot;
+ - key: operating_timezone
+ value: Asia/Hong_Kong
+ effective_from: &quot;2026-10-01&quot;
+platform_pairs:
+ - code: USDT-USD
+ from_currency: USDT
+ to_currency: USD
+ quote_direction: out_per_in
+ rate_precision: 5
+ amount_rounding: exact
+ status: active
+ sources:
+ - rate_source: KRAKEN
+ priority: 1
+ - rate_source: CMC
+ priority: 2
+ - code: EUR-USD
+ from_currency: EUR
+ to_currency: USD
+ quote_direction: out_per_in
+ rate_precision: 5
+ amount_rounding: exact
+ status: active
+ sources:
+ - rate_source: OANDA
+ priority: 1
+ - rate_source: XE
+ priority: 2
+rate_sources:
+ - code: KRAKEN
+ staleness_threshold_s: 120
+ - code: CMC
+ staleness_threshold_s: 300
+ - code: OANDA
+ staleness_threshold_s: 300
+ - code: XE
+ staleness_threshold_s: 300
+partners:
+ - code: ALI
+ name: Ali
+ disclosure_style: fee_in_rate
+ rate_expiry_time: &quot;17:00 local&quot;
+ holiday_calendar: ID banking holidays
+ supported_methods: [crypto, bank, cash, local_deposit]
+ bank_cutoff_time: &quot;14:30&quot;
+ cutoff_timezone: Asia/Hong_Kong
+ status: active
+ holidays:
+ - date: &quot;2026-12-25&quot;
+ name: Christmas Day
+ scope: bank_channel
+ source: public calendar
+ - date: &quot;2027-03-20&quot;
+ name: Idul Fitri (illustrative)
+ scope: bank_channel
+ source: partner notice
+ cutoff_overrides:
+ - weekday: Friday
+ cutoff_time: &quot;13:30&quot;
+ kind: early_close
+ reason: pre-weekend
+ recorded_by: finance
+ - code: JETON
+ name: Jeton
+ disclosure_style: fee_on_market
+ rate_expiry_time: &quot;16:00 local&quot;
+ holiday_calendar: UK banking holidays
+ supported_methods: [crypto, bank]
+ bank_cutoff_time: null
+ cutoff_timezone: Europe/London
+ status: active
+ holidays: []
+ cutoff_overrides: []
+markup_share_parties: []
+templates:
+ - code: quote
+ version: 1
+ channel: pdf
+ language: en
+ body_ref: tpl-quote-en-v1
+ printed_fields: [sender_rate, customer_facing_fee_pct, customer_facing_rate, printed_amount_out, effective_valid_until]
+ effective_from: &quot;2026-10-01&quot;
+ status: active
+ - code: payment_instructions
+ version: 1
+ channel: email
+ language: en
+ body_ref: tpl-payin-en-v1
+ printed_fields: [amount_in, network, address, effective_valid_until]
+ effective_from: &quot;2026-10-01&quot;
+ status: active
+ - code: email_otp_quote
+ version: 1
+ channel: email
+ language: en
+ body_ref: tpl-otp-en-v1
+ printed_fields: [deal_ref, issue_no, client_label, pair, amount_in, customer_facing_rate, customer_facing_fee_pct, printed_amount_out, collection_method, effective_valid_until, code, code_expires_at, partial_destination]
+ effective_from: &quot;2026-11-01&quot;
+ status: active
+client:
+ code: CLIENT1
+ name: Client 1
+ category: FRS
+ legal_entity_ref: le-client1
+ kyc_ref: kyc-client1
+ exposure_ceiling: 400000
+ status: active
+project:
+ code: CLIENT1-MAIN
+ client: CLIENT1
+ name: Client 1 (FRS project)
+ client_label: Client 1
+ quote_freshness_min: 5
+ quote_validity_min: 60
+ grace_min: 15
+ grace_drift_pct: 0.001
+ late_collection_policy: requote
+ bank_fee_treatment_default: carry_forward
+ receiver_fee_timing: at_conversion
+ network_fee_policy: absorbed
+ settlement_policy: to_zero
+ shortfall_tolerance: 0
+ exposure_ceiling: 250000
+ status: active
+ email_otp:
+ enabled: true
+thresholds:
+ - kind: max_amount
+ currency: USDT
+ value: 100000
+ escalation: finance
+ - kind: settlement_limit
+ currency: EUR
+ value: 50000
+ escalation: management
+ - kind: daily_slots
+ value: 2
+ escalation: management
+ - kind: rate_variation_rel
+ value: 0.002
+ escalation: finance
+ - kind: email_otp_code_window_min
+ value: 1440
+ escalation: finance
+ - kind: email_otp_stepup_amount
+ currency: USD
+ value: 50000
+ escalation: management
+ - kind: email_otp_tripwire_min
+ value: 240
+ escalation: finance
+currency_pairs:
+ - code: USDT-EUR
+ from_currency: USDT
+ to_currency: EUR
+ quote_direction: out_per_in
+ rate_precision: 5
+ amount_rounding: exact
+ status: active
+ sources:
+ - rate_source: KRAKEN
+ priority: 1
+ - rate_source: CMC
+ priority: 2
+own_wallets:
+ - code: AQN-LT-SUB
+ provider: Aquanow
+ account_label: LT Sub
+ role: reroute_contingency
+ networks: [TRC-20]
+ network: TRC-20
+ address: T…(wallet address)
+ signer_arrangement: multisig
+ custody_max_hours: 48
+bank_account_details:
+ - code: BAD-X1-EUR
+ holder_name: Entity X1 Ltd
+ bank_name: Bank X
+ country: DE
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: DE89 3704 0044 0532 0130 00
+ bic: COBADEFFXXX
+ evidence_ref: restricted/bank-letters/x1-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-X2-EUR
+ holder_name: Entity X2 GmbH
+ bank_name: Bank X
+ country: DE
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: DE02 1203 0000 0000 2020 51
+ bic: BYLADEM1001
+ evidence_ref: restricted/bank-letters/x2-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-Y-EUR
+ holder_name: Entity Y SA
+ bank_name: Bank Y
+ country: FR
+ currency: EUR
+ rail: SWIFT
+ rail_fields:
+ iban: FR14 2004 1010 0505 0001 3M02 606
+ bic: BNPAFRPPXXX
+ bank_address: &quot;16 bd des Italiens, Paris&quot;
+ intermediary_bic: &quot;&quot;
+ evidence_ref: restricted/bank-letters/y-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-PTG-IDR
+ holder_name: PT Global Inc
+ bank_name: Bank Mandiri
+ country: ID
+ currency: IDR
+ rail: local
+ rail_fields:
+ bank_code: &quot;008&quot;
+ account_number: &quot;1234567890&quot;
+ evidence_ref: restricted/bank-letters/ptg-idr.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-ALI-EUR-RAIL
+ holder_name: Ali EU EMI
+ bank_name: EMI Bank
+ country: LT
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: LT12 1000 0111 0100 1000
+ bic: EMIBLT22
+ evidence_ref: restricted/bank-letters/ali-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+ - code: BAD-JETON-EUR-RAIL
+ holder_name: Jeton EMI
+ bank_name: Jeton Bank
+ country: GB
+ currency: EUR
+ rail: SEPA
+ rail_fields:
+ iban: GB29 NWBK 6016 1331 9268 19
+ bic: NWBKGB2L
+ evidence_ref: restricted/bank-letters/jeton-eur.pdf
+ entered_by: ops.user
+ entered_at: &quot;2026-09-18&quot;
+ status: active
+receiver_groups:
+ - code: DEFAULT
+ name: Default group
+ is_default: true
+ status: active
+receivers:
+ - code: RCV_X
+ kind: counterparty
+ group: DEFAULT
+ name: Receiver X
+ status: active
+ entities:
+ - code: ENTITY_X1
+ name: Entity X1
+ status: active
+ accounts:
+ - code: X1-EUR-SEPA
+ currency: EUR
+ rail: SEPA
+ account_kind: bank
+ bank_account_details: BAD-X1-EUR
+ usage: standing
+ status: active
+ - code: ENTITY_X2
+ name: Entity X2
+ status: active
+ accounts:
+ - code: X2-EUR-SEPA
+ currency: EUR
+ rail: SEPA
+ account_kind: bank
+ bank_account_details: BAD-X2-EUR
+ usage: standing
+ status: active
+ - code: RCV_Y
+ kind: counterparty
+ group: DEFAULT
+ name: Receiver Y
+ status: active
+ entities:
+ - code: ENTITY_Y
+ name: Entity Y
+ status: active
+ accounts:
+ - code: Y-EUR-SWIFT
+ currency: EUR
+ rail: SWIFT
+ account_kind: bank
+ bank_account_details: BAD-Y-EUR
+ usage: standing
+ status: active
+ - code: RET_SND_A
+ kind: sender_return
+ sender: SND_A
+ name: Sender A (returns)
+ status: active
+ entities:
+ - code: RET_A
+ name: Sender A
+ status: active
+ accounts:
+ - code: RET-A-USDT-TRC20
+ currency: USDT
+ rail: TRC-20
+ account_kind: wallet
+ network: TRC-20
+ address: T…(Sender A return wallet)
+ usage: standing
+ status: active
+ - code: RET_SND_B
+ kind: sender_return
+ sender: SND_B
+ name: Sender B (returns)
+ status: active
+ entities:
+ - code: RET_B
+ name: Sender B
+ status: active
+ accounts:
+ - code: RET-B-USDT-TRC20
+ currency: USDT
+ rail: TRC-20
+ account_kind: wallet
+ network: TRC-20
+ address: T…(Sender B return wallet)
+ usage: standing
+ status: active
+senders:
+ - code: SND_A
+ name: Sender A
+ risk_tier: standard
+ status: active
+ email_otp:
+ approver_email: &quot;orders-a@client1.example&quot;
+ chat_platform: Telegram
+ chat_group_name: &quot;Client 1 · Sender A × NPL&quot;
+ chat_group_id: -1001234567890
+ sendable_to: [DEFAULT]
+ provenance:
+ - label: own wallet (TRC-20)
+ bank_account_details: null
+ wallet_network: TRC-20
+ wallet_address: TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE
+ fee_overrides: []
+ - code: SND_B
+ name: Sender B
+ risk_tier: standard
+ status: active
+ email_otp:
+ approver_email: &quot;orders-b@client1.example&quot;
+ chat_platform: Telegram
+ chat_group_name: &quot;Client 1 · Sender B × NPL&quot;
+ chat_group_id: -1001234567891
+ sendable_to: [DEFAULT]
+ provenance:
+ - label: own wallet (TRC-20)
+ bank_account_details: null
+ wallet_network: TRC-20
+ wallet_address: TAzsQ9Gx8eqFNFSKbeXrbi45CuVPHzA8wr
+ fee_overrides:
+ - partner_pair: CLIENT1-ALI/USDT-EUR
+ pct: 0.012
+ sender_pays_pct: 0.006
+ receiver_pays_pct: 0.006
+ effective_from: &quot;2026-10-01&quot;
+ approved_by: management
+partner_configs:
+ - code: CLIENT1-ALI
+ partner: ALI
+ applicable_for_reroute: false
+ is_own_desk: false
+ status: active
+ pairs:
+ - currency_pair: USDT-EUR
+ partner_pricing: fee_in_rate
+ needs_bank_lock: true
+ status: active
+ fee_structures:
+ - rate_basis: market
+ mode: fixed
+ pct: 0.01
+ sender_pays_pct: 0.004
+ receiver_pays_pct: 0.006
+ min_markup_pct: 0.008
+ max_markup_pct: 0.015
+ min_margin_pct: 0.003
+ variance_threshold_rel: 0.2
+ quoting_rate_policy: worst_applicable
+ customer_facing_fee_basis: actual
+ effective_from: &quot;2026-10-01&quot;
+ tiers: []
+ partner_entities:
+ - code: PT-TOUR
+ name: PT-tour
+ status: active
+ endpoints:
+ - code: PT-TOUR-USDT-TRC20
+ kind: wallet
+ currency: USDT
+ rail: TRC-20
+ network: TRC-20
+ address: T…(PT-tour wallet)
+ risk_band: standard
+ usage: standing
+ status: active
+ - code: PT-GLOBAL
+ name: PT Global Inc
+ status: active
+ endpoints:
+ - code: PT-GLOBAL-USDT-TRC20
+ kind: wallet
+ currency: USDT
+ rail: TRC-20
+ network: TRC-20
+ address: T…(PT Global wallet)
+ risk_band: elevated
+ usage: standing
+ status: active
+ - code: PT-GLOBAL-IDR-BANK
+ kind: bank
+ currency: IDR
+ rail: local
+ bank_account_details: BAD-PTG-IDR
+ risk_band: standard
+ usage: standing
+ status: active
+ settlement_sending_entities:
+ - narrative_name: PT Global Inc
+ status: active
+ settlement_rails:
+ - name: Ali's EU bank / EMI
+ bank_account_details: BAD-ALI-EUR-RAIL
+ expected_bank_fee: 25
+ currency: EUR
+ destination_approvals:
+ - account: X1-EUR-SEPA
+ approval_status: approved
+ approved_at: &quot;2026-09-20&quot;
+ - account: X2-EUR-SEPA
+ approval_status: approved
+ approved_at: &quot;2026-09-20&quot;
+ - account: Y-EUR-SWIFT
+ approval_status: approved
+ approved_at: &quot;2026-09-20&quot;
+ - account: RET-A-USDT-TRC20
+ approval_status: approved
+ approved_at: &quot;2026-09-20&quot;
+ - account: RET-B-USDT-TRC20
+ approval_status: approved
+ approved_at: &quot;2026-09-20&quot;
+ markup_share_rules: []
+ rebate_rule: null
+ - code: CLIENT1-JETON
+ partner: JETON
+ applicable_for_reroute: true
+ is_own_desk: false
+ status: active
+ pairs:
+ - currency_pair: USDT-EUR
+ partner_pricing: fee_on_market
+ partner_fee_pct: 0.005
+ needs_bank_lock: false
+ status: active
+ fee_structures:
+ - rate_basis: market
+ mode: fixed
+ pct: 0.01
+ sender_pays_pct: 0.004
+ receiver_pays_pct: 0.006
+ min_markup_pct: 0.008
+ max_markup_pct: 0.015
+ min_margin_pct: 0.003
+ variance_threshold_rel: 0.2
+ quoting_rate_policy: worst_applicable
+ customer_facing_fee_basis: actual
+ effective_from: &quot;2026-10-01&quot;
+ tiers: []
+ partner_entities:
+ - code: JETON-EMI
+ name: Jeton EMI
+ status: active
+ endpoints:
+ - code: JETON-USDT-TRC20
+ kind: wallet
+ currency: USDT
+ rail: TRC-20
+ network: TRC-20
+ address: T…(Jeton wallet)
+ risk_band: standard
+ usage: standing
+ status: active
+ settlement_sending_entities:
+ - narrative_name: Jeton
+ status: active
+ settlement_rails:
+ - name: Jeton EMI (SEPA)
+ bank_account_details: BAD-JETON-EUR-RAIL
+ expected_bank_fee: 0
+ currency: EUR
+ destination_approvals:
+ - account: X1-EUR-SEPA
+ approval_status: approved
+ approved_at: &quot;2026-09-22&quot;
+ - account: X2-EUR-SEPA
+ approval_status: approved
+ approved_at: &quot;2026-09-22&quot;
+ - account: Y-EUR-SWIFT
+ approval_status: pending_partner
+ - account: RET-A-USDT-TRC20
+ approval_status: approved
+ approved_at: &quot;2026-09-22&quot;
+ - account: RET-B-USDT-TRC20
+ approval_status: approved
+ approved_at: &quot;2026-09-22&quot;
+ markup_share_rules: []
+ rebate_rule:
+ basis: pct_of_amount
+ pct: 0.004
+ payout_currency: USDT
+ effective_from: &quot;2026-10-01&quot;</pre>
+
+<h3>What each part does in one deal</h3>
+<table><thead><tr><th style="width:30%">Step of the deal</th><th>Configuration it reads</th></tr></thead><tbody>
+<tr><td>Sender A asks to send USDT for Receiver Y</td><td>SENDER Sender A; the allow-list names the default group, so the deal is attributed to <code>DEFAULT</code>; Receiver Y is a counterparty receiver in it.</td></tr>
+<tr><td>Operations picks Ali for USDT → EUR</td><td>PARTNER_CONFIG CLIENT1-ALI, PARTNER_PAIR USDT-EUR (fee_in_rate: Ali's margin is inside its rate; needs_bank_lock, so Ali's 14:30 Hong Kong (GMT+8) cutoff governs the rate lock), its current FEE_STRUCTURE: basis market, fixed 1.00 % (0.40 % sender, 0.60 % receiver), customer-facing figures as actual. Jeton, the alternative, is fee_on_market at 0.50 % and binds no cutoff.</td></tr>
+<tr><td>Sender B instead of Sender A</td><td>FEE_OVERRIDE: 1.20 % split 0.60 / 0.60 on CLIENT1-ALI/USDT-EUR from 1 October, Management-approved; the structure's other terms still apply.</td></tr>
+<tr><td>Market rate</td><td>CURRENCY_PAIR USDT-EUR, source chain Kraken then CMC, 5 decimals; a snapshot older than 120 s is not used; both feeds down → manual rate with Finance approval.</td></tr>
+<tr><td>Quote clocks and the package</td><td>PROJECT: freshness 5 min, validity 60 min, grace 15 min if drift ≤ 0.10 %; beyond grace the policy is re-quote; an extension before validity ends is a QUOTE_VALIDITY_EXTENSION. The package is rendered from MESSAGE_TEMPLATE quote v1, which prints the five sender-facing fields only.</td></tr>
+<tr><td>Can the quote leave Inquiry?</td><td>DESTINATION_APPROVAL: Receiver Y's account Y-EUR-SWIFT is approved with Ali, so yes. Through Jeton it is still pending_partner, so a quote-first deal for Receiver Y cannot be routed through Jeton until the partner approves — while Receiver X could.</td></tr>
+<tr><td>Where does Sender A pay?</td><td>PARTNER_ENTITY PT-tour, its TRC-20 USDT COLLECTION_RECEIVING_ENDPOINT (standard band). Sender A's wallet is screened first (WALLET_SCREENING; clear under the Strict rulebook, so Operations decides accept); an accept_alternate decision (Management's, on a second look) would land on PT Global's elevated-band wallet instead. Provenance is recorded against his COLLECTION_SENDING_ENTITY.</td></tr>
+<tr><td>Conversion</td><td>Receiver part taken at conversion (receiver_fee_timing); Converting may not start before conversion_due_date — the next Hong Kong business day after a post-cutoff lock, skipping Ali's HOLIDAY rows and the Friday early close; variance tolerance 0.20 % (THRESHOLD rate_variation_rel).</td></tr>
+<tr><td>Payout</td><td>SETTLEMENT from Ali through SETTLEMENT_RAIL "Ali's EU bank / EMI" under the narrative "PT Global Inc" to Y-EUR-SWIFT; amount_rounding exact (cents go out); settlement_policy to_zero; expected bank fee 25 EUR, treatment carry_forward; Management approval above 50,000 EUR or for a third same-day slot.</td></tr>
+<tr><td>If Ali is unavailable</td><td>REROUTE to Jeton (applicable_for_reroute = true) via OWN_WALLET AQN-LT-SUB (role reroute_contingency), custody limit 48 hours; Jeton's rebate of 0.40 % of the amount, in USDT, accrues on what Jeton converts (PARTNER_REBATE_RULE).</td></tr>
+<tr><td>Sender B's approver address</td><td>The project's Email OTP switch is on, so each sender needs its own approved approver address and chat group before it can be quoted. Sender B's customer says 'use orders-b@client1.example, in our group Client 1 · Sender B × NPL'. Operations enters the address and the group on Sender B's card (set_email_otp_settings); Finance, a different person, approves; the system sends a verification code to the new address and the customer pastes it in Sender B's group; Operations enters it and the address is active. Until then a quote for Sender B is refused with the reason on the screen, while quotes for Sender A continue on Sender A's own address and group. When the customer later changes the address, the same steps run again; Sender B's open codes are voided, Sender A's are untouched, the sender row shows the new address and the audit log keeps the old one with who entered and who approved.</td></tr>
+<tr><td>Refund</td><td>A rejected payout opens a return leg to RET_SND_A, the sender_return receiver, through the same destination-approval path; the network-fee policy absorbed applies unless a FEE_DECISION says otherwise.</td></tr>
+<tr><td>Reporting</td><td>SYSTEM_SETTING reporting_currency USD; the platform pairs USDT-USD and EUR-USD convert every balance for the client-level ceiling (CLIENT.exposure_ceiling 400,000) and for the project's own cap (250,000).</td></tr>
+</tbody></table>
+
+<p class="small"><i>Illustrative values are marked as such in Section 7.</i></p>
+</body></html>

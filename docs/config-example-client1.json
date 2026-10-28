@@ -176,6 +176,7 @@
         "client_label",
         "pair",
         "amount_in",
+        "customer_facing_rate",
         "customer_facing_fee_pct",
         "printed_amount_out",
         "collection_method",
@@ -215,11 +216,7 @@
     "exposure_ceiling": 250000,
     "status": "active",
     "email_otp": {
-      "enabled": true,
-      "approver_email": "orders@client1.example",
-      "chat_platform": "Telegram",
-      "chat_group_name": "Client 1 × NPL orders",
-      "chat_group_id": "-1001234567890"
+      "enabled": true
     }
   },
   "thresholds": [
@@ -532,6 +529,12 @@
       "name": "Sender A",
       "risk_tier": "standard",
       "status": "active",
+      "email_otp": {
+        "approver_email": "orders-a@client1.example",
+        "chat_platform": "Telegram",
+        "chat_group_name": "Client 1 · Sender A × NPL",
+        "chat_group_id": "-1001234567890"
+      },
       "sendable_to": [
         "DEFAULT"
       ],
@@ -550,6 +553,12 @@
       "name": "Sender B",
       "risk_tier": "standard",
       "status": "active",
+      "email_otp": {
+        "approver_email": "orders-b@client1.example",
+        "chat_platform": "Telegram",
+        "chat_group_name": "Client 1 · Sender B × NPL",
+        "chat_group_id": "-1001234567891"
+      },
       "sendable_to": [
         "DEFAULT"
       ],
