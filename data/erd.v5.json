@@ -158,7 +158,7 @@
      "is_test",
      "bool",
      "",
-     "default false; a flagged dummy twin project for scripted test deals (Cutover Approach, Section 3); the pre-copy filter removes the project and every row that references it, through its deals, settlements, approvals, evidence and postings"
+     "default false; a flagged dummy twin project for scripted test deals on staging (Cutover Approach, Section 3); the clean-target extract that builds production (Cutover Approach 7) leaves the project and every row that references it behind, through its deals, settlements, approvals, evidence and postings; nothing is deleted, staging keeps them as the read-only record"
     ],
     [
      "archetype_code",
@@ -187,7 +187,8 @@
     "v5.4 (D38): + client_id — a project is one arrangement with a CLIENT, no longer the client itself",
     "v6.0 (NPL decision of 20 October 2026): + is_test — the test flag is at project level, one dummy twin per real project",
     "v6.0 (section 1): + state — draft / validated / active; cross-entity rule 13",
-    "v6.1 (round 2, 28 October 2026): + archetype_code, cloned_from_project_id (Configuration 1a, rule 15, finding 06.2); + email_otp_enabled (Email OTP, CR-01)"
+    "v6.1 (round 2, 28 October 2026): + archetype_code, cloned_from_project_id (Configuration 1a, rule 15, finding 06.2); + email_otp_enabled (Email OTP, CR-01)",
+    "v6.1 (29 October 2026): is_test note restated for the extract (finding 02.1)"
    ]
   },
   "PARTNER": {
