@@ -175,7 +175,7 @@ for f, h in HTML.items():
             if rid.startswith(("F-ID", "D-YY")): continue
             if rid not in ts["text"]: report("citations", "%s cites test %s, which is not in the Test Strategy" % (short(f), rid))
 # residue, stale phrases, editions, dates, anchors, marks
-STALE = [r"\bmk\(", r"\bdl\(", r"stage 2\b", r"next edition", r"\bTBD\b", r"\bTODO\b", r"backfilled deals|the backfill of earlier deals is gone(?!)", r"override_screening_reject", r"Finance overrides", r"overridden only by Finance", r"four hours|four-hour", r"smallest burstable", r"pre-copy filter", r"\bthree (?:named |allowed )?custody cases|those three cases", r"&amp;|<b>|</b>", r"\bD(?:[4-9]\d)\b(?! ·)", r"\bv5\.\d\b", r"\bv6\.0\b", r"\bclass=\"rev\""]
+STALE = [r"\bmk\(", r"\bdl\(", r"stage 2\b", r"next edition", r"\bTBD\b", r"\bTODO\b", r"backfilled deals|the backfill of earlier deals", r"\bsince\s*:", r"(?:^|[^A-Za-z0-9])\.\d\. [A-Z]", r"override_screening_reject", r"Finance overrides", r"overridden only by Finance", r"four hours|four-hour", r"smallest burstable", r"pre-copy filter", r"\bthree (?:named |allowed )?custody cases|those three cases", r"&amp;|<b>|</b>", r"\bD(?:[4-9]\d)\b(?! ·)", r"\bv5\.\d\b", r"\bv6\.0\b", r"\bclass=\"rev\""]
 for f, h in HTML.items():
     t = h["text"]
     for pat in STALE:
@@ -191,6 +191,56 @@ for f, h in HTML.items():
 titles = {short(f): re.findall(r"\b\d{1,2} (?:October|November|December) 2026\b", h["text"][:600])[:1] for f, h in HTML.items()}
 distinct = {d[0] for d in titles.values() if d}
 if len(distinct) > 2: report("dates", "title dates differ across the pack: %s" % sorted(distinct))
+
+# ------------------------------------------------------------------ figures: a table whose home is a drawn ERD figure
+# must be in that figure's SVG (the builder checks the definitions against the model, not the drawings); the note under a
+# figure may name only tables the drawing shows; and every upper-case name drawn in any figure must be in the model
+FIGDIR = os.path.join(ROOT, "scripts", "erd-figures-v6.0"); NAMES_ALL = set(tables) | set(views)
+defs = open(os.path.join(ROOT, "scripts", "erd-diagram-defs.mjs"), encoding="utf-8").read()
+def svg_text(fp): return re.sub(r"_ (?=[A-Z])", "_", " ".join(re.findall(r"<text[^>]*>([^<]*)</text>", open(fp, encoding="utf-8").read())))  # a name drawn on two lines reads whole
+FIG, FULL = {}, {}
+def boxes(svg):
+    """(name, kind) for every titled box: a bold title after a rect; grey fill or '(diagram' in the title = a name-only pointer."""
+    out, fill, pending = [], None, None
+    for m in re.finditer(r'<rect [^>]*?fill="([^"]*)"[^>]*/?>|<text ([^>]*)>([^<]*)</text>', svg):
+        if m.group(1) is not None: fill = m.group(1).upper(); continue
+        attrs, text = m.group(2), m.group(3)
+        if pending:  # a title that ended with "_" continues on the next line
+            name, kind = pending; pending = None; out.append((name + re.match(r"[A-Z_]*", text).group(0), kind)); continue
+        if 'font-weight="bold"' not in attrs: continue
+        name = re.match(r"[A-Z][A-Z_]+", text)
+        if not name or text.startswith("Diagram "): continue
+        kind = "stub" if fill == "#EFEFEF" or "(diagram" in text else "full"
+        if name.group(0).endswith("_"): pending = (name.group(0), kind)
+        else: out.append((name.group(0), kind))
+    return out
+HOME = {}
+for m in re.finditer(r'id: "([^"]+)", title: "[^"]*", nodes: \[([^\]]*)\]', defs):
+    fid = m.group(1); fp = os.path.join(FIGDIR, fid + ".svg")
+    for n in re.findall(r'"([A-Z_]+)"', m.group(2)): HOME[n] = fid
+    if not os.path.exists(fp): continue
+    svg = open(fp, encoding="utf-8").read(); FIG[fid] = svg_text(fp); FULL[fid] = {n for n, k in boxes(svg) if k == "full"}
+    for n in re.findall(r'"([A-Z_]+)"', m.group(2)):
+        if n not in FIG[fid]: report("figures", "Diagram %s is the home of %s, but the drawing erd-figures-v6.0/%s.svg does not show it" % (fid, n, fid))
+        elif n not in FULL[fid]: report("figures", "Diagram %s is the home of %s, but the drawing shows it only as a pointer" % (fid, n))
+for fid, full in FULL.items():
+    for n in sorted(full):
+        if n in HOME and HOME[n] != fid: report("figures", "the drawing of Diagram %s draws %s in full, but its home (the dictionary, the notes) is Diagram %s" % (fid, n, HOME[n]))
+        if n not in HOME and n in NAMES_ALL: report("figures", "the drawing of Diagram %s draws %s in full, but no diagram definition owns it" % (fid, n))
+erd = next((h for f, h in HTML.items() if "P0-ERD" in f), None)
+if erd:
+    for m in re.finditer(r'<p class="dgnote"><b>Diagram ([^.<]+)\.</b>(.*?)</p>', erd["raw"]):
+        fid, note = m.group(1), re.sub(r"<[^>]+>", "", m.group(2))
+        for n in set(re.findall(r"\b[A-Z][A-Z_]{3,}[A-Z]\b", note)):
+            if fid in FIG and n not in FIG[fid]: report("figures", "the note under Diagram %s names %s, which the drawing does not show" % (fid, n))
+NAMES = set(tables) | set(views)
+for d in ("erd-figures-v6.0", "figures-v6.0"):
+    for fn in sorted(os.listdir(os.path.join(ROOT, "scripts", d))):
+        if not fn.endswith(".svg"): continue
+        texts = svg_text(os.path.join(ROOT, "scripts", d, fn))
+        for n in set(re.findall(r"\b[A-Z][A-Z_]{3,}[A-Z]\b", texts)):
+            if n in NAMES or n in ("PAYABLE", "CREDIT", "SUSPENSE", "YYYY", "OTP", "NPL", "USD", "HKD", "AWS", "RDS", "ECS", "API", "PDF", "SMTP", "DNS", "TLS", "ERD", "SOP", "OWNER", "HOLDER", "CCY", "PURPOSE", "OPENING_BALANCE", "CUSTOMER", "FIFO", "HTML"): continue
+            report("figures", "%s/%s draws %s, which is no table or view of the model" % (d, fn, n))
 
 # ------------------------------------------------------------------ stage-2 folder
 ap = argparse.ArgumentParser(); ap.add_argument("--stage2"); args = ap.parse_args()

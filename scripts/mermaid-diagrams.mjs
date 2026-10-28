@@ -107,7 +107,8 @@ export function stubNote(nodes, homeOf) {
   const groups = {};
   for (const n of nodes) if (n.startsWith("~")) (groups[homeOf[n.slice(1)] || "?"] ||= []).push(n.slice(1));
   const ids = Object.keys(groups).sort();
-  return ids.map((id, i) => `${groups[id].map((n) => `<code>${n}</code>`).join(", ")} ${i === 0 ? "are defined in Diagram " : "in "}${id}`).join("; ") + ".";
+  if (!ids.length) return "";
+  return ids.map((id, i) => `${groups[id].map((n) => `<code>${n}</code>`).join(", ")} ${i === 0 ? (groups[id].length === 1 ? "is defined in Diagram " : "are defined in Diagram ") : "in "}${id}`).join("; ") + ".";
 }
 
 const CHROME = process.env.CHROME_BIN || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";

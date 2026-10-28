@@ -40,6 +40,10 @@ HTML with their PDFs rendered from it; `src/lib/documents.ts` serves the 6.1 fil
 
 The reviewer could not see this document. At 6.1 it is reconciled: C2 and C3 screening decided from the provider's report with Management's second look and no Finance override; A.1 the flagged rate version; A.3 the Email OTP gate; A.8 the hold, the outcome-unknown instruction, bank account details, the dormant route; A.10 people joining and leaving, A.11 the health checks, A.12 the fallback workbook (the procedures the other documents cite); C11 Email OTP; Part C the clone reconfirm list.
 
+## Figures corrected (29 October 2026, after the fix pass)
+
+CUSTOMER_APPROVAL_EVENT drawn in Diagram 3a and TYPE_REGISTRY in Diagram 4 (both had been placed there by the definitions and the dictionary but not drawn); PARTNER, HOLIDAY and PARTNER_CUTOFF_OVERRIDE homed in Diagram 1a, where they are drawn; text that ran past the right edge of Diagrams 1b, 3a, 3c and 4 and of the Lifecycle's Figure 1 now fits; captions that the client edition's filter had left as "Changed since:" / "New since:" reworded (Diagrams 1a, 3b, 3c, 4, Cutover Figure 1) and a residue ".9." removed from the Lifecycle's Figure 1; the Configuration Schema's Figure 1 names PARTNER_CUTOFF_OVERRIDE in full; the Cutover's figure caption no longer speaks of the backfill. The note under each diagram is derived from the drawing, the ERD build refuses an undrawn table, and `scripts/check-round2.py` checks the drawings (figures section) and figure text.
+
 ## Also in this edition
 
 - Bank account details in the database (D58, 26 October): BANK_ACCOUNT_DETAILS and BANK_DETAILS_TEMPLATE; Roles rule 10.

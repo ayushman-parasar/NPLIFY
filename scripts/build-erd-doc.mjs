@@ -51,10 +51,14 @@ const figureSvg = (id) => { const f = path.join(figDir, `${id}.svg`); if (!fs.ex
 const diagramPage = (dg) => {
   const drawn = figureSvg(dg.id);
   const svg = drawn ?? svgs[dg.id];
+  // the hand-drawn figure shows only some of the name-only stubs; the note below it names those, not the Mermaid list
+  const shown = drawn ? (drawn.match(/<text[^>]*>[^<]*<\/text>/g) || []).map((t) => t.replace(/<[^>]+>/g, "")).join(" ") : null;
+  const noted = shown ? dg.nodes.filter((n) => !n.startsWith("~") || shown.includes(n.slice(1))) : dg.nodes;
+  for (const n of dg.nodes) if (shown && !n.startsWith("~") && !shown.includes(n)) throw new Error(`table ${n} is defined in Diagram ${dg.id} but the drawing erd-figures-v6.0/${dg.id}.svg does not show it`);
   const m = drawn ? /viewBox="0 0 (\d+) (\d+)"/.exec(drawn) : /data-w="(\d+)" data-h="(\d+)"/.exec(svg);
   const land = m ? +m[1] / +m[2] >= 1.15 : true;
   return `<section class="diagram-page ${land ? "land" : "port"}">
-<p class="dgnote"><b>Diagram ${esc(dg.id)}.</b> ${stubNote(dg.nodes, homeOf)}</p>
+${stubNote(noted, homeOf) ? `<p class="dgnote"><b>Diagram ${esc(dg.id)}.</b> ${stubNote(noted, homeOf)}</p>` : ""}
 <figure>${svg}<figcaption>Diagram ${esc(dg.id)} — ${esc(dg.title)}</figcaption></figure>
 </section>`;
 };
@@ -111,7 +115,7 @@ const notes = {
     `A version stores the rate <b>as the partner quoted it</b> (${code("quoted_rate")}, ${code("quoted_direction")}); ${code("rate")} is normalised to the pair's direction and derived — 1 ÷ quoted when the directions differ — so Ali's 1.1738 becomes 0.851934 without a hand inversion, and a direction slip is caught by the breach check (D28). Cash pairs are priced per ${code("location")}: INR cash in Delhi and in Mumbai are two versions on the same day (D30).`,
   ],
   deal: [
-    mk(`<b>Email OTP (CR-01).</b> On a project with the feature on, a quote issue is an approval email with a one-time code, and the customer's acceptance is that code entered by Operations from the registered chat group: ${code("CUSTOMER_APPROVAL")} (one row per code; hash only; write-once decision; the email snapshot and the chat screenshot as evidence) and ${code("CUSTOMER_APPROVAL_EVENT")} (sends, deliveries, replies, attempts). The group's states are unchanged: Sent is pending customer approval, Accepted is customer approved. The settings sit on ${code("PROJECT")} (the switch), ${code("SENDER")} (one approver address and one registered chat group per sender, because each sender has its own chat group) and ${code("THRESHOLD")} (code window, step-up amount, tripwire window). Both tables are in Appendix B.3; Diagram 3a draws the approval record beside the quote package, and its event table is listed with it.`),
+    mk(`<b>Email OTP (CR-01).</b> On a project with the feature on, a quote issue is an approval email with a one-time code, and the customer's acceptance is that code entered by Operations from the registered chat group: ${code("CUSTOMER_APPROVAL")} (one row per code; hash only; write-once decision; the email snapshot and the chat screenshot as evidence) and ${code("CUSTOMER_APPROVAL_EVENT")} (sends, deliveries, replies, attempts). The group's states are unchanged: Sent is pending customer approval, Accepted is customer approved. The settings sit on ${code("PROJECT")} (the switch), ${code("SENDER")} (one approver address and one registered chat group per sender, because each sender has its own chat group) and ${code("THRESHOLD")} (code window, step-up amount, tripwire window). Both tables are in Appendix B.3 and drawn in Diagram 3a beside the quote package.`),
     `<b>Every deal belongs to a deal group.</b> ${code("DEAL_GROUP")} is the client-facing instruction: the pair as the sender sees it, the sender rate, fee, reference and entry mode. A plain single-partner deal is a group of one leg; a route that needs two partners (INR → USDT at Ali, USDT → EUR at Jeton) has two forward legs; a rejected payout is unwound with a return leg.`,
     `<b>Legs.</b> ${code("leg_type")} forward or return; ${code("funding_source")} collection, prior_leg (leg 2 of a route, no collection) or returned_settlement (a return leg). Priced once and partner fixed at quote hold per leg. Attribution is to the receiver group: set at quote on the first forward leg, inherited by leg n of a route from leg n−1 and by a return leg from its parent leg. The receiver is optional until settlement.`,
     `Two entry modes as before: collect-first legs are born in state Collected with priced_at = conversion time; quote-first legs carry sent / valid / grace timestamps and a late decision. An estimate-first mode gives an indicative figure and prices at conversion.`,
