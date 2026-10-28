@@ -5,7 +5,7 @@
 //   note(text)          — for a short field note: strips the tokens, keeps the sentence
 //   clientFacing(html)  — final pass over a whole HTML document (parentheticals and stray tokens)
 
-const DREF = /\b(?:decisions?\s+)?D(?:[1-9]|[1-5]\d)\b(?:\s*[–-]\s*D?(?:[1-9]|[1-5]\d)\b)?(?:\s*\(\d\))?(?:\s+(?:and\s+(?:its\s+)?)?amendment)?/g;
+const DREF = /\b(?:decisions?\s+)?D(?:[1-9]|[1-6]\d)\b(?:\s*[–-]\s*D?(?:[1-9]|[1-5]\d)\b)?(?:\s*\(\d\))?(?:\s+(?:and\s+(?:its\s+)?)?amendment)?/g;
 const VER = /\bv[1-5]\.\d(?:\.\d)?\b/g;
 const INV = /\binvariants?\s+\d+(?:\s*(?:,|and|–|-|to)\s*\d+)*\b/g;
 const QREF = /\bQ\d{1,2}\b/g;
@@ -18,7 +18,7 @@ const tidy = (s) => s
 
 function cleanParens(text) {
   return text.replace(/\(([^()<>]*)\)/g, (m, inner) => {
-    if (!/\b(?:D(?:[1-9]|[1-5]\d)|v[1-5]\.\d|invariants?\s+\d+|Q\d{1,2}|Understanding|was\s+[A-Za-z_]+_[A-Za-z_]+|was\s+[A-Z_]{3,})\b/.test(inner)) return m;
+    if (!/\b(?:D(?:[1-9]|[1-6]\d)|v[1-5]\.\d|invariants?\s+\d+|Q\d{1,2}|Understanding|was\s+[A-Za-z_]+_[A-Za-z_]+|was\s+[A-Z_]{3,})\b/.test(inner)) return m;
     if (HISTORY.test(inner) || /\badded\b.*\bso\b|Understanding/.test(inner)) return "";
     if (/^\s*(?:v[1-5]\.\d(?:\.\d)?\s*[,:]?\s*)?(?:D(?:[1-9]|[1-4]\d)\b[^:]*:\s*)?[+−-]\s/.test(inner)) return "";   // "(v5.7, D46: + LossRecovery, Invoice)" is a change note
     let r = inner.replace(DREF, "").replace(VER, "").replace(INV, "").replace(QREF, "").replace(DATED, "").replace(WAS, "").replace(/Understanding\s*§?[\d.a-z]*/g, "");
@@ -33,7 +33,7 @@ function cleanParens(text) {
 function stripTokens(text) {
   let t = cleanParens(text);
   t = t.replace(/^\s*v[1-5]\.\d(?:\.\d)?\s*(?:\([^()]*\))?\s*:\s*/, "");           // "v5.3 (D29): " prefix
-  t = t.replace(/\bthe\s+D(?:[1-9]|[1-5]\d)\s+amendment\b/g, "a later amendment").replace(DREF, "").replace(DATED, "");
+  t = t.replace(/\bthe\s+D(?:[1-9]|[1-6]\d)\s+amendment\b/g, "a later amendment").replace(DREF, "").replace(DATED, "");
   t = t.replace(/\bsince\s+v[1-5]\.\d(?:\.\d)?\b/g, "").replace(/\b(?:in|until|from|as of)\s+v[1-5]\.\d(?:\.\d)?\b/g, "").replace(VER, "");
   t = t.replace(INV, "").replace(/\binvariant\b(?=\s*[.,;)])/g, "");
   return tidy(t).replace(/^[\s,;:·—–-]+/, "").trim();

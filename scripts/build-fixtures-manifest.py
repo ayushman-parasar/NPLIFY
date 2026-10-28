@@ -3,11 +3,11 @@
 Reads the built Ledger Posting Design HTML and writes one row per worked transaction: fixture id, pattern, source type,
 number of posting lines, accounts touched, the page of the Ledger Posting Design PDF it is on. 61 numbered transactions
 T1–T61; 67 fixtures counting the variants (T3a, T22a, T24a, T41a/b/c in place of T41, T52a).
-    python3 scripts/build-fixtures-manifest.py            -> docs/fixtures-manifest-v6.0.csv (+ a copy for the Test Strategy builder)"""
+    python3 scripts/build-fixtures-manifest.py            -> docs/fixtures-manifest-v6.1.csv (+ a copy for the Test Strategy builder)"""
 import re, html, csv, subprocess, shutil, os, sys
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-H = open(os.path.join(root, "docs/NPLify-Ledger-Posting-Design-v6.0.html"), encoding="utf-8").read()
-P = os.path.join(root, "docs/NPLify-Ledger-Posting-Design-v6.0.pdf")
+H = open(os.path.join(root, "docs/NPLify-Ledger-Posting-Design-v6.1.html"), encoding="utf-8").read()
+P = os.path.join(root, "docs/NPLify-Ledger-Posting-Design-v6.1.pdf")
 secs = [(m.start(), m.group(1), html.unescape(m.group(2)).strip()) for m in re.finditer(r'<h2[^>]*>\d+[a-d]? · Pattern ([A-R]) — ([^<]*)</h2>', H)]
 pages = {}
 n = int(re.search(r"Pages:\s+(\d+)", subprocess.run(["pdfinfo", P], capture_output=True, text=True).stdout).group(1))
@@ -35,9 +35,9 @@ assert len(rows) == 67, (len(rows), ids)
 assert len(set(ids)) == 67
 numbered = sorted(set(int(re.match(r"T(\d+)", i).group(1)) for i in ids))
 assert numbered == list(range(1, 62)), numbered
-out = os.path.join(root, "docs/fixtures-manifest-v6.0.csv")
+out = os.path.join(root, "docs/fixtures-manifest-v6.1.csv")
 with open(out, "w", newline="", encoding="utf-8") as f:
     w = csv.DictWriter(f, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
-copy = "/Users/sp/Desktop/NPLify client pack/.claude/skills/nplify-section-drafts/scripts/fixtures-manifest-v6.0.csv"
+copy = "/Users/sp/Desktop/NPLify client pack/.claude/skills/nplify-section-drafts/scripts/fixtures-manifest-v6.1.csv"
 if os.path.isdir(os.path.dirname(copy)): shutil.copy(out, copy)
 print("wrote", out, len(rows), "fixtures;", "patterns:", "".join(sorted(set(r["pattern"] for r in rows))))

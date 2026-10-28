@@ -15,7 +15,7 @@ const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
 const outDir = path.join(root, "docs");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const V = D.version, DATE = "13 October 2026";
+const V = D.version, DATE = "28 October 2026";
 const FLOWS = Object.fromEntries(D.SCENARIO_CATALOGUE.flows.map((f) => [f[0], f[1]]));
 
 // ------------------------------------------------------------------ Part A · common procedures (C1–C10 mirror the shared flows F1–F10)
@@ -32,7 +32,7 @@ const COMMON = [
   ], "Token serial, agent contact, the token photo, counted amount and time; the city on the deal."],
   ["C2", "USDT collection with wallet screening", "Every USDT collection on every project. Sender wallets are screened before any address is given out, except where the project allows a sender to skip it (some Evo senders).", [
     ["Operations", "Asks the sender to declare the sending wallet (network and address)."],
-    ["Operations", "Screens the wallet with the screening tool and records result, decision and evidence. Acceptable → the partner's standard receiving wallet; higher-risk but acceptable → the partner's alternate (elevated-band) wallet; unacceptable → refused, the sender must arrange another wallet. A refused wallet can be overridden only by Finance."],
+    ["Operations", "Screens the wallet with the screening tool and records result, decision and evidence. A report that is clear under the provider's strict rulebook (nothing at threshold, no terrorism-financing trace, score in the clear band) is Operations' decision: accept, the partner's standard receiving wallet. Anything else goes to Management's second look, which decides accept, accept on the partner's alternate (elevated-band) wallet, or reject, with the reason, the report and the decision kept together; the approver is never the person who screened. A reject stands: it is lifted only by a new screening of the same address decided by Management, and nobody at NPL, Finance included, overrides it. A hold, freeze or decline by the partner or its bank is the partner's decision: NPL records it as the event it is, routes around it and records the partner's clearance reference when the partner lifts it (Roles &amp; Visibility rule 11; Configuration Schema 4)."],
     ["Operations", "Gives the sender the receiving address. If the partner lacks the sender's network (Ali has no ERC-20), gives NPL's own bridge wallet on that network; the funds are forwarded to the partner on a supported network as a hop, within the wallet's custody limit."],
     ["Sender", "Sends the transfer and shares the transaction hash."],
     ["Operations", "Checks the hash on Tronscan (TRC-20) or Etherscan (ERC-20): address, amount, confirmations. Attaches the result as evidence and shares the hash with the partner."],
@@ -40,7 +40,7 @@ const COMMON = [
     ["Operations", "Verifies the collection part. An overpayment becomes a sender credit; an underpayment leaves the deal in Collecting until Finance decides to wait or void."],
   ], "Screening record; sending address; hash and explorer result; the partner's confirmation."],
   ["C3", "Receiver wallet screened before a USDT payout", "Every payout to a wallet: BF withdrawals, Peru, NPL-GR vendor payments, JTN and Jonas payouts in USDT, AK Personal withdrawals in USDT.", [
-    ["Operations", "Takes the receiver's wallet (network, address); screens it and records the result on the account's destination approval."],
+    ["Operations", "Takes the receiver's wallet (network, address); screens it and records the report, the decision and the evidence on the account's destination approval, under the same rule as C2: a clear report is Operations' decision, anything else is Management's second look, a reject is never overridden."],
     ["Operations", "Prepares the payout line to that account; Finance approves the payout (Section A.5)."],
     ["Partner", "Executes the transfer and provides the hash."],
     ["Operations", "Shares the hash with the receiver; attaches it to the line."],
@@ -95,13 +95,21 @@ const COMMON = [
     ["Partner", "Moves the funds; BF recognises them at once; no bank fee."],
     ["Operations", "Marks the line confirmed on the receiver's confirmation (often the same day)."],
   ], "The internal transfer reference; the receiver's confirmation."],
+  ["C11", "Email OTP — the customer's approval of the order", "Any quote-first deal on a project with Email OTP switched on. The customer approves the exact order by a one-time code sent by email and pasted in the sender's registered chat group; the code is the acceptance (Lifecycle & Approvals 2e). A sender whose approver address and chat group are not entered and approved cannot be quoted while the switch is on; the screen says why.", [
+    ["Operations", "Prepares the quote as usual (Finance approves it where the thresholds require) and presses Send for customer approval. One email leaves for the sender's registered approver address: the quote as rendered, a one-time code with its expiry, and the first and last four characters of the collection destination. No link, never the full account or wallet."],
+    ["Customer", "Pastes the code in the sender's registered chat group; at or above the step-up amount, the order amount as well. A reply to the email, or a message in the group, with 'reject' and the reason is a rejection."],
+    ["Operations", "Enters the code (and the amount where required). The server validates it: right code, right issue, unexpired, unused; five wrong attempts lock it and a locked, expired or voided code needs a new send. Attaches a screenshot of the customer's message as evidence. The group is customer approved."],
+    ["Operations", "Sends the full destination in the registered chat group; the customer's standing rule is to pay only if it matches the partial identifier in the email. The collection then follows C2, C4 or C7 as usual."],
+    ["Operations", "If nothing arrives from the registered group within the tripwire window (default 4 hours), verifies with the customer through a known contact outside the chat. A code whose chat evidence cannot be produced from the registered group blocks collection and opens an exception."],
+    ["Operations · Finance", "A change of a sender's approver address or chat group is a settings change: Operations enters, Finance approves (never the same person); the new address is active only after its verification code comes back through that sender's group; that sender's open codes are voided."],
+  ], "The email snapshot, the code reference, the chat screenshot, the approval stamp (user and time); a rejection with its reason verbatim."],
 ];
 
 // ------------------------------------------------------------------ Part A · the day: standing procedures
 const STANDING = [
   ["A.1", "Rates of the day", [
     "Finance takes each partner's rate for the pairs in use (Ali in the morning for bank-side pairs; Jeton and Aquanow when quoting) and enters it as quoted, with its direction; the app normalises it and compares it with the market feed (Kraken, then CoinMarketCap).",
-    "A version whose spread breaches the project's threshold freezes quoting and conversion on that partner × pair until Finance approves it with a reason, rejects it, or asks the partner for a better rate (a new version). Operations sees only usable or frozen.",
+    "A version whose spread breaches the project's threshold freezes quoting and conversion on that partner × pair until Finance approves it with a reason, rejects it, or asks the partner for a better rate (a new version). A version outside the absolute tolerance in either direction, better or worse than the market, is flagged: it prices nothing and instructs nothing until Finance confirms it with a reason or rejects it, while the last usable version keeps serving; a quote or conversion attempted against a flagged version is refused and the refusal logged (Calculation Specification 2a). Operations sees only usable, flagged or frozen.",
     "With both market feeds down, Finance enters a manual rate with evidence; nothing prices until a rate exists.",
   ]],
   ["A.2", "Quoting", [
@@ -113,6 +121,7 @@ const STANDING = [
   ["A.3", "Collecting", [
     "By the common procedure the method calls for: C2 (USDT), C4 (bank), C1 (cash), C7 (one-time local account). Every part is verified by Operations with its evidence; the deal moves to Collected when the full amount (or the agreed partial) is verified.",
     "The collection must land on an endpoint of the partner entity stamped on the deal, of the kind the leg's method requires. The app refuses anything else.",
+    "On a project with Email OTP switched on, no collection is recorded until the customer's code has been validated for the current quote issue (C11); a sender whose approver address and chat group are not entered and approved cannot be quoted at all, and the screen says why.",
   ]],
   ["A.4", "Converting", [
     "Operations instructs the conversion once the deal is Collected (on a bank-side pair, not before the conversion due date). Finance approves. The receiver's fee part is taken at conversion; the sender's part was taken in the price.",
@@ -139,6 +148,11 @@ const STANDING = [
     "Loss event (frozen account, cash short and unrecoverable, wrong-chain transfer): Operations records it the same day; the whole loss is booked to NPL and the client made whole; Finance proposes the split with the partner, the sender and the client; Management approves; each share is recovered and recorded separately.",
     "Shortfall: topped up at the next payout, or by its own payout; a top-up from NPL's pool is a Management approval.",
     "Balance conversion (a held balance into another currency): Finance requests, Management approves; on a bank-side pair the cutoff applies.",
+    "A leg on hold (a partner's hold, freeze or decline, or NPL's own screening awaiting Management's second look): the leg keeps its state and the server refuses every movement of the money — conversion, balance conversion, settlement line, refund, reroute forward, return — for every role; recording, screening, evidence, partner messages and a void before money moved stay allowed. A partner hold ends only when Finance records the partner's clearance with its reference; a screening hold only with Management's second look or a new clear screening. The one movement under hold is the one the partner instructs in writing, recorded with its reference and approved by Management, never while the partner's hold is on the balance itself. A partner hold is chased daily from the exception list (Lifecycle &amp; Approvals 2c).",
+    "An instruction with outcome unknown (the partner has not acknowledged a conversion, settlement line or reroute forward by the time-out): Operations raises the partner reference inquiry the same day and records the answer with its evidence; Finance obtains the partner's statement; nothing is sent again by anyone meanwhile. Executed: the instruction is marked against the partner's reference and the line continues. Not received: Management closes it as rejected on the partner's written confirmation and Finance authorises the one retry under a new partner reference, recorded as a retry of the held line. Escalated to Management if the partner has not answered by its next statement or within two business days (Lifecycle &amp; Approvals 2d and 8a).",
+    "Bank account details (a receiving account, a partner's bank endpoint, a settlement rail, a sender's bank source): Operations enters them in full from the bank's letter or confirmation, with the document as evidence; Finance or Management approves, never the person who entered them; the row becomes active and the account, endpoint or rail that points at it may become active. The details are read in full by all three roles and every full read is logged (Roles &amp; Visibility rule 10).",
+    "A dormant route (a partner pair in status dormant): it prices nothing and accepts no collection or settlement line. Before it is used again Finance runs the reactivation checklist — the partner's current confirmation of the product, the destination approvals, the rates of the day, the fee structure validated against the current agreement, the test cases of the Test Strategy run on staging — and Management sets the pair active. A route unused for the project's route_unused_days threshold is put on the quarterly review to be set dormant or kept (Scenario Catalogue; Configuration Schema, partner pair).",
+    "The opening date (opening entries, in-flight deals, suspense lines): the procedure is Section 4 of the Cutover Approach and is not repeated here.",
   ]],
 ];
 
@@ -513,7 +527,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 <div class="rule"></div>
 
 <h2>Part A · Common procedures</h2>
-<p>The ten common procedures below are the shared flows of the scenario catalogue (${Object.keys(FLOWS).map((k) => k + " " + FLOWS[k]).join("; ")}), written as steps. A project SOP cites them by code.</p>
+<p>The common procedures below are the ten shared flows of the scenario catalogue (${Object.keys(FLOWS).map((k) => k + " " + FLOWS[k]).join("; ")}), written as steps, and the Email OTP procedure C11. A project SOP cites them by code.</p>
 ${common}
 
 <h2 class="pb">Part A · Standing procedures of the day</h2>
@@ -522,6 +536,21 @@ ${standing}
 <h3>A.9 · Who may do what — quick reference</h3>
 <p class="small">The approving person is always different from the initiator. The last column names the conditions that add Management's approval on top of Finance's. The full list with rejection handling is in the Lifecycle &amp; Approvals document.</p>
 ${actionsTable}
+<h3 id="A.10">A.10 · People joining and leaving</h3><ul>
+<li>A new account is created on the day the person starts, with one role and the person named behind it (USER.person_ref); Management approves. Nobody holds two accounts that can approve each other's requests.</li>
+<li>A leaver's account is closed the same day, before the end of the day's work: the role removed, the account disabled, the person removed from the share lists of the two fallback workbooks, and any pending request of theirs dropped or reassigned. Finance does it, Management confirms; the audit log carries both.</li>
+<li>Every quarter Management confirms the list of users and their roles, the rights per controlled action, the share lists of the two workbooks against the user list, and, per project, the senders' registered approver addresses and chat groups for Email OTP (Roles &amp; Visibility rule 12, rule 13 and 5a).</li>
+</ul>
+<h3 id="A.11">A.11 · The health checks</h3><ul>
+<li>Every morning Finance reads the alarm mailbox and the exception list before the first deal. A job that stopped after three attempts or a run the sweep found missing is an exception until Engineering has cleared it and the job-health line on the monitor is green again; the alarm names the job, the time and the event, never a figure (Architecture &amp; Stack 4 and 5).</li>
+<li>Every month Engineering restores last week's backup into a scratch database and runs the restore checks (the ledger identities, every evidence reference, every type-plus-id reference); the result is recorded with its time. Every year the rehearsal is the region case: the standby database promoted in the second region, the application started there, every step timed, and the measured recovery time and data loss reported to NPL (Cutover Approach 8a; Test Strategy G-REST).</li>
+<li>The two fallback workbooks are checked weekly for freshness (an export every five minutes) and for their share lists (A.10).</li>
+</ul>
+<h3 id="A.12">A.12 · Working from the fallback workbook</h3><ul>
+<li>When the application cannot be used, Finance declares the outage with its time and tells the team; from then on Operations works from the Operations workbook (open deals and their states, cutoffs, pending approvals, the day's partner rates as entered, the amount available to pay out per partner and currency) and Finance from the Finance workbook (balances, pool, margins, reconciliation figures). Both are refreshed every five minutes while the application runs, so they start from the last five minutes before the outage.</li>
+<li>Every instruction given to a partner during the outage is written in the workbook with the deal reference, the partner's reference and the time, and the partner's confirmation is kept; nothing is instructed twice for the same promise, and nothing new is quoted unless Management says so.</li>
+<li>When the application is back, the recovery runbook of Cutover Approach 8a applies: Engineering identifies the last committed transaction, Operations and Finance re-enter everything after it from the workbook and the partner confirmations in time order, with the real times in the evidence, and Finance reconciles every partner balance before the first new deal. Management records the resumption.</li>
+</ul>
 
 <h2 class="pb">Part B · One SOP per project</h2>
 <p>Each SOP has the same shape: what the project is for; the parties, partners, pairs and fee at a glance; the configuration that must be in place before the first deal; the procedure step by step with the control and the evidence at each step; the rules particular to the project; and the checks. The projects:</p>
@@ -532,6 +561,7 @@ ${PROJECTS.map(sop).join("")}
 <ol>
 <li><b>Classify it</b> against Part B: which SOP is it closest to — an invoice-payment project (YN Remit), a funding project with a fixed fee (BF), a shared-markup arrangement (BF Sub), a cash project (JTN, Jonas), a held-balance account (AK Personal), or NPL's own desk (NPL-GR)?</li>
 <li><b>Configure it</b> from the Configuration Schema: client and project, parties and their accounts, partner configuration with the pairs and the fee structure (fixed, variable with a cap, tiered, shared), destination approvals, templates. Finance proposes, Management approves; the validation must pass before the first deal.</li>
+<li><b>If it is cloned from an archetype or another project</b>, the clone copies structure, not agreements. The new project records its source, and every copied row carries it until a user confirms or changes the row. The reconfirm list is left empty on purpose and must be set by hand: on the project, the client, the name and label, the exposure ceiling, the settlement policy and every threshold with an amount or currency; per partner pair, the fee percentage and its parts, the tiers, the minimum and maximum markup and the rate basis; per partner block, the partner entities, endpoints, settlement sending entities and rails, destination approvals, rebate rule and markup shares; the parties, accounts, bank account details and allow-lists. A partner's cutoff, time zone and holidays are never copied. Activation is refused with a field-level list of what is missing until every copied row is confirmed, every referenced version is the one in force on the activation date, and every block's route is complete (Configuration Schema 1a and rule 15).</li>
 <li><b>Write its SOP</b> on the template of Part B — at a glance, configuration, procedure, rules, checks — citing the common procedures by code. Any step not covered by Part A is a question for Management before the project runs, not a workaround.</li>
 <li><b>Run the first deal with Finance on the screen</b>, reconcile it the same evening, and only then hand the project to the normal rota.</li>
 </ol>

@@ -15,7 +15,7 @@ const REVIEW = !!process.env.NPLIFY_REVIEW;                      // round-2 revi
 const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
 const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
 const outDir = process.env.NPLIFY_OUT || path.join(path.resolve(here, ".."), "docs");
-const VERSION = M.ERD_VERSION, DATE = "22 October 2026";
+const VERSION = M.ERD_VERSION, DATE = "28 October 2026";
 const e = (x) => fmt(x);
 const u = (x) => fmt(x, "USDT");
 
@@ -268,7 +268,7 @@ ${PATTERNS.map(([letter, name, intro, keys, extra]) => name === null ? `<div cla
 <tr><td>T56 to T58</td><td>Pattern O — reroute after conversion</td><td>§19a</td></tr>
 <tr><td>T59</td><td>Pattern Q — month-end reconciliation true-up</td><td>§19c</td></tr>
 <tr><td>T60, T61</td><td>Pattern R — opening entries on the opening date</td><td>§19d</td></tr>
-<tr><td>${mk("F-T1 to F-T61, with the suffixes of the T ids (67 fixtures)")}</td><td>${mk("One executable fixture per worked transaction above: id, pattern, source type, posting lines, accounts, page; the build refuses a fixture without a transaction and a transaction without a fixture")}</td><td>${mk("Test Strategy &amp; Coverage, Appendix A; fixtures-manifest-v6.0.csv")}</td></tr>
+<tr><td>${mk("F-T1 to F-T61, with the suffixes of the T ids (67 fixtures)")}</td><td>${mk("One executable fixture per worked transaction above: id, pattern, source type, posting lines, accounts, page; the build refuses a fixture without a transaction and a transaction without a fixture")}</td><td>${mk("Test Strategy &amp; Coverage, Appendix A; fixtures-manifest-v6.1.csv")}</td></tr>
 <tr><td>L1 to ${dl("L13")}${mk("L14")}</td><td>Acceptance vectors A, the ledger's worked deals (L10 to L13 added in 18a${mk("; L14, the opening tier volume, in round 2")})</td><td>Calculation Specification §18</td></tr>
 <tr><td>B1 to ${dl("B23")}${mk("B24")}</td><td>Acceptance vectors B, NPL's own figures recomputed (B18 to B23 added in 19b${mk("; B24, NPL's figure for L14, in round 2")})</td><td>Calculation Specification §19, numbered in 19b</td></tr>
 <tr><td>W1 to W8</td><td>Guided walkthroughs through the model</td><td>Scenario Catalogue Part 3</td></tr>
