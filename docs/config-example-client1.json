@@ -163,6 +163,30 @@
       ],
       "effective_from": "2026-10-01",
       "status": "active"
+    },
+    {
+      "code": "email_otp_quote",
+      "version": 1,
+      "channel": "email",
+      "language": "en",
+      "body_ref": "tpl-otp-en-v1",
+      "printed_fields": [
+        "deal_ref",
+        "issue_no",
+        "client_label",
+        "pair",
+        "amount_in",
+        "customer_facing_rate",
+        "customer_facing_fee_pct",
+        "printed_amount_out",
+        "collection_method",
+        "effective_valid_until",
+        "code",
+        "code_expires_at",
+        "partial_destination"
+      ],
+      "effective_from": "2026-10-01",
+      "status": "active"
     }
   ],
   "client": {
@@ -190,7 +214,10 @@
     "settlement_policy": "to_zero",
     "shortfall_tolerance": 0,
     "exposure_ceiling": 250000,
-    "status": "active"
+    "status": "active",
+    "email_otp": {
+      "enabled": true
+    }
   },
   "thresholds": [
     {
@@ -213,6 +240,22 @@
     {
       "kind": "rate_variation_rel",
       "value": 0.002,
+      "escalation": "finance"
+    },
+    {
+      "kind": "email_otp_code_window_min",
+      "value": 1440,
+      "escalation": "finance"
+    },
+    {
+      "kind": "email_otp_stepup_amount",
+      "currency": "USD",
+      "value": 50000,
+      "escalation": "management"
+    },
+    {
+      "kind": "email_otp_tripwire_min",
+      "value": 240,
       "escalation": "finance"
     }
   ],
@@ -252,6 +295,106 @@
       "custody_max_hours": 48
     }
   ],
+  "bank_account_details": [
+    {
+      "code": "BAD-X1-EUR",
+      "holder_name": "Entity X1 Ltd",
+      "bank_name": "Bank X",
+      "country": "DE",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "DE89 3704 0044 0532 0130 00",
+        "bic": "COBADEFFXXX"
+      },
+      "evidence_ref": "restricted/bank-letters/x1-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-X2-EUR",
+      "holder_name": "Entity X2 GmbH",
+      "bank_name": "Bank X",
+      "country": "DE",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "DE02 1203 0000 0000 2020 51",
+        "bic": "BYLADEM1001"
+      },
+      "evidence_ref": "restricted/bank-letters/x2-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-Y-EUR",
+      "holder_name": "Entity Y SA",
+      "bank_name": "Bank Y",
+      "country": "FR",
+      "currency": "EUR",
+      "rail": "SWIFT",
+      "rail_fields": {
+        "iban": "FR14 2004 1010 0505 0001 3M02 606",
+        "bic": "BNPAFRPPXXX",
+        "bank_address": "16 bd des Italiens, Paris",
+        "intermediary_bic": ""
+      },
+      "evidence_ref": "restricted/bank-letters/y-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-PTG-IDR",
+      "holder_name": "PT Global Inc",
+      "bank_name": "Bank Mandiri",
+      "country": "ID",
+      "currency": "IDR",
+      "rail": "local",
+      "rail_fields": {
+        "bank_code": "008",
+        "account_number": "1234567890"
+      },
+      "evidence_ref": "restricted/bank-letters/ptg-idr.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-ALI-EUR-RAIL",
+      "holder_name": "Ali EU EMI",
+      "bank_name": "EMI Bank",
+      "country": "LT",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "LT12 1000 0111 0100 1000",
+        "bic": "EMIBLT22"
+      },
+      "evidence_ref": "restricted/bank-letters/ali-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    },
+    {
+      "code": "BAD-JETON-EUR-RAIL",
+      "holder_name": "Jeton EMI",
+      "bank_name": "Jeton Bank",
+      "country": "GB",
+      "currency": "EUR",
+      "rail": "SEPA",
+      "rail_fields": {
+        "iban": "GB29 NWBK 6016 1331 9268 19",
+        "bic": "NWBKGB2L"
+      },
+      "evidence_ref": "restricted/bank-letters/jeton-eur.pdf",
+      "entered_by": "ops.user",
+      "entered_at": "2026-09-18",
+      "status": "active"
+    }
+  ],
   "receiver_groups": [
     {
       "code": "DEFAULT",
@@ -278,7 +421,7 @@
               "currency": "EUR",
               "rail": "SEPA",
               "account_kind": "bank",
-              "bank_details_ref": "bank-ref-001",
+              "bank_account_details": "BAD-X1-EUR",
               "usage": "standing",
               "status": "active"
             }
@@ -294,7 +437,7 @@
               "currency": "EUR",
               "rail": "SEPA",
               "account_kind": "bank",
-              "bank_details_ref": "bank-ref-002",
+              "bank_account_details": "BAD-X2-EUR",
               "usage": "standing",
               "status": "active"
             }
@@ -319,7 +462,7 @@
               "currency": "EUR",
               "rail": "SWIFT",
               "account_kind": "bank",
-              "bank_details_ref": "bank-ref-003",
+              "bank_account_details": "BAD-Y-EUR",
               "usage": "standing",
               "status": "active"
             }
@@ -386,13 +529,21 @@
       "name": "Sender A",
       "risk_tier": "standard",
       "status": "active",
+      "email_otp": {
+        "approver_email": "orders-a@client1.example",
+        "chat_platform": "Telegram",
+        "chat_group_name": "Client 1 · Sender A × NPL",
+        "chat_group_id": "-1001234567890"
+      },
       "sendable_to": [
         "DEFAULT"
       ],
       "provenance": [
         {
-          "label": "own account",
-          "account_ref": "wallet-snd-a-1"
+          "label": "own wallet (TRC-20)",
+          "bank_account_details": null,
+          "wallet_network": "TRC-20",
+          "wallet_address": "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE"
         }
       ],
       "fee_overrides": []
@@ -402,13 +553,21 @@
       "name": "Sender B",
       "risk_tier": "standard",
       "status": "active",
+      "email_otp": {
+        "approver_email": "orders-b@client1.example",
+        "chat_platform": "Telegram",
+        "chat_group_name": "Client 1 · Sender B × NPL",
+        "chat_group_id": "-1001234567891"
+      },
       "sendable_to": [
         "DEFAULT"
       ],
       "provenance": [
         {
-          "label": "own account",
-          "account_ref": "wallet-snd-b-1"
+          "label": "own wallet (TRC-20)",
+          "bank_account_details": null,
+          "wallet_network": "TRC-20",
+          "wallet_address": "TAzsQ9Gx8eqFNFSKbeXrbi45CuVPHzA8wr"
         }
       ],
       "fee_overrides": [
@@ -495,7 +654,7 @@
               "kind": "bank",
               "currency": "IDR",
               "rail": "local",
-              "bank_details_ref": "bank-ref-ptg-idr",
+              "bank_account_details": "BAD-PTG-IDR",
               "risk_band": "standard",
               "usage": "standing",
               "status": "active"
@@ -512,7 +671,7 @@
       "settlement_rails": [
         {
           "name": "Ali's EU bank / EMI",
-          "bank_details_ref": "rail-ref-ali-eur",
+          "bank_account_details": "BAD-ALI-EUR-RAIL",
           "expected_bank_fee": 25,
           "currency": "EUR"
         }
@@ -608,7 +767,7 @@
       "settlement_rails": [
         {
           "name": "Jeton EMI (SEPA)",
-          "bank_details_ref": "rail-ref-jeton-eur",
+          "bank_account_details": "BAD-JETON-EUR-RAIL",
           "expected_bank_fee": 0,
           "currency": "EUR"
         }

@@ -1,5 +1,5 @@
 {
- "version": "6.0",
+ "version": "6.1",
  "ledger": {
   "L1": {
    "name": "Deal 1 — Evo, 10,000 USDT → EUR at Ali (fee_in_rate), market 0.9000, Ali 0.8910, sender 1.4 % + receiver 0.6 % on market",
@@ -254,6 +254,24 @@
    "payable": 20000,
    "residual": 0,
    "blended": 0.02375
+  },
+  "L14": {
+   "name": "Opening volume in the counter: GDC opens on day 20 with USD 480,000.00 month-to-date (opening line), target_out USD 40,000.00 at rate 1; 20,000.00 at 2.5 % and 20,000.00 at 2.25 % (blended 2.375 %); counter afterwards 520,950.00",
+   "in": "USDT",
+   "out": "USD",
+   "amountIn": 40950,
+   "Rs": 0.9768009768009768,
+   "grossOut": 40000,
+   "feeSender": 950,
+   "feeReceiver": 0,
+   "clientNet": 40000,
+   "actualOut": 40950,
+   "partnerCost": 0,
+   "earnings": 950,
+   "payable": 40000,
+   "residual": 0,
+   "blended": 0.02375,
+   "counterAfter": 520950
   }
  },
  "npl": [
@@ -463,6 +481,16 @@
    "shown": "4,860",
    "ok": true,
    "note": "NPL's figure of 21 October (L3)"
+  },
+  {
+   "id": "B24",
+   "name": "Opening tier volume: GDC opens on day 20 at USD 480,000 month-to-date, USD 40,000 target out",
+   "inputs": "target_out; 20,000 × (1 + 2.5 %) + 20,000 × (1 + 2.25 %); counter afterwards 480,000 + 40,950",
+   "computed": "40,950",
+   "shown": "40,950",
+   "ok": true,
+   "note": "NPL's figure of 27 October 2026: amount in 40,950.00, markup 950.00, counter 520,950.00 (L14)",
+   "rv": true
   }
  ]
 }

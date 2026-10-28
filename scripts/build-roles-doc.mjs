@@ -13,10 +13,14 @@ import { clientFacing } from "./client-facing.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const D = JSON.parse(fs.readFileSync(path.join(root, "data/erd.v5.json"), "utf8"));
-const outDir = path.join(root, "docs");
+const REVIEW = !!process.env.NPLIFY_REVIEW;                      // round-2 review marks: yellow = new, red strike = goes
+const outDir = process.env.NPLIFY_OUT || path.join(root, "docs");
+const mk = (t) => (REVIEW ? `<mark class="rev">${t}</mark>` : t);
+const dl = (t) => (REVIEW ? `<del class="rev">${t}</del> ` : "");
+const REV_TABLES = new Set(["BANK_ACCOUNT_DETAILS", "BANK_DETAILS_TEMPLATE"]), REV_FIELD = "bank_account_details_id";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const c = (s) => `<code>${esc(s)}</code>`;
-const V = D.version, DATE = "22 October 2026";
+const V = D.version, DATE = "28 October 2026";
 
 // ------------------------------------------------------------------ field groups
 // Every field of every table belongs to exactly one group; the group decides who may see it.
@@ -29,15 +33,17 @@ const GROUPS = {
   LEDGER: { name: "Ledger and balances", who: "Finance · Management", desc: "Accounts, transactions, postings, and every balance derived from them: client balance per partner, group entitlement, offsets, custody, the client-level roll-up. Operations sees one figure only: the amount available to pay out at a partner." },
   CONFIG: { name: "Configuration and master data", who: "view: all · propose: Finance · approve: Management", desc: "Clients, project settings, pairs and rounding, thresholds, partner configuration, cutoffs and holidays, fee structures and tiers, destination approvals, templates, system settings. Visible to everyone who operates them; changed only through Finance's proposal and Management's approval." },
   CTRL: { name: "Approvals, audit, users, roles", who: "own requests: Operations · all: Finance · Management", desc: "Approval records, the audit log, record locks, users, roles and the rights per controlled action." },
+  NONE: { name: "Not readable by any role", who: "—", desc: "The one-time code of Email OTP, stored as a hash for validation only: in no screen, export, API response or notification for any role (rule 13)." },
 };
 // Entities whose every field belongs to one group
 const ENTITY_GROUP = {
+  TYPE_REGISTRY: "CTRL", CUSTOMER_APPROVAL_EVENT: "OPS",
   // configuration
   PROJECT: "CONFIG", PARTNER: "CONFIG", RATE_SOURCE: "CONFIG", MARKUP_SHARE_PARTY: "CONFIG", SENDER: "CONFIG", RECEIVER_GROUP: "CONFIG", RECEIVER: "CONFIG", OWN_WALLET: "CONFIG", THRESHOLD: "CONFIG",
   CURRENCY_PAIR: "CONFIG", PARTNER_CONFIG: "CONFIG", COLLECTION_SENDING_ENTITY: "CONFIG", SENDER_RECEIVER_ALLOW: "CONFIG", RECEIVING_ENTITY: "CONFIG", PAIR_RATE_SOURCE: "CONFIG", SETTLEMENT_SENDING_ENTITY: "CONFIG",
   FEE_OVERRIDE: "CONFIG", RECEIVING_ENTITY_ACCOUNT: "CONFIG", DESTINATION_APPROVAL: "CONFIG", PARTNER_ENTITY: "CONFIG", COLLECTION_RECEIVING_ENDPOINT: "CONFIG", FEE_TIER: "CONFIG", PARTNER_CUTOFF_OVERRIDE: "CONFIG",
   HOLIDAY: "CONFIG", MESSAGE_TEMPLATE: "CONFIG", CLIENT: "CONFIG", SYSTEM_SETTING: "CONFIG", WALLET_SCREENING: "OPS",
-  MARKUP_SHARE_RULE: "ECON", PARTNER_REBATE_RULE: "ECON",
+  MARKUP_SHARE_RULE: "ECON", PARTNER_REBATE_RULE: "ECON", BANK_ACCOUNT_DETAILS: "CONFIG", BANK_DETAILS_TEMPLATE: "CONFIG",
   // rates
   MARKET_RATE: "REF",
   // deal
@@ -53,6 +59,7 @@ const ENTITY_GROUP = {
 };
 // Field-level exceptions: entity -> field -> group ("*" is the entity's default)
 const FIELD_GROUP = {
+  CUSTOMER_APPROVAL: { "*": "OPS", code_hash: "NONE" },
   PARTNER_PAIR: { "*": "CONFIG", partner_fee_pct: "ECON" },
   FEE_STRUCTURE: { "*": "CONFIG", min_margin_pct: "ECON", variance_threshold_rel: "REF", customer_facing_fee_basis: "PRICE", customer_facing_fee_pct: "PRICE" },
   SETTLEMENT_RAIL: { "*": "CONFIG", expected_bank_fee: "ECON" },
@@ -83,8 +90,8 @@ function groupOf(entity, field) {
 }
 const RIGHTS = { // group -> [Operations, Finance, Management]
   OPS: ["view · enter", "view", "view"], PRICE: ["view (quotes)", "view", "view"], PRATE: ["view · enter", "view · confirm", "view"],
-  REF: ["usable / frozen only", "view · approve breach", "view"], ECON: ["—", "view", "view"], LEDGER: ["available-to-pay figure only", "view · reconcile", "view"],
-  CONFIG: ["view", "view · propose", "view · approve"], CTRL: ["own requests", "view all · approve own scope", "view all · approve · users and roles"],
+  REF: ["usable / flagged / frozen only", "view · approve breach", "view"], ECON: ["—", "view", "view"], LEDGER: ["available-to-pay figure only", "view · reconcile", "view"],
+  CONFIG: ["view", "view · propose", "view · approve"], CTRL: ["own requests", "view all · approve own scope", "view all · approve · users and roles"], NONE: ["—", "—", "—"],
 };
 
 // ------------------------------------------------------------------ the matrix by module
@@ -94,20 +101,23 @@ const MATRIX = [
     ["Exposure ceilings (project and client)", "ECON", "PROJECT.exposure_ceiling, CLIENT.exposure_ceiling — compared through REPORTING_VALUE; Operations sees that a release is blocked, not the figure"]]],
   ["Configuration", [
     ["Project, pairs and rounding, rate-source chains, thresholds, own wallets, templates", "CONFIG", "PROJECT, CURRENCY_PAIR (amount_rounding, cash_rounding), PAIR_RATE_SOURCE, THRESHOLD, OWN_WALLET (role), MESSAGE_TEMPLATE"],
+    ["Email OTP settings: the project's switch and three windows; each sender's registered approver address and chat group", "CONFIG", "PROJECT.email_otp_enabled; SENDER.email_otp_approver_email, email_otp_chat_platform / group_name / group_id (one set per sender); THRESHOLD kinds email_otp_* — protected master data: Operations enters, Finance approves, verified before active (rule 13)", true],
     ["Parties: senders, groups, receivers, entities, accounts, allow-lists", "CONFIG", "SENDER, SENDER_RECEIVER_ALLOW, COLLECTION_SENDING_ENTITY, RECEIVER_GROUP, RECEIVER, RECEIVING_ENTITY, RECEIVING_ENTITY_ACCOUNT (single_use)"],
+    ["Bank account details, in full (holder, bank, IBAN or account number, BIC, sort code …) and the templates per rail", "CONFIG", "BANK_ACCOUNT_DETAILS, BANK_DETAILS_TEMPLATE — Operations enters, Finance or Management approves; all three roles read in full, no masking; every full read is logged (rule 10)", true],
     ["Partner block: methods, cutoff and holidays, pairs, vehicles, endpoints, rails, narratives, destination approvals", "CONFIG", "PARTNER (supported_methods, bank_cutoff_time), PARTNER_CUTOFF_OVERRIDE, HOLIDAY, PARTNER_CONFIG (is_own_desk), PARTNER_PAIR (needs_bank_lock), PARTNER_ENTITY, COLLECTION_RECEIVING_ENDPOINT (risk_band, single_use), SETTLEMENT_SENDING_ENTITY, SETTLEMENT_RAIL, DESTINATION_APPROVAL"],
     ["Fee structures, tiers and overrides (the percentages applied to the sender and receiver; what the quote prints)", "CONFIG", "FEE_STRUCTURE (pct, sender_pays_pct, receiver_pays_pct, min_markup_pct, max_markup_pct, rate_basis, mode, customer_facing_*), FEE_TIER, FEE_OVERRIDE"],
     ["Minimum margin, partner fee, variance thresholds, expected bank fees", "ECON", "FEE_STRUCTURE.min_margin_pct, PARTNER_PAIR.partner_fee_pct, FEE_STRUCTURE.variance_threshold_rel, SETTLEMENT_RAIL.expected_bank_fee"],
     ["Markup-share and rebate terms", "ECON", "MARKUP_SHARE_PARTY (name only is configuration), MARKUP_SHARE_RULE (basis, pct, settlement_mode), PARTNER_REBATE_RULE (basis, pct, payout_currency)"]]],
   ["Rates", [
-    ["Partner rate of the day, as quoted (rate, direction, city), its version and whether it is usable", "PRATE", "PARTNER_RATE_VERSION.quoted_rate, quoted_direction, rate, location, version_no, expires_at, status (usable / frozen)"],
+    ["Partner rate of the day, as quoted (rate, direction, city), its version and whether it is usable", "PRATE", "PARTNER_RATE_VERSION.quoted_rate, quoted_direction, rate, location, version_no, expires_at, status (active / usable / flagged / breached / approved / rejected; Operations sees usable, flagged or frozen)"],
     ["Market snapshots, day comparison, spread, averages, breach", "REF", "MARKET_RATE, RATE_COMPARISON, PARTNER_RATE_VERSION.spread_pct and the breach decision"]]],
   ["Quoting", [
     ["Deal group and legs: parties, states, references, clocks, extensions, packages", "OPS", "DEAL_GROUP, DEAL (identities, leg_type, funding_source, states, sent_at, effective_valid_until, grace_until, rate_locked_at, cutoff_at, conversion_due_date), QUOTE_PACKAGE, QUOTE_VALIDITY_EXTENSION, the invoice a group collects"],
     ["Sender-facing price: sender rate, fee applied, tier, customer-facing figures, amounts promised", "PRICE", "DEAL_GROUP.sender_rate, customer_facing_fee_pct, customer_facing_rate, invoice_rate; DEAL.sender_rate, amount_in, gross_out, client_net, fee_sender_part, fee_receiver_part, fee_override_id, fee_tier_id; DEAL_FEE_TIER; PROJECT_MONTH_VOLUME; the printed figures of a QUOTE_PACKAGE"],
     ["Reference rate stamped on the leg", "REF", "DEAL.market_rate_id"]]],
   ["Collection", [
-    ["Parts, endpoints, evidence, verification; cash tokens and counts; wallet screening", "OPS", "COLLECTION (amount, endpoint, evidence_ref, state, token_ref, counted_at, sending_address), WALLET_SCREENING, WALLET_REGISTRY"],
+    [["Parts, endpoints, evidence, verification; cash tokens and counts" + dl("; wallet screening")], "OPS", ["COLLECTION (amount, endpoint, evidence_ref, state, token_ref, counted_at, sending_address), " + dl("WALLET_SCREENING, ") + "WALLET_REGISTRY"]],
+    ["Wallet screening: the provider's report as returned, the result, the decision and who made it", "OPS", "WALLET_SCREENING — Operations screens and accepts a clear report; a report that is not clear is Management's second look (ROLE_RIGHT screening_second_look); Finance has no right on it; the decision is write-once; a partner's hold, freeze or decline is an event (REROUTE, LOSS_EVENT, EMERGENCY_ACTION) that no role at NPL lifts (rule 11)", true],
     ["Overpayment credit", "OPS", "SENDER_CREDIT"]]],
   ["Conversion", [
     ["Instruction, partner rate used, what the partner delivered", "PRATE", "CONVERSION.partner_rate_version_id, actual_out, calc_mode, state"],
@@ -128,6 +138,7 @@ const MATRIX = [
     ["Accounts, transactions, postings, balances, identities, the client roll-up; opening entries and partner statement reconciliations", "LEDGER", "LEDGER_ACCOUNT, LEDGER_TRANSACTION, LEDGER_POSTING, OPENING_ENTRY, PARTNER_STATEMENT_RECONCILIATION, PROJECT_BALANCE, GROUP_ENTITLEMENT, OFFSET, CUSTODY, CLIENT_POSITION"],
     ["Figures in the reporting currency", "ECON", "REPORTING_VALUE (any per-currency figure converted at the latest platform-pair rate, D43)"]]],
   ["Reports, exports and messages", [
+    ["Customer approval (Email OTP): the code reference, the status and its stamps, the attempts, the stored email snapshot and the chat screenshot; never the code itself", "OPS", "CUSTOMER_APPROVAL (all but code_hash), CUSTOMER_APPROVAL_EVENT — Operations sends, enters the code and records a rejection; Finance and Management view; code_hash is in no group and on no screen, export or API", true],
     ["Operational reports and sender-facing documents", "OPS", "deal lists, collection and settlement reports, quote packages rendered from MESSAGE_TEMPLATE (sender-facing fields only, D36), partner instructions, the client journal"],
     ["Economic reports: margin, pool, cost breakdown, variances, earnings, offsets, losses, reseller margins, Finance Log", "ECON", "every report, export, message or notification that carries a value from groups REF, ECON or LEDGER"]]],
   ["Administration", [
@@ -154,6 +165,9 @@ const TESTS = [
   ["Audit", "Any controlled action is taken.", "AUDIT_LOG holds actor, time, reason and record version; APPROVAL holds requester, approver and state; neither can be edited or deleted."],
   ["No client-side leakage", "Any screen shown to Operations is inspected (page source, network responses, cached data).", "No value of groups REF, ECON or LEDGER is present, even hidden: the filtering happens on the server, not in the user interface."],
   ["Template fields", "A quote template is saved with a field outside the sender-facing set, or a message is rendered for a sender.", "The template is refused (MESSAGE_TEMPLATE.printed_fields); a rendered message never carries a partner rate, a margin or a cost (D36)."],
+  [mk("A hold cannot be cleared from any channel"), mk("A Finance or Operations user tries to lift a partner's hold, freeze or decline, or to change a screening decision of reject, through the screen, the API, an export re-imported, or a re-submitted or replayed approval request."), mk("Refused in every channel: the decision field is write-once, the replayed request returns the first result and writes nothing, and each attempt is in the audit log. Only a new screening row decided by Management changes what the address may do, and only for NPL's own alert, never for a partner's block (rule 11).")],
+  [mk("Fallback workbook and incident channels"), mk("An Operations user opens the fallback workbook, the day's notifications, a monitoring alarm and the incident raised on the delivery board; the share lists of both workbooks are read."), mk("The operational workbook holds no partner balance, pool, margin or spread; the Finance workbook is not shared with the Operations account; no notification, alarm, chat message or incident text carries a figure of groups REF, ECON or LEDGER; both share lists equal the user list by role, and a leaver's account is on neither (rule 12).")],
+  [mk("Bank details read in full, and logged"), mk("A user of any role opens the bank-details card of an account, endpoint, rail or destination approval, or exports it."), mk("The card shows every field of the current BANK_ACCOUNT_DETAILS version unmasked; an AUDIT_LOG row (record_type BANK_ACCOUNT_DETAILS, field read, actor, time) exists for the read; a superseded version is shown only from the account's history, and the read of it is logged the same way.")],
 ];
 
 // ------------------------------------------------------------------ appendix: every field, its group, its rights
@@ -161,9 +175,9 @@ const byDomain = (d) => Object.keys(D.E).filter((n) => D.E[n].d === d);
 const DOMAIN_NAME = { config: "Configuration", rates: "Rates", deal: "Deal lifecycle", settle: "Settlement", ledger: "Ledger & controls", view: "Derived views" };
 const appendix = Object.keys(DOMAIN_NAME).map((dom) => `<h3>${esc(DOMAIN_NAME[dom])}</h3>` + byDomain(dom).map((n) => {
   const e = D.E[n];
-  const rows = e.f.map((f) => { const g = groupOf(n, f[0]); return [f[0], GROUPS[g].name, ...RIGHTS[g]]; });
-  return `<h4>${esc(n)}</h4><table class="dd"><thead><tr><th style="width:30%">Field</th><th style="width:24%">Group</th><th>Operations</th><th>Finance</th><th>Management</th></tr></thead><tbody>
-${rows.map((r) => `<tr><td class="mono">${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td></tr>`).join("")}</tbody></table>`;
+  const rows = e.f.map((f) => { const g = groupOf(n, f[0]); const r = [f[0], GROUPS[g].name, ...RIGHTS[g]]; return REVIEW && (REV_TABLES.has(n) || f[0] === REV_FIELD) ? r.map((c) => mk(esc(c))) : r.map(esc); });
+  return `<h4>${REVIEW && REV_TABLES.has(n) ? mk(esc(n)) : esc(n)}</h4><table class="dd"><thead><tr><th style="width:30%">Field</th><th style="width:24%">Group</th><th>Operations</th><th>Finance</th><th>Management</th></tr></thead><tbody>
+${rows.map((r) => `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join("")}</tbody></table>`;
 }).join("")).join("");
 
 // summary counts for the status line
@@ -174,6 +188,7 @@ const withCode = ACTIONS.filter((a) => a[5] !== "—");
 
 // ------------------------------------------------------------------ HTML
 const CSS = `
+mark.rev{background:#ffe58a;color:inherit;padding:0 1px} del.rev{color:#b00020;text-decoration:line-through} .rev-note{background:#ffe58a;padding:3pt 6pt;font-size:9pt;margin:0 0 8pt}
 @page { size: A4; margin: 18mm 18mm 16mm 18mm; @bottom-center { content: counter(page); font: 8pt Georgia, serif; color: #666 } }
 @page land { size: A4 landscape; margin: 12mm 14mm 12mm 14mm; }
 body{font:10.5pt/1.45 Georgia,"Times New Roman",serif;color:#111;margin:0}
@@ -220,16 +235,17 @@ const nest = `<figure class="chart"><svg viewBox="0 0 760 290" width="100%" xmln
 </svg><figcaption>Figure 1 — Cumulative visibility. Each ring sees everything inside it. Rights to approve grow outward; rights to see never shrink.</figcaption></figure>`;
 
 const matrixRows = MATRIX.map(([mod, rows]) => rows.map((r, i) => {
-  const [label, g, fields] = r; const rt = RIGHTS[g];
-  return `<tr>${i === 0 ? `<td class="mod" rowspan="${rows.length}">${esc(mod)}</td>` : ""}<td>${esc(label)}</td><td>${esc(GROUPS[g].name)}</td><td class="r-ops">${esc(rt[0])}</td><td class="r-fin">${esc(rt[1])}</td><td class="r-mgmt">${esc(rt[2])}</td><td class="small">${esc(fields)}</td></tr>`;
+  const [label, g, fields, rv] = r; const rt = RIGHTS[g]; const W = (t) => (rv && REVIEW ? mk(t) : t); const X = (t) => (Array.isArray(t) ? t[0] : W(esc(t)));   // a cell given as [html] is inserted raw
+  return `<tr>${i === 0 ? `<td class="mod" rowspan="${rows.length}">${esc(mod)}</td>` : ""}<td>${X(label)}</td><td>${W(esc(GROUPS[g].name))}</td><td class="r-ops">${W(esc(rt[0]))}</td><td class="r-fin">${W(esc(rt[1]))}</td><td class="r-mgmt">${W(esc(rt[2]))}</td><td class="small">${X(fields)}</td></tr>`;
 }).join("")).join("");
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NPLify — Roles &amp; Visibility Matrix v${V}</title><style>${CSS}</style></head><body>
 <div class="title"><h1>NPLify · P0 Technical Baseline</h1><p class="sub">Roles &amp; Visibility Matrix · Draft v${V}</p><p class="small">Numbered with the ERD edition it is built against.</p><p class="org">New XP Technologies Limited</p><p class="date">${DATE} · Confidential</p></div>
 <div class="rule"></div>
 
+${REVIEW ? `<p class="rev-note"><b>Round-2 review draft, 28 October 2026 (Email OTP, the reviewer's change request CR-01, added to the draft of 27 October: findings 08.1 and 08.2 of the v6.0 design review, and the bank account details of 26 October).</b> Yellow = added or replaced; red strike = what goes.</p>` : ""}
 <h2>How to read this pack</h2>
-<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 92 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
+<p>Four map pages are now part of the pack as documents of their own, and are the place to start: the Top-Down Map (from the business, through the data model and the deal states, to the scenarios and the reading order), the Deal Flow on one page (Quote, Collect, Convert, Settle, with the roles and the money path), the Workflow Tree (8 classes, 27 sub-classes, 96 procedures, each naming who initiates, who approves, the codes it is written under and the records it touches) and the Workflow Tree on one page. Read them in that order, then this document. Every worked transaction (T), acceptance vector (L, B), walkthrough (W, X), flow (F) and procedure (C, A, D) has one identifier, listed in the Reading Companion's identifier register; the Test Strategy &amp; Coverage document says which test proves each procedure.</p>
 
 <h2>1 · The model in one page</h2>
 <p>Three roles, three nested rings. <b>Operations</b> runs deals: quotes and extends quotes, screens wallets, verifies collections, instructs conversions, prepares settlements, enters partner rates as quoted, requests reroutes, records destination approvals and loss events. <b>Finance</b> sees everything Operations sees plus the economics, approves what Operations initiates, resolves exceptions, recommends covered fees, requests balance conversions, dues recovery, earnings offsets and loss splits, proposes configuration and owns reconciliation. <b>Management</b> sees everything and approves the heavier actions, every configuration change and every user change. Visibility is <i>cumulative</i> — a wider role never loses a narrower role's view — and approval is <i>maker-checker</i>: the person who initiates an action is never the person who approves it, enforced by the server from the ROLE_RIGHT rows, not by convention.</p>
@@ -252,7 +268,7 @@ ${matrixRows}
 <section class="land"><h2>4 · Approval rights per controlled action — the ROLE_RIGHT rows</h2>
 <p class="small">The approving role is always a different user from the initiator. "Escalates to Management when" lists the conditions that add a Management approval on top of, not instead of, the approving role's. The last column is the ${c("ROLE_RIGHT.action")} code; a row with a code is configuration (may_initiate, may_approve, escalates_to_role_id per role), a row marked — is an audited operational step. Identical to §5 of the Lifecycle &amp; Approvals document, from the same source.</p>
 <table style="font-size:8.2pt"><thead><tr><th style="width:19%">Controlled action</th><th style="width:9%">Initiates</th><th style="width:10%">Approves</th><th style="width:30%">Escalates to Management when</th><th style="width:20%">On rejection</th><th>ROLE_RIGHT</th></tr></thead><tbody>
-${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""}>${esc(x)}</td>`).join("")}</tr>`).join("")}
+${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""}>${/class="rev"/.test(x) ? x : esc(x)}</td>`).join("")}</tr>`).join("")}
 </tbody></table>
 </section>
 
@@ -267,17 +283,21 @@ ${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""
 <li><b>Users and roles need two Management users.</b> Creating, changing or removing a user, a role or a ROLE_RIGHT row is a Management action approved by a second Management user.</li>
 <li><b>Exceptions are shown as blockers, not as figures.</b> A frozen partner × pair, an open variance exception, an open offset, custody aging, a negative pool, an unfunded make-good and an open loss recovery appear to Operations as the state that blocks their work and the role that must act; the spread, variance, offset amount, pool and loss shares are Finance's view.</li>
 <li><b>Messages print only what the template allows.</b> ${c("MESSAGE_TEMPLATE.printed_fields")} is the list of model fields a template may render; a quote template is sender-facing only (D36), so a message can never carry a partner rate, a margin or a cost whichever role sends it.</li>
+<li>${mk("<b>Bank account details are read in full and read-logged.</b> BANK_ACCOUNT_DETAILS belongs to group <i>Configuration and master data</i>: Operations enters a row from the rail's template, Finance or Management approves it (controlled action bank_details_approve), and all three roles read every field unmasked, on one card component, because the people who instruct and verify transfers need the details as the bank sees them. In return every full read — card, export or API — writes an AUDIT_LOG row with the actor and time, and the quarterly access review (5a) samples those rows. The evidence files (bank letters, KYC, legal documents) stay under the restricted prefix of the file store, which only Finance and Management resolve.")}</li>
+<li>${mk("<b>Screening outcomes have three owners, and there is no override right.</b> (1) A partner's sanctions or AML hold, freeze or decline is the partner's decision: no role at NPL has a right that lifts it; NPL records it as the event it is (REROUTE with trigger compliance_hold, LOSS_EVENT with reason account_frozen, EMERGENCY_ACTION of kind destination_freeze), routes around it, and records the partner's clearance reference when the partner lifts it. (2) NPL's own wallet screening is operational when the provider's report is clear under its Strict rulebook (Operations records accept) and a Management decision otherwise: the screening row requests the second look, Management decides accept, accept_alternate or reject with a reason (ROLE_RIGHT screening_second_look: may_initiate Operations, may_approve Management; no Finance row), and the approver is never the person who screened. There is no Finance override right. (3) A technical false positive is a new screening row with its evidence, decided on its own report. Enforcement: WALLET_SCREENING.decision is write-once for every role and every channel (screen, API, export re-import, a re-submitted or replayed approval request, which carries the same idempotency key and returns the first result without writing); the provider's report is operational data the three roles read, while a partner's clearance letter is an evidence file under the restricted prefix.")}</li>
+<li>${mk("<b>The field groups apply outside the application too.</b> The fallback workbook of the Architecture (the export every five minutes) is two workbooks, not two tabs: an operational workbook (open deals and their states, cutoffs, pending approvals, the partner rates of the day as entered, the amount available to pay out per partner and currency) shared with the Operations, Finance and Management accounts, and a Finance workbook (partner balances, pool, margins, spreads, the reconciliation figures) shared with Finance and Management only; tab-level protection is not relied on. Both are shared to named accounts, never by link; the export job writes through a service account; a leaver's account is removed from both on the day (procedure A.10) and the share lists are compared with the user list at the quarterly access review. Generated extracts and scheduled reports pass the same server-side filter as a screen (rule 2). Notifications, monitoring alarms, chat messages and incidents raised on the delivery board name the item and the state in operational terms (rule 8) and carry no figure of the groups Reference rate and comparison, Margin, pool, cost breakdown or Ledger and balances; the alarms of the Architecture's monitoring carry no deal figures at all.")}</li>
+<li>${mk("<b>Email OTP settings are protected master data, and a code is never readable.</b> The project's Email OTP switch and, on each sender, its one registered approver address and its registered chat group (platform, group name, group id; every sender has its own group) belong to group <i>Configuration and master data</i> and follow two paths: the three windows are THRESHOLD rows and follow the threshold rule, Finance proposes and Management approves; the switch and the sender's address and group change only through the controlled action set_email_otp_settings: Operations enters, Finance approves, never the same person, every change an APPROVAL and an AUDIT_LOG row with before and after. A new approver address is active only after a verification code sent to it comes back through the registered chat group and is entered; a chat-group change carries a screenshot from the group as evidence. While a change is pending the server refuses to send an approval email for that sender, and it never sends one to any address but the one stored on the sender; a sender with no approved address cannot be quoted while the switch is on; the address is not on the quote screen. A change of address voids that sender's open codes, so a live code never moves. The one-time code exists only in the email and in memory at generation: the database holds its hash, which is in no field group and on no screen, export or API for any role; the approval row shows the code reference, the status, the stamps and the evidence. The senders' approver addresses are listed, per project, on the quarterly access review (5a) for Management to confirm. Inbound mail is the customer's only when it comes from the registered address, and never approves (Lifecycle &amp; Approvals 2e; Configuration Schema rule 16).")}</li>
 </ol>
-<div class="box"><b>One point for Management to confirm.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate). If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
+<div class="box"><b>What Operations necessarily sees.</b> Operations enters the partner's rate and sees the sender rate and the amount the receiver is owed. For a fee_on_market partner those three numbers let a careful user work out NPL's gross margin on a deal by hand. The policy hides the <i>computed</i> figures, not the inputs Operations must handle; this follows today's practice (Operations types the agent rate). If Management wants the inference closed too, the partner's rate would have to be entered by Finance — a change to who does what, not to this matrix.</div>
 
 <h2>5a · Absence cover, scoped rights and delegation</h2>
 <p>Three questions from the design review, answered with NPL's decisions of 19 and 20 October. None of them adds a role or a per-user right; rule 1 of Section 5 stands.</p>
-<h3>10. Cover for staff absence is the role, not a delegation</h3>
+<h3>${dl("10.")}${mk("14.")} Cover for staff absence is the role, not a delegation</h3>
 <p>Rights belong to the role, so any user holding a role may do what that role permits; nothing is handed from one person to another when someone is on leave, off shift or unreachable. If a whole role is unavailable, a user of a wider role may work a narrower role's steps through an account of that role (a Finance user takes an Operations-role account for the Operations steps and returns to the Finance account for the Finance steps). One safeguard makes this safe: the “approver is not the initiator” check of rule 5 is made on the person, not the account. Every USER row names the natural person behind it (${c("USER.person_ref")}, ERD Appendix B.5), the two accounts of one person carry the same person_ref, and APPROVAL refuses an approver whose person_ref equals the initiator's. The Management countersignature when only one Finance user is on shift (rule 5) is unchanged.</p>
 <h3>Scoped rights: documented, not built</h3>
 <p>A per-user, per-project scope (a user limited to named projects, approved by Management) is a possible later addition for an unusually sensitive counterparty. It is recorded here as an option and is not built unless NPL chooses it; until then there are no per-user exceptions and visibility is by role only.</p>
 <h3>Time-limited delegation: not in P0</h3>
-<p>The reviewer's revised recommendation is adopted as written: “Define backup approval arrangements for staff absence, holidays and emergencies, ensuring maker-checker controls remain intact. Automated temporary delegation can be considered in a later phase.” Rule 10 is that arrangement. No delegation feature, no expiring rights and no delegation records exist in the P0 model.</p>
+<p>The reviewer's revised recommendation is adopted as written: “Define backup approval arrangements for staff absence, holidays and emergencies, ensuring maker-checker controls remain intact. Automated temporary delegation can be considered in a later phase.” Rule ${dl("10")}${mk("14")} is that arrangement. No delegation feature, no expiring rights and no delegation records exist in the P0 model.</p>
 <h3>Periodic access review</h3>
 <p>Management reviews users, roles, dormant accounts and leavers once a quarter and records the review; the procedure is A.10 of the Client Operating Procedures, and the users-and-access report that supports it is built in Phase 2 (M6).</p>
 
@@ -286,7 +306,8 @@ ${ACTIONS.map((a) => `<tr>${a.map((x, i) => `<td${i === 5 ? ' class="mono"' : ""
 ${appendix}
 </body></html>`;
 
-const h = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.html`), p = path.join(outDir, `NPLify-Roles-and-Visibility-Matrix-v${V}.pdf`);
+const base = REVIEW ? "NPLify-Roles-and-Visibility-Matrix-review" : `NPLify-Roles-and-Visibility-Matrix-v${V}`;
+const h = path.join(outDir, `${base}.html`), p = path.join(outDir, `${base}.pdf`);
 // The client-facing pass knows the v1–v5 edition tokens; this edition's own token and draft marker are removed here.
 const thisEdition = (s) => s.replace(/\s*[·—–-]\s*Draft v6\.0\b/g, "").replace(/\bDraft v6\.0\b/g, "").replace(/\(v6\.0,\s*/g, "(").replace(/\bv6\.0[,:]?\s*/g, "");
 fs.writeFileSync(h, thisEdition(clientFacing(html)));
