@@ -5,7 +5,9 @@
   "description": "NPLify P0 data model: interactive ERD map with an in-model assistant, for NPL staff.",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/build-controlled-actions-data.mjs",
     "build": "next build",
+    "data:actions": "node scripts/build-controlled-actions-data.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

@@ -104,6 +104,17 @@ if tree:
     for cid, n in re.findall(r'<span class="id">(\d)</span>[^<]*<span class="cnt">\d+ sub-classes · (\d+) procedures</span>', tree_raw):
         if per_class.get(cid) != int(n): report("Tree", "class %s says %s procedures but has %d" % (cid, n, per_class.get(cid, 0)))
 counts["controlled actions"] = len(act_rows) if act_rows else None
+
+# the assistant's sixth source (data/controlled-actions.v6.1.json) must be the same table as the shared list
+_caf = os.path.join(ROOT, "data", "controlled-actions.v6.1.json")
+if os.path.exists(_caf):
+    _ca = json.load(open(_caf, encoding="utf-8"))
+    _names = [re.sub(r"<[^>]+>", "", re.findall(r'"((?:[^"\\]|\\.)*)"', row)[0]) for row in act_rows if re.findall(r'"((?:[^"\\]|\\.)*)"', row)]
+    if len(_ca["rows"]) != len(act_rows): report("actions→assistant", "data/controlled-actions.v6.1.json has %d rows, the shared list %d: run node scripts/build-controlled-actions-data.mjs" % (len(_ca["rows"]), len(act_rows)))
+    for _r, _n in zip(_ca["rows"], _names):
+        if _r["action"] != _n: report("actions→assistant", "assistant row %d is '%s', the shared list has '%s': run node scripts/build-controlled-actions-data.mjs" % (_r["n"], _r["action"][:50], _n[:50]))
+else:
+    report("actions→assistant", "data/controlled-actions.v6.1.json is missing: run node scripts/build-controlled-actions-data.mjs")
 if ledger:
     counts["worked transactions"] = len(set(re.findall(r"\bT(\d{1,2}[a-c]?) ·", ledger["text"])))
     counts["patterns"] = len(set(re.findall(r"Pattern ([A-R]) —", ledger["text"])))

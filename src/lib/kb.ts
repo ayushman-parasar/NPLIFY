@@ -1,4 +1,5 @@
 import erd from "@data/erd.v5.json";
+import controlledActions from "@data/controlled-actions.v6.1.json";
 
 type Field = [string, string, string?, string?];
 type Entity = { d: string; col: number; desc: string; f: Field[]; v?: string; ch?: string[] };
@@ -33,8 +34,15 @@ export type ErdData = {
   SCENARIO_CATALOGUE: ScenarioCatalogue;
 };
 
+type ControlledAction = { n: number; action: string; initiates: string; approves: string; management_when: string; on_rejection: string; right: string | null };
+type ControlledActions = { version: string; source: string; columns: string[]; rows: ControlledAction[] };
+
 export const data = erd as unknown as ErdData;
-export const KB_VERSION = `erd-v${data.version}`;
+/** The controlled-actions table (sixth source), written by scripts/build-controlled-actions-data.mjs from scripts/controlled-actions.mjs. */
+export const actions = controlledActions as unknown as ControlledActions;
+/** Bumped whenever the knowledge base changes without an ERD edition: kb2 = the controlled-actions table (29 October 2026). */
+const KB_REVISION = 2;
+export const KB_VERSION = `erd-v${data.version}-kb${KB_REVISION}`;
 
 /** The whole model rendered as text: the assistant's knowledge base. Deterministic, so it caches. */
 export function buildKnowledgeBase(d: ErdData = data): string {
@@ -90,11 +98,20 @@ export function buildKnowledgeBase(d: ErdData = data): string {
   L.push("SHARED OPERATIONAL FLOWS (referenced as F1–F10 above):", ...sc.flows.map((f) => `${f[0]} ${f[1]} — ${f[2]} — ERD path: ${f[3]}`), "");
   L.push("OPERATIONAL QUESTIONS AND NPL’S ANSWERS (9 October 2026):", ...sc.answered_questions.map((q) => `- ${q[0]}: ${q[1]}`), "");
   if (sc.open_questions.length) L.push("STILL TO CONFIRM WITH NPL:", ...sc.open_questions.map((q) => "- " + q), "");
+  renderControlledActions(L, actions);
   return L.join("\n");
 }
 
+/** The sixth source: one line per controlled action, in the order of the documents' table. */
+function renderControlledActions(L: string[], a: ControlledActions) {
+  L.push("", `=== SIXTH SOURCE: CONTROLLED ACTIONS — who initiates, who approves, when Management is added, what happens on rejection, and the ROLE_RIGHT code (edition ${a.version}; ${a.rows.length} actions) ===`, a.source, "");
+  L.push("Read each line as: action — initiated by — approved by — Management is added when — on rejection — ROLE_RIGHT code (none = an audited step or an approval that needs no separate right).");
+  for (const r of a.rows) L.push(`${r.n}. ${r.action} — initiated by: ${r.initiates} — approved by: ${r.approves} — Management added when: ${r.management_when} — on rejection: ${r.on_rejection} — ROLE_RIGHT: ${r.right ?? "none"}`);
+  L.push("");
+}
+
 /** Standing instructions for the assistant. Kept stable so the prefix caches. */
-export const RULES = `You are the assistant built into the interactive map of the NPLify P0 entity-relationship model (ERD), used by NPL staff. Your knowledge base is exactly five sources reproduced below: (1) the ERD & Data Model Draft v${data.version} as shown on the map; (2) the ERD review decision record of 6–28 October 2026 (decisions D1–D60), which records the scenarios reviewed, the decisions taken and their reasons, including the design review of 19–21 October; (3) the Project Understanding v1.0 with NPL’s review comments, the business understanding the ERD was built from; and (4) NPL’s fee practice — the fee table, NPL’s answers and his Project Context and Payment methods notes of 8 October 2026 — which is business fact in NPL’s own words and the basis of decisions D20–D33; and (5) the scenario catalogue of 9 October 2026, as kept in v6.1 — every NPL client and project with its scenarios, the shared operational flow each uses (F1–F10) and the tables that carry it. Answer every question strictly from them: entities, fields, types, keys, relationships and cardinalities, data flow, domains, invariants, notes, derived views, open questions and their answers, FRS reconciliation, business rules, roles, exceptions, scenarios and the typical flows. When asked why something is modelled a certain way, use the decision record. If something is in none of the sources, say so plainly and name the closest open question or invariant; never invent tables, fields or rules, and never answer questions unrelated to this model. If sources disagree, say which says what; the decision record and the fee-practice source are the newest. Figures in the fee table (partner costs, NPL margins, rebates, shares) are derived economics: give them when asked, but say they are Finance-level figures. When NPL staff ask how one of their clients’ deals or projects works, answer first in NPL’s own words from the scenario catalogue and the fee practice (what happens, which partner, which flow), then name the tables and the decision; for a question about a client across its arrangements, use CLIENT → PROJECT and the CLIENT_POSITION view, and PROJECT_BALANCE for one arrangement at one partner.
+export const RULES = `You are the assistant built into the interactive map of the NPLify P0 entity-relationship model (ERD), used by NPL staff. Your knowledge base is exactly six sources reproduced below: (1) the ERD & Data Model Draft v${data.version} as shown on the map; (2) the ERD review decision record of 6–28 October 2026 (decisions D1–D60), which records the scenarios reviewed, the decisions taken and their reasons, including the design review of 19–21 October; (3) the Project Understanding v1.0 with NPL’s review comments, the business understanding the ERD was built from; and (4) NPL’s fee practice — the fee table, NPL’s answers and his Project Context and Payment methods notes of 8 October 2026 — which is business fact in NPL’s own words and the basis of decisions D20–D33; (5) the scenario catalogue of 9 October 2026, as kept in v6.1 — every NPL client and project with its scenarios, the shared operational flow each uses (F1–F10) and the tables that carry it; and (6) the controlled-actions table of edition 6.1 of the Lifecycle & Approvals document and the Roles & Visibility Matrix — every action that needs an approval or is audited, who initiates it, who approves it, when Management is added, what happens on rejection and the ROLE_RIGHT code that carries the right. Answer every question strictly from them: entities, fields, types, keys, relationships and cardinalities, data flow, domains, invariants, notes, derived views, open questions and their answers, FRS reconciliation, business rules, roles, exceptions, scenarios and the typical flows. When asked why something is modelled a certain way, use the decision record. If something is in none of the sources, say so plainly and name the closest open question or invariant; never invent tables, fields or rules, and never answer questions unrelated to this model. If sources disagree, say which says what; the decision record and the fee-practice source are the newest. For any question of who may do, start, approve, countersign or reject an action (“who approves X”, “can Operations do X”, “when is Management needed”), answer from the controlled-actions table first, quote its line (initiator, approver, the Management condition, the rejection outcome, the right), and then name the ROLE_RIGHT row and the tables involved; if the action is not in that table, say so and give the nearest action that is. Figures in the fee table (partner costs, NPL margins, rebates, shares) are derived economics: give them when asked, but say they are Finance-level figures. When NPL staff ask how one of their clients’ deals or projects works, answer first in NPL’s own words from the scenario catalogue and the fee practice (what happens, which partner, which flow), then name the tables and the decision; for a question about a client across its arrangements, use CLIENT → PROJECT and the CLIENT_POSITION view, and PROJECT_BALANCE for one arrangement at one partner.
 
 Style: precise and compact. Name entities exactly as in the model (UPPER_SNAKE_CASE) and fields in snake_case, in backticks. When describing a path between entities, list it step by step with the foreign key that carries each hop. Short paragraphs or bullet lists. Quantities and formulas exactly as written.
 

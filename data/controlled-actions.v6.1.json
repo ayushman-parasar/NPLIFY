@@ -1,0 +1,383 @@
+{
+ "version": "6.1",
+ "source": "Controlled actions: the shared table of the Lifecycle & Approvals document (section 5) and the Roles & Visibility Matrix (section 4), edition 6.1 of 28 October 2026 with the corrections of 29 October 2026; ROLE_RIGHT codes per decision D44.",
+ "columns": [
+  "action",
+  "initiates",
+  "approves",
+  "management_when",
+  "on_rejection",
+  "right"
+ ],
+ "rows": [
+  {
+   "n": 1,
+   "action": "Quote a deal (price, fee, partner × pair)",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Below-margin quote: Finance approval mandatory before sending (FEE_STRUCTURE.min_margin_pct)",
+   "on_rejection": "Returns to Ops with reason; the quote package is not sent; Ops re-prices as a new quote",
+   "right": "price_quote"
+  },
+  {
+   "n": 2,
+   "action": "Extend a quote's validity (before the validity in force ends)",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "The new validity passes the partner's cutoff or the rate version's expiry (D45); any number of extensions, each a QUOTE_VALIDITY_EXTENSION row re-issuing the package at the same price",
+   "on_rejection": "Validity ends as quoted; the paths are the grace decision and a new deal group",
+   "right": "extend_quote_validity"
+  },
+  {
+   "n": 3,
+   "action": "Honour an expired quote's rate on a new deal (late decision)",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Always Finance (honour_expired_rate): the new leg is priced on the earlier leg's market rate and partner rate version, the difference against the day's rate posting to VAR_RATE_HONOUR (D45)",
+   "on_rejection": "Re-quote at today's rate with a new deal reference; the original stamp is kept",
+   "right": "honour_expired_rate"
+  },
+  {
+   "n": 4,
+   "action": "Enter a manual rate (reference feed outage)",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Evidence attached (both feeds down)",
+   "on_rejection": "No rate; quoting waits for the feed or a new manual entry",
+   "right": null
+  },
+  {
+   "n": 5,
+   "action": "Confirm a partner rate version",
+   "initiates": "Operations (enters, as quoted: rate and direction; city for cash pairs)",
+   "approves": "Finance (confirms)",
+   "management_when": "Breached version: Finance approval with recorded reason, or rejection; no skip path",
+   "on_rejection": "Pair stays frozen; Ops may request a better rate from the partner, which is a new version",
+   "right": null
+  },
+  {
+   "n": 6,
+   "action": "Record a partner cutoff override (extension agreed, or early close)",
+   "initiates": "Finance",
+   "approves": "— (recorded with the partner's agreement reference, D29)",
+   "management_when": "—",
+   "on_rejection": "The standing cutoff applies",
+   "right": null
+  },
+  {
+   "n": 7,
+   "action": "Send a quote for the customer's approval (Email OTP)",
+   "initiates": "Operations (only on a project with Email OTP on, after any Finance approval the quote needed)",
+   "approves": "— (no approval: the send is the issue of the quote)",
+   "management_when": "One email per quote issue to the sender's registered approver address: the rendered quote, a one-time code and the partial destination; no link, never the full account or wallet; a resend or any change to the order is a new issue and voids the old code; refused while the sender has no approved approver address and chat group, or a change to them is pending",
+   "on_rejection": "—",
+   "right": "send_email_otp"
+  },
+  {
+   "n": 8,
+   "action": "Enter the customer's approval code (Email OTP)",
+   "initiates": "Operations (from the customer's paste in the registered chat group)",
+   "approves": "— (the server validates: right code, right issue, unexpired, unused; the amount too above the step-up threshold)",
+   "management_when": "Five wrong attempts lock the code; a locked or expired code needs a new send; the chat screenshot is attached as evidence; the approval stamps the group Accepted with the entering user and the time; a code whose evidence is not from the registered group blocks collection and opens an exception",
+   "on_rejection": "A wrong code is refused with the attempt counted",
+   "right": "enter_email_otp_code"
+  },
+  {
+   "n": 9,
+   "action": "Record a customer rejection (Email OTP)",
+   "initiates": "Operations (a reply from the registered approver address, or a message in the registered chat group)",
+   "approves": "— (reason mandatory, recorded verbatim)",
+   "management_when": "The group leaves Sent: re-quoted as a new group or voided; the code is void; a rejection never needs an approval",
+   "on_rejection": "—",
+   "right": "record_customer_rejection"
+  },
+  {
+   "n": 10,
+   "action": "Change the Email OTP settings (the project's switch; a sender's approver address and registered chat group)",
+   "initiates": "Operations",
+   "approves": "Finance (never the entering user)",
+   "management_when": "Protected master data (Roles rule 13): a new approver address activates only after a verification code sent to it comes back through the registered chat group; a chat-group change carries a screenshot from the group; while a change is pending no approval email can be sent for that sender; a change of address voids that sender's open codes",
+   "on_rejection": "The pending change is dropped with the reason; the old values stay in force",
+   "right": "set_email_otp_settings"
+  },
+  {
+   "n": 11,
+   "action": "Approve bank account details (a new or changed row)",
+   "initiates": "Operations (enters the details in full from the bank's letter or confirmation, with the document as evidence)",
+   "approves": "Finance or Management (never the person who entered them)",
+   "management_when": "Always a second person (Roles rule 10): the row becomes active and the account, endpoint, rail or destination approval that points at it may become active; every full read of the details is logged",
+   "on_rejection": "The row stays draft; what points at it cannot activate",
+   "right": "bank_details_approve"
+  },
+  {
+   "n": 12,
+   "action": "Screen a sending or receiving wallet",
+   "initiates": "Operations (an Operations action, not an approval — D31)",
+   "approves": "— (result and decision recorded with evidence); Management decides a second look (screening_second_look)",
+   "management_when": "A report not clear under the provider's Strict rulebook (any category at threshold, a terrorism / TF trace, or a score outside the clear band) goes to Management's second look: Management decides accept, accept_alternate or reject with a reason; Finance has no right on a screening; a partner's hold, freeze or decline is recorded as its event and never lifted at NPL; accept_alternate may land only on an elevated-band endpoint",
+   "on_rejection": "No collection on that address; the sender is given an alternate wallet or refused",
+   "right": "screening_second_look"
+  },
+  {
+   "n": 13,
+   "action": "Verify a collection (hash / slip / receipt; a cash part after the partner's count)",
+   "initiates": "Operations",
+   "approves": "— (audited; Finance reviews in reconciliation)",
+   "management_when": "Underpayment left open beyond policy: Finance decides wait or void. The system refuses the part if its endpoint is not active, does not belong to the leg's partner entity, or its kind does not match the leg's collection method (D18, D19); a single-use endpoint serves one deal only (D32)",
+   "on_rejection": "Collection stays unverified; funds are not attributed",
+   "right": null
+  },
+  {
+   "n": 14,
+   "action": "Activate a collection endpoint (COLLECTION_RECEIVING_ENDPOINT)",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "— (the system refuses to activate a bank endpoint without rail, or a wallet whose rail differs from its network; a wallet's network must be one the partner's vehicle offers)",
+   "on_rejection": "Endpoint stays inactive; no collection may reference it",
+   "right": null
+  },
+  {
+   "n": 15,
+   "action": "Instruct a conversion",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Variance beyond tolerance opens an exception that Finance resolves; on a bank-channel pair Converting may not start before conversion_due_date (D29); a next-day rate that breaches the minimum margin defers the conversion with a reason",
+   "on_rejection": "Conversion not instructed; deal stays Collected",
+   "right": null
+  },
+  {
+   "n": 16,
+   "action": "Keep the deal's margin unconverted (CONVERSION.residual_in)",
+   "initiates": "Finance",
+   "approves": "— (part of the conversion instruction; EARN_GROSS recognised in the collection currency, D46)",
+   "management_when": "—",
+   "on_rejection": "The margin converts with the client's money and rests at the partner as EARNINGS_RECEIVABLE",
+   "right": null
+  },
+  {
+   "n": 17,
+   "action": "Resolve a conversion variance exception",
+   "initiates": "Finance",
+   "approves": "Finance (second user)",
+   "management_when": "Variance above the project's exception limit → Management",
+   "on_rejection": "Exception stays open; the deal is already converted and does not wait",
+   "right": null
+  },
+  {
+   "n": 18,
+   "action": "Prepare and release a settlement",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Above settlement limit; third same-day slot; a counterparty receiver paid from a leg attributed to another group (offset) — never for a line paying a sender_return or partner_transit receiver, which debits the group of the leg named in its deal_id (D13, D17); a bank-rail settlement approved after the partner's cutoff goes out on the next business day (D29, D34); only one Finance user on shift → Management countersigns",
+   "on_rejection": "Back to Prepared with reason; lines can be changed and re-submitted",
+   "right": null
+  },
+  {
+   "n": 19,
+   "action": "Override the bank-fee treatment on one settlement",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "—",
+   "on_rejection": "Project default applies",
+   "right": null
+  },
+  {
+   "n": 20,
+   "action": "Cover a bank fee, or raise the fee above the cap",
+   "initiates": "Finance (recommends, FEE_DECISION.recommended_by)",
+   "approves": "Management",
+   "management_when": "Always (D41): a covered bank fee, or a markup above max_markup_pct after discussing with the customer",
+   "on_rejection": "The project's bank-fee treatment applies; the cap stands",
+   "right": "cover_bank_fee / raise_fee_cap"
+  },
+  {
+   "n": 21,
+   "action": "Top up a shortfall from the pool",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always Management (company money becomes client money)",
+   "on_rejection": "Shortfall stays open; receiver remains short",
+   "right": null
+  },
+  {
+   "n": 22,
+   "action": "Pay a counterparty receiver from another group's leg (offset)",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Always Management, with tighter aging on the resulting offset. Does not apply to refund (sender_return) or hop (partner_transit) lines: cross_group_payout never fires on them",
+   "on_rejection": "Lines must stay within the entitled group",
+   "right": "cross_group_payout"
+  },
+  {
+   "n": 23,
+   "action": "Request a reroute",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Contingency route set (applicable_for_reroute) is configuration: Management",
+   "on_rejection": "Deal stays on its route; if the partner is unavailable the deal waits or is voided",
+   "right": null
+  },
+  {
+   "n": 24,
+   "action": "Outbound transfer from NPL's own wallet",
+   "initiates": "Finance",
+   "approves": "Management (dual approval)",
+   "management_when": "Always; executed by NPL signers outside the platform (hardware or multisig); a bridge hop to the leg's partner within custody_max_hours (D40) follows the same path",
+   "on_rejection": "Funds stay in custody; aging continues to be reported",
+   "right": null
+  },
+  {
+   "n": 25,
+   "action": "Recover dues on a reroute (net against forwarded funds)",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always; amount ≤ outstanding receivable at that partner; partner's agreement recorded",
+   "on_rejection": "Forward the full amount",
+   "right": "recover_dues"
+  },
+  {
+   "n": 26,
+   "action": "Earnings offset between partners (EARNINGS_OFFSET)",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always (D46): NPL's converted margin at one partner becomes the client's there and the same value of the client's unconverted money at another becomes NPL's, at the to-partner's rate of the day; recovers EARNINGS_RECEIVABLE rows; recorded for NPL in FX_RESULT",
+   "on_rejection": "Margins stay where they rest; receivables wait for the partner's fee cycle",
+   "right": "earnings_offset"
+  },
+  {
+   "n": 27,
+   "action": "Balance conversion (client balance to another currency)",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always; any excess over the served group's entitlement is an offset and needs the offset approval too",
+   "on_rejection": "Balance stays in its currency",
+   "right": "balance_conversion"
+  },
+  {
+   "n": 28,
+   "action": "Open a return leg after a rejected payout",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "Destination other than the sender's own return receiver → Management with reason (refund_to_third_party); markup apply / waive is a FEE_DECISION approved by Finance",
+   "on_rejection": "Returned funds stay in balance for later payouts",
+   "right": "refund_to_third_party"
+  },
+  {
+   "n": 29,
+   "action": "Override the network-fee policy on a refund",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "—",
+   "on_rejection": "Project default applies",
+   "right": null
+  },
+  {
+   "n": 30,
+   "action": "Void a deal before money moved",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "—",
+   "on_rejection": "Deal continues",
+   "right": null
+  },
+  {
+   "n": 31,
+   "action": "Void a deal after collection (refund / sender credit / hold)",
+   "initiates": "Operations",
+   "approves": "Management",
+   "management_when": "Always",
+   "on_rejection": "Deal continues; funds stay attributed",
+   "right": null
+  },
+  {
+   "n": 32,
+   "action": "Record a loss event and approve its split",
+   "initiates": "Operations records; Finance proposes the split",
+   "approves": "Management (approve_loss_split)",
+   "management_when": "Always (D32, D46): the whole loss is booked to NPL and the client made whole when the event is approved; each share the partner, the sender or the client bears is its own LOSS_RECOVERY posting; unwinding the deal (COLLECTION reversed) is a separate Management decision",
+   "on_rejection": "The loss stays open on the exception list; the make-good stands",
+   "right": "approve_loss_split"
+  },
+  {
+   "n": 33,
+   "action": "Record a loss recovery received (partner credit, sender payment)",
+   "initiates": "Finance",
+   "approves": "— (audited; names the LOSS_RECOVERY row)",
+   "management_when": "—",
+   "on_rejection": "The receivable stays open",
+   "right": null
+  },
+  {
+   "n": 34,
+   "action": "Record a partner's destination approval (DESTINATION_APPROVAL)",
+   "initiates": "Operations",
+   "approves": "Finance",
+   "management_when": "— (payout details follow the account's kind: bank reference for a bank account, network and address for a wallet; a wallet account carries its screening)",
+   "on_rejection": "Approval stays pending_partner; quote-first deals for it cannot leave Inquiry",
+   "right": null
+  },
+  {
+   "n": 35,
+   "action": "Post NPL-GR's vendor and resale invoices",
+   "initiates": "Finance",
+   "approves": "— (audited; posted once each in the invoice currency, source Invoice — D46)",
+   "management_when": "—",
+   "on_rejection": "Nothing posts; the remittance deal cannot name an invoice that is not recorded",
+   "right": null
+  },
+  {
+   "n": 36,
+   "action": "Enable an own-desk partner configuration",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always (D23): NPL itself converts in its own wallet for this project",
+   "on_rejection": "The project keeps its outside partners",
+   "right": "enable_own_desk"
+  },
+  {
+   "n": 37,
+   "action": "Change thresholds, fee structures and tiers, partner configuration, rate sources, pairs and rounding, holidays, templates",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always; all versioned (new rows with an effective date)",
+   "on_rejection": "Current version stays in force",
+   "right": null
+  },
+  {
+   "n": 38,
+   "action": "Change a system setting (reporting currency, staleness limit, time zone) or a platform pair",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always (D43, D44)",
+   "on_rejection": "Current setting stays in force",
+   "right": null
+  },
+  {
+   "n": 39,
+   "action": "Create, change or remove a user or role (ROLE, ROLE_RIGHT, USER)",
+   "initiates": "Management",
+   "approves": "Management (second user)",
+   "management_when": "Always (D44)",
+   "on_rejection": "No change",
+   "right": null
+  },
+  {
+   "n": 40,
+   "action": "Ledger adjustment (reversal and re-posting; a company currency exchange through FX_RESULT)",
+   "initiates": "Finance",
+   "approves": "Management",
+   "management_when": "Always; the reversal names the transaction it reverses",
+   "on_rejection": "Books unchanged; the discrepancy stays on the exception list",
+   "right": null
+  },
+  {
+   "n": 41,
+   "action": "Emergency suspend of a partner, freeze of a destination, or override of a partner cutoff (immediate)",
+   "initiates": "Finance applies it at once, with a mandatory reason; the suspension, freeze or override takes effect immediately on every deal and settlement it touches",
+   "approves": "Management ratifies within one business day (after the fact)",
+   "management_when": "Always: the action is recorded as applied and awaiting ratification; the deals affected show it as the blocker (Roles & Visibility rule 8)",
+   "on_rejection": "Not ratified: the action is lifted and the standing configuration applies again; the record and the reason stay (EMERGENCY_ACTION in the ERD)",
+   "right": "emergency_suspend"
+  }
+ ]
+}
