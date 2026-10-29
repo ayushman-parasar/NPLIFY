@@ -176,7 +176,7 @@
      "email_otp_enabled",
      "bool",
      "",
-     "default false; Email OTP, the customer's approval of each quote by a one-time code (Lifecycle 2e); on only with the three Email OTP thresholds set; each sender then needs its own approved approver address and chat group; a sender marked not required (SENDER.email_otp_required = false) is quoted and approved in its chat group without it"
+     "default false; Email OTP, the customer's approval of each quote by a one-time code (Lifecycle 2e); on only with the three Email OTP thresholds set; the switch is the default for the project's senders, and each required sender then needs its own approved approver address and chat group; a sender marked not required (SENDER.email_otp_required = false) is quoted and approved in its chat group without it"
     ]
    ],
    "v": "changed",
@@ -340,7 +340,7 @@
      "email_otp_approver_email",
      "string",
      "",
-     "nullable; the sender's one registered approver address (each sender has its own chat group with NPL, so the approver is per sender); protected master data: Operations enters, Finance approves, verified by a code before it is active (Roles rule 13); required to quote the sender while the project's switch is on"
+     "nullable; the sender's one registered approver address (each sender has its own chat group with NPL, so the approver is per sender); protected master data: Operations enters, Finance approves, verified by a code before it is active (Roles rule 13); required to quote the sender while the project's switch is on and the sender is required (email_otp_required)"
     ],
     [
      "email_otp_chat_platform",
@@ -4323,7 +4323,7 @@
      "code",
      "string",
      "",
-     "quote / payment_instructions / confirmation_request / settlement_advice / cash_token / email_otp_quote (the Email OTP approval email: the quote's sender-facing figures, the code, its expiry and the partial destination)"
+     "quote / payment_instructions / confirmation_request / settlement_advice / cash_token / email_otp_quote (the Email OTP approval email: the quote's sender-facing figures, the code, its expiry, the code box's fixed sentence that the code is single use, for this quote issue only and void if the order changes, the partial destination and, at or above the step-up amount, the instruction to paste the code and the order amount)"
     ],
     [
      "version",
@@ -5467,7 +5467,7 @@
    "ch": [
     "new in v6.1 (round 2, 28 October 2026): Email OTP, the reviewer's change request CR-01"
    ],
-   "desc": "Email OTP: one row per one-time code sent for a quote issue; the customer's approval of the order as a recorded, attributable step (Lifecycle 2e). The code is stored only as a hash; the decision is write-once; one open code per issue; no collection without the approval of the current issue.",
+   "desc": "Email OTP: one row per one-time code sent for a quote issue; the customer's approval of the order as a recorded, attributable step (Lifecycle 2e). The code is stored only as a hash; the decision is write-once; one open code per issue; no collection without the approval of the current issue for a sender for which Email OTP is required; a sender marked not required (SENDER.email_otp_required = false) collects without a row here and its quote issue records that the approval was taken in chat.",
    "f": [
     [
      "id",

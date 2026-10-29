@@ -67,9 +67,9 @@
   {
    "n": 7,
    "action": "Send a quote for the customer's approval (Email OTP)",
-   "initiates": "Operations (only on a project with Email OTP on, after any Finance approval the quote needed)",
+   "initiates": "Operations (only for a required sender on a project with Email OTP on, after any Finance approval the quote needed)",
    "approves": "— (no approval: the send is the issue of the quote)",
-   "management_when": "One email per quote issue to the sender's registered approver address: the rendered quote, a one-time code and the partial destination; no link, never the full account or wallet; a resend or any change to the order is a new issue and voids the old code; refused while the sender has no approved approver address and chat group, or a change to them is pending",
+   "management_when": "One email per quote issue to the sender's registered approver address: the rendered quote, a one-time code and the partial destination; no link, never the full account or wallet; a resend or any change to the order is a new issue and voids the old code; refused for a required sender while it has no approved approver address and chat group, or a change to them is pending; never issued for a sender marked not required, whose quote issue records that the approval is taken in chat",
    "on_rejection": "—",
    "right": "send_email_otp"
   },

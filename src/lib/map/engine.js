@@ -100,7 +100,7 @@ export const SKELETON = `
         <div class="tip"><i>${IC.click}</i><p>Hover an entity to see its connections. Click to pin it.<small>Pinning opens the full data dictionary, what feeds it and what it feeds. Click again to unpin.</small></p></div>
         <div class="tip"><i>${IC.branch}</i><p>Arrows point the way data flows.<small>From the referenced row into the row that stores the foreign key. Use <em>Trace downstream</em> to light up everything an entity's data reaches.</small></p></div>
         <div class="tip"><i>${IC.route}</i><p>Walk a data flow from the toolbar.<small>Follow a deal step by step from quote to confirmation. Grey dashed boxes are derived views, computed and never stored.</small></p></div>
-        <div class="tip"><i>${IC.chat}</i><p>Ask the ERD anything.<small>The assistant answers only from the model, the decision record, the Understanding document and NPL's fee practice, and points to entities on the map.</small></p></div>
+        <div class="tip"><i>${IC.chat}</i><p>Ask the ERD anything.<small>The assistant answers only from the model, the decision record, the Understanding document, NPL's fee practice, the scenario catalogue and the controlled-actions table, and points to entities on the map.</small></p></div>
       </div>
       <div id="chat" hidden>
         <div id="chatLog" aria-live="polite"></div>

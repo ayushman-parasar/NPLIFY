@@ -1,4 +1,4 @@
-# NPLify — Change list, 28 October 2026, ERD v6.0 → v6.1
+# NPLify — Change list, 28 and 29 October 2026, ERD v6.0 → v6.1
 
 Round 2: the independent "NPLify v6.0 Critical & High-Priority Design Review" (22 findings, 22 October 2026) and the reviewer's
 change request CR-01 (Email OTP), answered document by document between 26 and 28 October 2026 as review drafts
@@ -51,6 +51,10 @@ Two details of CR-01 that the documents had not stated: the approval email's cod
 ## Email OTP required per sender (29 October 2026, New XP's design decision; NPL to confirm)
 
 A customer who will not name an approver address had no way through: with the project's switch on, the sender could not be quoted at all. The requirement is now per sender, which is what CR-01 itself specified (its toggle is per client, and clients with it off follow today's flow): SENDER gains email_otp_required, true by default while the project's switch is on; a sender marked not required is quoted and approved in its registered chat group as today, and every quote issue sent to it records "approval taken in chat, Email OTP not required for this sender" on the quote, the deal and the audit log; marking a sender not required removes a control, so Operations enters, Finance approves and Management approves with a recorded reason, and the exemption is listed on the quarterly review. Written into Configuration Schema (PROJECT, SENDER, the Email OTP card, rule 16, the worked example), Lifecycle & Approvals 2e "The settings, protected", Roles & Visibility rule 13 and the field groups, the ERD (SENDER, the Email OTP paragraph, Appendix C, Diagram 1b caption), Operating Procedures C11, A.3 and the quarterly review, the Scenario Catalogue's Email OTP section, the Test Strategy (S-OTP0, S-OTP1 to 8 criterion 4, R-OTP), the Workflow Tree procedure 1.3.4, the controlled-actions table (set_email_otp_settings) and the decision record (D60 amended). No new state, no new channel, no new table.
+
+## The assistant's sixth source (29 October 2026)
+
+The web app's assistant now answers from six sources: the sixth is the controlled-actions table of the Lifecycle & Approvals document (section 5) and the Roles & Visibility Matrix (section 4), 41 rows with the action, who initiates, who approves, when Management is added, what happens on rejection and the ROLE_RIGHT code, written to `data/controlled-actions.v6.1.json` by `scripts/build-controlled-actions-data.mjs` before every build. Any question of who may do or approve an action is answered from it first. The knowledge-base version logged on every question is now `erd-v6.1-kb3` (kb2 added the table, kb3 the per-sender Email OTP rule).
 
 ## Also in this edition
 
