@@ -183,7 +183,9 @@
         "effective_valid_until",
         "code",
         "code_expires_at",
-        "partial_destination"
+        "code_terms",
+        "partial_destination",
+        "stepup_clause"
       ],
       "effective_from": "2026-10-01",
       "status": "active"

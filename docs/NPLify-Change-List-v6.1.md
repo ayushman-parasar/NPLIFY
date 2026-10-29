@@ -44,6 +44,10 @@ The reviewer could not see this document. At 6.1 it is reconciled: C2 and C3 scr
 
 CUSTOMER_APPROVAL_EVENT drawn in Diagram 3a and TYPE_REGISTRY in Diagram 4 (both had been placed there by the definitions and the dictionary but not drawn); PARTNER, HOLIDAY and PARTNER_CUTOFF_OVERRIDE homed in Diagram 1a, where they are drawn; text that ran past the right edge of Diagrams 1b, 3a, 3c and 4 and of the Lifecycle's Figure 1 now fits; captions that the client edition's filter had left as "Changed since:" / "New since:" reworded (Diagrams 1a, 3b, 3c, 4, Cutover Figure 1) and a residue ".9." removed from the Lifecycle's Figure 1; the Configuration Schema's Figure 1 names PARTNER_CUTOFF_OVERRIDE in full; the Cutover's figure caption no longer speaks of the backfill. The note under each diagram is derived from the drawing, the ERD build refuses an undrawn table, and `scripts/check-round2.py` checks the drawings (figures section) and figure text.
 
+## Email OTP template wording (29 October 2026, after the CR-01 gap check)
+
+Two details of CR-01 that the documents had not stated: the approval email's code box says that the code is for this quote issue only, is used once and is void if any detail of the order changes (REQ-CA-03), and at or above the project's step-up amount the printed instruction is to paste the code and the order amount, the clause being omitted below that amount (REQ-CA-05). Written into Lifecycle & Approvals 2e "What the email carries" (page 10) and into the Configuration Schema's "The Email OTP card" paragraph and the email_otp_quote template, whose printed fields gain code_terms and stepup_clause (page 13). Nothing else changed in either document; both rebuilt, the pack and figure checks clean.
+
 ## Also in this edition
 
 - Bank account details in the database (D58, 26 October): BANK_ACCOUNT_DETAILS and BANK_DETAILS_TEMPLATE; Roles rule 10.
