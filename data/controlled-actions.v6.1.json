@@ -93,10 +93,10 @@
   },
   {
    "n": 10,
-   "action": "Change the Email OTP settings (the project's switch; a sender's approver address and registered chat group)",
+   "action": "Change the Email OTP settings (the project's switch; a sender's approver address, registered chat group and whether Email OTP is required for it)",
    "initiates": "Operations",
    "approves": "Finance (never the entering user)",
-   "management_when": "Protected master data (Roles rule 13): a new approver address activates only after a verification code sent to it comes back through the registered chat group; a chat-group change carries a screenshot from the group; while a change is pending no approval email can be sent for that sender; a change of address voids that sender's open codes",
+   "management_when": "Marking a sender not required (its customer will not name an approver address) removes a control: Management approves as well, with a recorded reason, and the exemption is on the quarterly review. Protected master data (Roles rule 13): a new approver address activates only after a verification code sent to it comes back through the registered chat group; a chat-group change carries a screenshot from the group; while a change is pending no approval email can be sent for that sender; a change of address voids that sender's open codes",
    "on_rejection": "The pending change is dropped with the reason; the old values stay in force",
    "right": "set_email_otp_settings"
   },

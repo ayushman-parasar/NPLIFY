@@ -40,8 +40,8 @@ type ControlledActions = { version: string; source: string; columns: string[]; r
 export const data = erd as unknown as ErdData;
 /** The controlled-actions table (sixth source), written by scripts/build-controlled-actions-data.mjs from scripts/controlled-actions.mjs. */
 export const actions = controlledActions as unknown as ControlledActions;
-/** Bumped whenever the knowledge base changes without an ERD edition: kb2 = the controlled-actions table (29 October 2026). */
-const KB_REVISION = 2;
+/** Bumped whenever the knowledge base changes without an ERD edition: kb2 = the controlled-actions table; kb3 = Email OTP required per sender (both 29 October 2026). */
+const KB_REVISION = 3;
 export const KB_VERSION = `erd-v${data.version}-kb${KB_REVISION}`;
 
 /** The whole model rendered as text: the assistant's knowledge base. Deterministic, so it caches. */

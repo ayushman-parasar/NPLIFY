@@ -532,6 +532,7 @@
       "risk_tier": "standard",
       "status": "active",
       "email_otp": {
+        "required": true,
         "approver_email": "orders-a@client1.example",
         "chat_platform": "Telegram",
         "chat_group_name": "Client 1 · Sender A × NPL",
@@ -556,6 +557,7 @@
       "risk_tier": "standard",
       "status": "active",
       "email_otp": {
+        "required": true,
         "approver_email": "orders-b@client1.example",
         "chat_platform": "Telegram",
         "chat_group_name": "Client 1 · Sender B × NPL",
